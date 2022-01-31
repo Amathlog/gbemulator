@@ -12,7 +12,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(EXTERNAL_FOLDER "External")
-set(MAIN_FOLDER "NesEmulator")
+set(MAIN_FOLDER "GBEmulator")
 
 if(MSVC)
   add_definitions(/MP)
