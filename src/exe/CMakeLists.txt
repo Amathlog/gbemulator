@@ -63,7 +63,7 @@ if(WIN32)
   target_compile_options(ImGuiFE PRIVATE /wd4267 /wd4996 /wd4244)
 endif(WIN32)
 
-include_directories(${NesEmulator_SOURCE_DIR}/include)
+include_directories(${GBEmulator_SOURCE_DIR}/include)
 
 file(GLOB_RECURSE NEW_EXE_SRC
     "${GBEmulator_SOURCE_DIR}/src/exe/*.cpp" 
