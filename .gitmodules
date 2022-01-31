@@ -1,0 +1,15 @@
+[submodule "external/glfw"]
+	path = external/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "external/ImGui-Addons"]
+	path = external/ImGui-Addons
+	url = https://github.com/gallickgunner/ImGui-Addons.git
+[submodule "external/rtaudio"]
+	path = external/rtaudio
+	url = https://github.com/thestk/rtaudio.git
+[submodule "external/Tonic"]
+	path = external/Tonic
+	url = https://github.com/TonicAudio/Tonic.git
