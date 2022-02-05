@@ -10,6 +10,7 @@ void Z80Processor::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_HL.HL);
     visitor.WriteValue(m_SP);
     visitor.WriteValue(m_PC);
+    visitor.WriteValue(m_cycles);
 }
 
 void Z80Processor::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -20,6 +21,7 @@ void Z80Processor::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_HL.HL);
     visitor.ReadValue(m_SP);
     visitor.ReadValue(m_PC);
+    visitor.ReadValue(m_cycles);
 }
 
 void Z80Processor::Reset()
@@ -30,4 +32,6 @@ void Z80Processor::Reset()
     m_HL.HL = 0x0000;
     m_SP = 0x0000;
     m_PC = 0x0000;
+
+    m_cycles = 0;
 }

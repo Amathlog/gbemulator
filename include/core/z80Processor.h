@@ -97,5 +97,7 @@ namespace GBEmulator
 
         uint16_t m_SP;
         uint16_t m_PC;
+
+        uint8_t m_cycles = 0;
     };
 }
