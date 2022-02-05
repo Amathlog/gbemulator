@@ -53,7 +53,22 @@ inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data)
     m_bus->WriteByte(addr, data);
 }
 
-bool Z80Processor::GetByteFromRegisterIndex(uint8_t index, uint8_t& data)
+// Oversimplification of the clock mecanism
+// Each operation will be done in one shot, regardless of their
+// number of cycles. Each time we clock, we only decrement the cycle
+// counter if it is not zero.
+void Z80Processor::Clock()
+{
+    if (m_cycles == 0)
+    {
+        uint8_t opcode = ReadByte(m_PC++);
+        m_cycles = DecodeOpcodeAndCall(opcode);
+    }
+
+    m_cycles--;
+}
+
+bool Z80Processor::ReadByteFromRegisterIndex(uint8_t index, uint8_t& data)
 {
     data = 0;
     bool extraCycle = false;
@@ -87,6 +102,45 @@ bool Z80Processor::GetByteFromRegisterIndex(uint8_t index, uint8_t& data)
         break;
     default:
         data = 0;
+        break;
+    }
+
+    return extraCycle;
+}
+
+bool Z80Processor::WriteByteToRegisterIndex(uint8_t index, uint8_t data)
+{
+    data = 0;
+    bool extraCycle = false;
+
+    switch(index)
+    {
+    case 0:
+        m_BC.B = data;
+        break;
+    case 1:
+        m_BC.C = data;
+        break;
+    case 2:
+        m_DE.D = data;
+        break;
+    case 3:
+        m_DE.E = data;
+        break;
+    case 4:
+        m_HL.L = data;
+        break;
+    case 5:
+        m_HL.H = data;
+        break;
+    case 6:
+        WriteByte(m_HL.HL, data);
+        extraCycle = true;
+        break;
+    case 7:
+        m_AF.A = data;
+        break;
+    default:
         break;
     }
 
@@ -178,6 +232,12 @@ uint8_t Z80Processor::INC(uint8_t opcode)
 // Index 6          -> read memory pointed by HL => 3 cycles
 //
 // Bit to check is encoded in bit 3 to 5 (0x38)
+//
+// Flags:
+// Z: If the given bit is 0
+// N: 0
+// H: 1
+// C: Untouched
 uint8_t Z80Processor::BIT(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
@@ -185,83 +245,413 @@ uint8_t Z80Processor::BIT(uint8_t opcode)
     
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
-    if (GetByteFromRegisterIndex(registerIndex, data))
+    if (ReadByteFromRegisterIndex(registerIndex, data))
         ++nbCycles;
 
     SetZeroFlag(data & (1 << bitToCheck));
+    m_AF.F.N = 0;
+    m_AF.F.H = 1;
 
     return nbCycles;
 }
 
+// RES Op
+// Set a specific bit in a given data to 0
+// The opcode encode the bit we want to reset and the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Bit to set is encoded in bit 3 to 5 (0x38)
+//
+// Flags: Untouched
 uint8_t Z80Processor::RES(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    uint8_t bitToCheck = (opcode & 0x38) >> 3;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    data = data & (~(1 << bitToCheck));
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    return nbCycles;
 }
 
+// SET Op
+// Set a specific bit in a given data to 1
+// The opcode encode the bit we want to reset and the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Bit to set is encoded in bit 3 to 5 (0x38)
+//
+// Flags: Untouched
 uint8_t Z80Processor::SET(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    uint8_t bitToCheck = (opcode & 0x38) >> 3;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    data = data | (1 << bitToCheck);
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    return nbCycles;
 }
 
+// SWAP Op
+// Swap 4 most significant bits with the 4 less significant bits
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: 0
 uint8_t Z80Processor::SWAP(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    data = (data << 4) | (data >> 4);
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+    m_AF.F.C = 0;
+
+    return nbCycles;
 }
 
 // Bit shift instructions
+
+// RL Op
+// Shift a given data to the left and introduce the carry to the right
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: If we have an overflow
 uint8_t Z80Processor::RL(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    uint8_t oldCarry = m_AF.F.C;
+    m_AF.F.C = (data & 0x80) > 0;
+
+    data = (data << 1) | oldCarry;
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+
+    return nbCycles;
 }
 
+// RLA op
+// Same as RL op, but special op for the A register
+// done in 1 cycle instead of 2
+// Register A is index 7
 uint8_t Z80Processor::RLA(uint8_t opcode)
 {
-    return 0;
+    RL(0x07);
+    return 1;
 }
 
+// RLC Op
+// Shift a given data to the left and reintroduce the highest bit at the right.
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: If we have an overflow
 uint8_t Z80Processor::RLC(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    m_AF.F.C = (data & 0x80) > 0;
+
+    data = (data << 1) | m_AF.F.C;
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+
+    return nbCycles;
 }
 
+// RLCA op
+// Same as RLC op, but special op for the A register
+// done in 1 cycle instead of 2
+// Register A is index 7
 uint8_t Z80Processor::RLCA(uint8_t opcode)
 {
-    return 0;
+    RLC(0x07);
+    return 1;
 }
 
+// RR Op
+// Shift a given data to the right and introduce the carry to the left
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: If we have an overflow
 uint8_t Z80Processor::RR(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    uint8_t oldCarry = m_AF.F.C;
+    m_AF.F.C = data & 0x01;
+
+    data = (data >> 1) | (oldCarry << 7);
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+
+    return nbCycles;
 }
 
+// RRA op
+// Same as RR op, but special op for the A register
+// done in 1 cycle instead of 2
+// Register A is index 7
 uint8_t Z80Processor::RRA(uint8_t opcode)
 {
-    return 0;
+    RR(0x07);
+    return 1;
 }
 
+// RRC Op
+// Shift a given data to the right and reintroduce the lowest bit to the left
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: If we have an overflow
 uint8_t Z80Processor::RRC(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    m_AF.F.C = data & 0x01;
+
+    data = (data >> 1) | (m_AF.F.C << 7);
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+
+    return nbCycles;
 }
 
+// RRCA op
+// Same as RRC op, but special op for the A register
+// done in 1 cycle instead of 2
+// Register A is index 7
 uint8_t Z80Processor::RRCA(uint8_t opcode)
 {
-    return 0;
+    RRC(0x07);
+    return 1;
 }
 
+// SLA Op: Left arithmetic shift
+// Shift a given data to the left
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: If we have an overflow
 uint8_t Z80Processor::SLA(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    m_AF.F.C = (data & 0x80) > 0;
+
+    data <<= 1;
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+
+    return nbCycles;
 }
 
+// SRA Op : Right arithmetic shift
+// Shift a given data to the right. Most significant bit stays unchanged.
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: If we have an overflow
 uint8_t Z80Processor::SRA(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    m_AF.F.C = (data & 0x01) > 0;
+
+    data = (data >> 1) | (data & 0x80);
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+
+    return nbCycles;
 }
 
+// SRA Op : Right logical shift
+// Shift a given data to the right.
+// The opcode encode the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                                => 2 cycles
+// Index 6          -> read memory pointed by HL and write back => 4 cycles
+//
+// Flags:
+// Z: If result is 0
+// N: 0
+// H: 0
+// C: If we have an overflow
 uint8_t Z80Processor::SRL(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+
+    if (ReadByteFromRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    m_AF.F.C = (data & 0x01) > 0;
+
+    data >>= 1;
+    
+    if (WriteByteToRegisterIndex(registerIndex, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+
+    return nbCycles;
 }
 
 // Dispatcher instruction

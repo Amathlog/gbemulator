@@ -84,6 +84,7 @@ namespace GBEmulator
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
         void Reset();
+        void Clock();
 
         uint8_t ReadByte(uint16_t addr);
         void WriteByte(uint16_t addr, uint8_t data);
@@ -101,10 +102,11 @@ namespace GBEmulator
     private:
         // Utility functions
         void SetZeroFlag(uint16_t res) { m_AF.F.Z = (res == 0); }
-        // Will get the value of the register with a given index in data
-        // Return true if the data was read from memory (index 6)
-        // indicating that we have a additional cycle
-        bool GetByteFromRegisterIndex(uint8_t index, uint8_t& data);
+        // Will get/write the value of the register with a given index in data
+        // Return true if the data was read from/write to memory (index 6)
+        // indicating that we have an additional cycle
+        bool ReadByteFromRegisterIndex(uint8_t index, uint8_t& data);
+        bool WriteByteToRegisterIndex(uint8_t index, uint8_t data);
 
         // Return the number of cycles required by this opcode
         uint8_t DecodeOpcodeAndCall(uint8_t opcode);
