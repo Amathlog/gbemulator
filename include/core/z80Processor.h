@@ -99,6 +99,13 @@ namespace GBEmulator
         void ConnectBus(Bus* bus) { m_bus = bus; }
 
     private:
+        // Utility functions
+        void SetZeroFlag(uint16_t res) { m_AF.F.Z = (res == 0); }
+        // Will get the value of the register with a given index in data
+        // Return true if the data was read from memory (index 6)
+        // indicating that we have a additional cycle
+        bool GetByteFromRegisterIndex(uint8_t index, uint8_t& data);
+
         // Return the number of cycles required by this opcode
         uint8_t DecodeOpcodeAndCall(uint8_t opcode);
 

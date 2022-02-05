@@ -53,6 +53,46 @@ inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data)
     m_bus->WriteByte(addr, data);
 }
 
+bool Z80Processor::GetByteFromRegisterIndex(uint8_t index, uint8_t& data)
+{
+    data = 0;
+    bool extraCycle = false;
+
+    switch(index)
+    {
+    case 0:
+        data = m_BC.B;
+        break;
+    case 1:
+        data = m_BC.C;
+        break;
+    case 2:
+        data = m_DE.D;
+        break;
+    case 3:
+        data = m_DE.E;
+        break;
+    case 4:
+        data = m_HL.L;
+        break;
+    case 5:
+        data = m_HL.H;
+        break;
+    case 6:
+        data = ReadByte(m_HL.HL);
+        extraCycle = true;
+        break;
+    case 7:
+        data = m_AF.A;
+        break;
+    default:
+        data = 0;
+        break;
+    }
+
+    return extraCycle;
+}
+
 // Dispatchers
 uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 {
@@ -127,9 +167,30 @@ uint8_t Z80Processor::INC(uint8_t opcode)
 }
 
 // Bit operations instructions
+
+// BIT Op
+// Compare a specific bit in a given data
+// and set the zero flag accordingly
+// The opcode encode the bit we want to check and the register index
+// 
+// Index is encoded in the 3 lowest bits (0x07)
+// Index [0, 5] + 7 -> registers                 => 2 cycles
+// Index 6          -> read memory pointed by HL => 3 cycles
+//
+// Bit to check is encoded in bit 3 to 5 (0x38)
 uint8_t Z80Processor::BIT(uint8_t opcode)
 {
-    return 0;
+    uint8_t nbCycles = 2;
+    uint8_t bitToCheck = (opcode & 0x38) >> 3;
+    
+    uint8_t registerIndex = opcode & 0x07;
+    uint8_t data = 0;
+    if (GetByteFromRegisterIndex(registerIndex, data))
+        ++nbCycles;
+
+    SetZeroFlag(data & (1 << bitToCheck));
+
+    return nbCycles;
 }
 
 uint8_t Z80Processor::RES(uint8_t opcode)
