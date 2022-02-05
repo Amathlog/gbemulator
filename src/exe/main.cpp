@@ -1,4 +1,5 @@
 #include <exe/mainWindow.h>
+#include <core/bus.h>
 #include <filesystem>
 #include <vector>
 #include <algorithm>
@@ -32,6 +33,8 @@ int main(int argc, char **argv)
         if (path.is_relative())
             path = root / path;
     }
+
+    GBEmulator::Bus bus;
 
     auto previous_point = std::chrono::high_resolution_clock::now();
     constexpr bool showRealFPS = false;

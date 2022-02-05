@@ -2,7 +2,7 @@
 
 #include <core/utils/visitor.h>
 
-namespace NesEmulator
+namespace GBEmulator
 {
     namespace Utils 
     {
