@@ -1,6 +1,7 @@
 #include "core/z80Processor.h"
 #include <core/bus.h>
 #include <algorithm>
+#include <cstdint>
 
 using GBEmulator::Bus;
 
@@ -18,6 +19,69 @@ Bus::Bus()
     m_ROM.fill(0x00);
 
     Reset();
+}
+
+uint8_t Bus::ReadByte(uint16_t addr)
+{
+    uint8_t data;
+    // First try to read from the cartridge, if it returns true, it's done
+    if (m_cartridge && m_cartridge->ReadByte(addr, data))
+    {
+        // Nothing to do
+    }
+    // VRAM zone
+    else if (addr >= 0x8000 && addr < 0xA000)
+    {
+        // VRAM banks are 8kB in size
+        data = m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)];
+    }
+    // WRAM zone
+    else if (addr >= 0xC000 && addr < 0xE000)
+    {
+        // Get the WRAM bank
+        // Between 0xC000 and 0xCFFF it's bank 0
+        // Between 0xD000 and 0xDFFF it's bank switchable
+        uint8_t wramBank = (addr & 0x1000) ? m_currentWRAMBank : 0;
+        // WRAM banks are 4kB in size
+        data = m_WRAM[wramBank * 0x1000 + (addr & 0x0FFF)];
+    }
+    // Misc zone
+    else if (addr >= 0xE000)
+    {
+        // TODO
+    }
+
+    return data;
+}
+
+void Bus::WriteByte(uint16_t addr, uint8_t data)
+{
+    // First try to write from to cartridge, if it returns true, it's done
+    if (m_cartridge && m_cartridge->WriteByte(addr, data))
+    {
+        // Nothing to do
+    }
+    // VRAM zone
+    else if (addr >= 0x8000 && addr < 0xA000)
+    {
+        // VRAM banks are 8kB in size
+        m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)] = data;
+    }
+    // WRAM zone
+    else if (addr >= 0xC000 && addr < 0xE000)
+    {
+        // Get the WRAM bank
+        // Between 0xC000 and 0xCFFF it's bank 0
+        // Between 0xD000 and 0xDFFF it's bank switchable
+        uint8_t wramBank = (addr & 0x1000) ? m_currentWRAMBank : 0;
+        // WRAM banks are 4kB in size
+        m_WRAM[wramBank * 0x1000 + (addr & 0x0FFF)] = data;
+    }
+    // Misc zone
+    else if (addr >= 0xE000)
+    {
+        // TODO
+    }
 }
 
 void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const

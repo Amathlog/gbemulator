@@ -27,6 +27,12 @@ namespace GBEmulator
         void Reset();
         Mode GetCurrentMode() const { return m_mode; }
 
+        // Read a single byte of data
+        uint8_t ReadByte(uint16_t addr);
+
+        // Write a single byte of data
+        void WriteByte(uint16_t addr, uint8_t data);
+
         void InsertCartridge(const std::shared_ptr<Cartridge>& cartridge);
 
     private:
