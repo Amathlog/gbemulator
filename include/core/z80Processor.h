@@ -3,9 +3,13 @@
 #include <core/utils/visitor.h>
 #include <core/serializable.h>
 #include <cstdint>
+#include <type_traits>
+#include <array>
 
 namespace GBEmulator
 {
+    class Bus;
+
     // Registers
     union Flags
     {
@@ -74,10 +78,15 @@ namespace GBEmulator
     class Z80Processor : public ISerializable
     {
     public:
+        Z80Processor();
+
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
         void Reset();
+
+        uint8_t ReadByte(uint16_t addr);
+        void WriteByte(uint16_t addr, uint8_t data);
 
         RegisterAF GetAFRegister() const { return m_AF; } 
         RegisterBC GetBCRegister() const { return m_BC; } 
@@ -87,7 +96,56 @@ namespace GBEmulator
         uint16_t GetStackPointer() const { return m_SP; }
         uint16_t GetPrgCounter() const { return m_PC; }
 
+        void ConnectBus(Bus* bus) { m_bus = bus; }
+
     private:
+        // Return the number of cycles required by this opcode
+        uint8_t DecodeOpcodeAndCall(uint8_t opcode);
+
+        // Declaration of all "types" of opcodes
+        // We also pass the opcode to the function as
+        // it contains information like the register to read from/write to...
+        // Will return the number of cycles required
+        #define DECLARE_OP(OP) uint8_t OP(uint8_t opcode)
+
+        // Load operations
+        DECLARE_OP(LD);   DECLARE_OP(LDH);
+
+        // Arithmetic/Logic instructions
+        DECLARE_OP(ADD);  DECLARE_OP(ADC);  DECLARE_OP(SUB);
+        DECLARE_OP(SBC);  DECLARE_OP(AND);  DECLARE_OP(OR);
+        DECLARE_OP(XOR);  DECLARE_OP(CP);   DECLARE_OP(DEC);
+        DECLARE_OP(INC);
+
+        // Bit operations instructions
+        DECLARE_OP(BIT);  DECLARE_OP(RES);  DECLARE_OP(SET);
+        DECLARE_OP(SWAP);
+
+        // Bit shift instructions
+        DECLARE_OP(RL);   DECLARE_OP(RLA);  DECLARE_OP(RLC);
+        DECLARE_OP(RLCA); DECLARE_OP(RR);   DECLARE_OP(RRA);
+        DECLARE_OP(RRC);  DECLARE_OP(RRCA); DECLARE_OP(SLA);
+        DECLARE_OP(SRA);  DECLARE_OP(SRL);
+
+        // Dispatcher instruction
+        DECLARE_OP(DISP);
+
+        // Jumps and Subroutines
+        DECLARE_OP(CALL); DECLARE_OP(JP);   DECLARE_OP(JR);
+        DECLARE_OP(RET);  DECLARE_OP(RETI); DECLARE_OP(RST);
+
+        // Stack operations
+        DECLARE_OP(POP);  DECLARE_OP(PUSH); DECLARE_OP(LDSP);
+
+        // Misc instructions
+        DECLARE_OP(CCF);  DECLARE_OP(CPL);  DECLARE_OP(DAA);
+        DECLARE_OP(DI);   DECLARE_OP(EI);   DECLARE_OP(HALT);
+        DECLARE_OP(NOP);  DECLARE_OP(SCF);  DECLARE_OP(STOP);
+
+        // Invalid instruction
+        DECLARE_OP(XXX);
+
+        #undef DECLARE_OP
 
         // Registers
         RegisterAF m_AF;
@@ -99,5 +157,31 @@ namespace GBEmulator
         uint16_t m_PC;
 
         uint8_t m_cycles = 0;
+
+        // Other members
+        Bus* m_bus;
+
+        using OpCall = uint8_t(Z80Processor::*)(uint8_t);
+        using Z = Z80Processor;
+
+        static constexpr std::array<OpCall, 256> m_opcodesMap =
+        {
+            &Z::NOP,  &Z::LD,   &Z::LD,   &Z::INC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::RLCA, &Z::LD,   &Z::ADD,  &Z::LD,   &Z::DEC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::RRCA, 
+            &Z::STOP, &Z::LD,   &Z::LD,   &Z::INC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::RLA,  &Z::JR,   &Z::ADD,  &Z::LD,   &Z::DEC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::RRA, 
+            &Z::JR,   &Z::LD,   &Z::LD,   &Z::INC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::DAA,  &Z::JR,   &Z::ADD,  &Z::LD,   &Z::DEC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::CPL, 
+            &Z::JR,   &Z::LD,   &Z::LD,   &Z::INC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::SCF,  &Z::JR,   &Z::ADD,  &Z::LD,   &Z::DEC,  &Z::INC,  &Z::DEC,  &Z::LD,   &Z::CCF, 
+            &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD, 
+            &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD, 
+            &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD, 
+            &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::HALT, &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD,   &Z::LD, 
+            &Z::ADD,  &Z::ADD,  &Z::ADD,  &Z::ADD,  &Z::ADD,  &Z::ADD,  &Z::ADD,  &Z::ADD,  &Z::ADC,  &Z::ADC,  &Z::ADC,  &Z::ADC,  &Z::ADC,  &Z::ADC,  &Z::ADC,  &Z::ADC, 
+            &Z::SUB,  &Z::SUB,  &Z::SUB,  &Z::SUB,  &Z::SUB,  &Z::SUB,  &Z::SUB,  &Z::SUB,  &Z::SBC,  &Z::SBC,  &Z::SBC,  &Z::SBC,  &Z::SBC,  &Z::SBC,  &Z::SBC,  &Z::SBC, 
+            &Z::AND,  &Z::AND,  &Z::AND,  &Z::AND,  &Z::AND,  &Z::AND,  &Z::AND,  &Z::AND,  &Z::XOR,  &Z::XOR,  &Z::XOR,  &Z::XOR,  &Z::XOR,  &Z::XOR,  &Z::XOR,  &Z::XOR, 
+            &Z::OR,   &Z::OR,   &Z::OR,   &Z::OR,   &Z::OR,   &Z::OR,   &Z::OR,   &Z::OR,   &Z::CP,   &Z::CP,   &Z::CP,   &Z::CP,   &Z::CP,   &Z::CP,   &Z::CP,   &Z::CP,  
+            &Z::RET,  &Z::POP,  &Z::JP,   &Z::JP,   &Z::CALL, &Z::PUSH, &Z::ADD,  &Z::RST,  &Z::RET,  &Z::RET,  &Z::JP,   &Z::DISP, &Z::CALL, &Z::CALL, &Z::ADC,  &Z::RST, 
+            &Z::RET,  &Z::POP,  &Z::JP,   &Z::XXX,  &Z::CALL, &Z::PUSH, &Z::SUB,  &Z::RST,  &Z::RET,  &Z::RETI, &Z::JP,   &Z::XXX,  &Z::CALL, &Z::XXX,  &Z::SBC,  &Z::RST, 
+            &Z::LDH,  &Z::POP,  &Z::LD,   &Z::XXX,  &Z::XXX,  &Z::PUSH, &Z::AND,  &Z::RST,  &Z::ADD,  &Z::JP,   &Z::LD,   &Z::XXX,  &Z::XXX,  &Z::XXX,  &Z::XOR,  &Z::RST, 
+            &Z::LDH,  &Z::POP,  &Z::LD,   &Z::DI,   &Z::XXX,  &Z::PUSH, &Z::OR,   &Z::RST,  &Z::LDSP, &Z::LD,   &Z::LD,   &Z::EI,   &Z::XXX,  &Z::XXX,  &Z::CP,   &Z::RST, 
+        };
     };
 }

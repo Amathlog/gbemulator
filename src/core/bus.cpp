@@ -18,6 +18,9 @@ Bus::Bus()
     // TODO: Fill the rom with the right data
     m_ROM.fill(0x00);
 
+    // Connect to the cpu
+    m_cpu.ConnectBus(this);
+
     Reset();
 }
 
