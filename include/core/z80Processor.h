@@ -1,11 +1,5 @@
 #pragma once
 
-/***********************************************************
-Z80Processor class - Gameboy CPU
-
-Copyright Adrien Logut - 2022
-***********************************************************/
-
 #include <core/utils/visitor.h>
 #include <core/serializable.h>
 #include <cstdint>
