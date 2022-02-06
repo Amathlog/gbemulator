@@ -108,6 +108,13 @@ namespace GBEmulator
         bool ReadByteFromRegisterIndex(uint8_t index, uint8_t& data);
         bool WriteByteToRegisterIndex(uint8_t index, uint8_t data);
 
+        // Same than previous, but for words (u16)
+        // It can be register BC, DE and HF, and the stack pointer (SP)
+        // Since we can't fetch words in memory, only byte, we drop the bool
+        // return value (always false)
+        void ReadWordFromRegisterIndex(uint8_t index, uint16_t& data);
+        void WriteWordToRegisterIndex(uint8_t index, uint16_t data);
+
         // Return the number of cycles required by this opcode
         uint8_t DecodeOpcodeAndCall(uint8_t opcode);
 

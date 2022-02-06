@@ -70,7 +70,6 @@ void Z80Processor::Clock()
 
 bool Z80Processor::ReadByteFromRegisterIndex(uint8_t index, uint8_t& data)
 {
-    data = 0;
     bool extraCycle = false;
 
     switch(index)
@@ -110,7 +109,6 @@ bool Z80Processor::ReadByteFromRegisterIndex(uint8_t index, uint8_t& data)
 
 bool Z80Processor::WriteByteToRegisterIndex(uint8_t index, uint8_t data)
 {
-    data = 0;
     bool extraCycle = false;
 
     switch(index)
@@ -145,6 +143,49 @@ bool Z80Processor::WriteByteToRegisterIndex(uint8_t index, uint8_t data)
     }
 
     return extraCycle;
+}
+
+void Z80Processor::ReadWordFromRegisterIndex(uint8_t index, uint16_t& data)
+{
+    switch(index)
+    {
+    case 0:
+        data = m_BC.BC;
+        break;
+    case 1:
+        data = m_DE.DE;
+        break;
+    case 2:
+        data = m_HL.HL;
+        break;
+    case 3:
+        data = m_SP;
+        break;
+    default:
+        data = 0;
+        break;
+    }
+}
+
+void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
+{
+    switch(index)
+    {
+    case 0:
+        m_BC.BC = data;
+        break;
+    case 1:
+        m_DE.DE = data;
+        break;
+    case 2:
+        m_HL.HL = data;
+        break;
+    case 3:
+        m_SP = data;
+        break;
+    default:
+        break;
+    }
 }
 
 // Dispatchers
@@ -210,14 +251,110 @@ uint8_t Z80Processor::CP(uint8_t opcode)
     return 0;
 }
 
+// DEC op
+// Increment the value of the given data
+// and write it back
+// Lowest 4 bits:
+// - 0xB     -> 16 bits mode
+// - 0x5/0xD -> 8 bits mode
+// 2 cycles for 16 bits mode
+// 1 cycle for 8 bit mode in registers
+// 3 cycles for 8 bit mode in memory
+//
+// Flags (untouched in 16bits mode):
+// Z: If result is zero
+// N: 1
+// H: Set if borrow from bit 4.
+// C: Untouched
 uint8_t Z80Processor::DEC(uint8_t opcode)
 {
-    return 0;
+    if ((opcode & 0x0F) == 0x0B)
+    {
+        // 16 bits mode
+        uint16_t data = 0;
+        uint8_t index = opcode >> 4;
+        ReadWordFromRegisterIndex(index, data);
+
+        data--;
+        WriteWordToRegisterIndex(index, data);
+
+        return 2;
+    }
+
+    // 8 bit mode
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    uint8_t lowestBitIndex = (opcode & 0x08) > 0;
+    uint8_t index = ((opcode >> 4) << 1) | lowestBitIndex;
+
+    if(ReadByteFromRegisterIndex(index, data))
+        nbCycles++;
+
+    // TODO: Check this one
+    // In some docs, it's written: Set if borrow from bit 4.
+    // Not exactly sure if that's the right thing here.
+    m_AF.F.H = ((data & 0xF0) > 0) & ((data & 0x0F) == 0);
+
+    data--;
+
+    if (WriteByteToRegisterIndex(index, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 1;
+
+    return nbCycles;
 }
 
+// INC op
+// Increment the value of the given data
+// and write it back
+// Lowest 4 bits:
+// - 0x3     -> 16 bits mode
+// - 0x4/0xC -> 8 bits mode
+// 2 cycles for 16 bits mode
+// 1 cycle for 8 bit mode in registers
+// 3 cycles for 8 bit mode in memory
+//
+// Flags (untouched in 16bits mode):
+// Z: If result is zero
+// N: 0
+// H: Set if overflow from bit 3
+// C: Untouched
 uint8_t Z80Processor::INC(uint8_t opcode)
 {
-    return 0;
+    if ((opcode & 0x0F) == 0x03)
+    {
+        // 16 bits mode
+        uint16_t data = 0;
+        uint8_t index = opcode >> 4;
+        ReadWordFromRegisterIndex(index, data);
+
+        data++;
+        WriteWordToRegisterIndex(index, data);
+
+        return 2;
+    }
+
+    // 8 bit mode
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    uint8_t lowestBitIndex = (opcode & 0x08) > 0;
+    uint8_t index = ((opcode >> 4) << 1) | lowestBitIndex;
+
+    if(ReadByteFromRegisterIndex(index, data))
+        nbCycles++;
+
+    m_AF.F.H = (data & 0x0F) == 0x0F;
+
+    data++;
+    if (WriteByteToRegisterIndex(index, data))
+        nbCycles++;
+
+    SetZeroFlag(data);
+    m_AF.F.N = 0;
+
+    return nbCycles;
 }
 
 // Bit operations instructions
