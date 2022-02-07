@@ -174,6 +174,10 @@ namespace GBEmulator
 
         uint8_t m_cycles = 0;
 
+        // IME flags
+        bool m_IMEScheduled = false;
+        bool m_IMEEnabled = false;
+
         // Other members
         Bus* m_bus;
 

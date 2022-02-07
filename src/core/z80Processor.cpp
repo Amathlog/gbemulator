@@ -59,6 +59,14 @@ inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data)
 // counter if it is not zero.
 void Z80Processor::Clock()
 {
+    // IME enabling is done the next cycle after a EI instruction.
+    // Handle it here.
+    if (m_IMEScheduled)
+    {
+        m_IMEScheduled = false;
+        m_IMEEnabled = true;
+    }
+
     if (m_cycles == 0)
     {
         uint8_t opcode = ReadByte(m_PC++);
@@ -87,10 +95,10 @@ bool Z80Processor::ReadByteFromRegisterIndex(uint8_t index, uint8_t& data)
         data = m_DE.E;
         break;
     case 4:
-        data = m_HL.L;
+        data = m_HL.H;
         break;
     case 5:
-        data = m_HL.H;
+        data = m_HL.L;
         break;
     case 6:
         data = ReadByte(m_HL.HL);
@@ -126,10 +134,10 @@ bool Z80Processor::WriteByteToRegisterIndex(uint8_t index, uint8_t data)
         m_DE.E = data;
         break;
     case 4:
-        m_HL.L = data;
+        m_HL.H = data;
         break;
     case 5:
-        m_HL.H = data;
+        m_HL.L = data;
         break;
     case 6:
         WriteByte(m_HL.HL, data);
@@ -211,14 +219,94 @@ uint8_t Z80Processor::LDH(uint8_t opcode)
 }
 
 // Arithmetic/Logic instructions
+// ADD op
+// General addition
+// There are a lot of cases:
+// ADD A,r8: 0x80 -> 0x87: Add the value from a given register to A (1 or 2 cycles)
+// ADD HL,r16: 0x09/0x19/0x29/0x39: Add the value from a given register to HL (2 cycles)
+// ADD A,d8: 0xC6: Add the litteral value to A (2 cycles)
+// ADD SP,e8: 0xE8: Add the litteral signed value to SP (4 cycles)
 uint8_t Z80Processor::ADD(uint8_t opcode)
 {
-    return 0;
+    // Signed addition
+    if (opcode == 0xE8)
+    {
+        int8_t data = (int8_t)(ReadByte(m_PC++));
+        m_AF.F.H = ((data > 0) && ((m_SP & 0x000F) == 0x0F));
+        m_AF.F.C = ((data > 0) && ((m_SP & 0x0080) > 0));
+
+        m_SP += data;
+        m_AF.F.Z = 0;
+        m_AF.F.N = 0;
+        return 4;
+    }
+
+    // 16 bits mode
+    if ((opcode & 0x0F) == 0x09)
+    {
+        uint8_t index = opcode >> 4;
+        uint16_t data = 0;
+        ReadWordFromRegisterIndex(index, data);
+
+        m_AF.F.H = (data > 0) && (m_HL.HL & 0x0FFF) == 0x0FFF;
+
+        uint32_t temp = (uint32_t)data + (uint32_t)m_HL.HL;
+
+        m_AF.F.C = (temp & 0xFFFF0000) > 0;
+        m_HL.HL = (uint16_t)(temp & 0x0000FFFF);
+        m_AF.F.N = 0;
+
+        return 2;
+    }
+
+    // In the other cases, it's exactly the same than ADC
+    // but with a carry equal to 0
+    // We re-use the same code then
+    uint8_t overridenOpcode = opcode == 0xC6 ? 0xCE : opcode;
+    m_AF.F.C = 0;
+    return ADC(overridenOpcode);
 }
 
+// ADC op
+// Add the given data to A, with the carry
+// Nb Cycles:
+// From register: 1 cycle
+// From memory or literal value: 2 cycles
+//
+// Flags:
+// Z: If the result is 0
+// N: 0
+// H: If overflow from bit 3
+// C: If overflow from bit 7
 uint8_t Z80Processor::ADC(uint8_t opcode)
 {
-    return 0;
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    if (opcode == 0xCE)
+    {
+        // Literal value
+        data = ReadByte(m_PC++);
+        nbCycles++;
+    }
+    else
+    {
+        uint8_t index = opcode & 0x07;
+        if (ReadByteFromRegisterIndex(index, data))
+            nbCycles++;
+    }
+
+    m_AF.F.H = (data > 0 || m_AF.F.C) && (m_AF.A & 0x0F) == 0x0F;
+
+    uint16_t temp = (uint16_t)m_AF.A + (uint16_t)data + (uint16_t)m_AF.F.C;
+
+    m_AF.F.N = 0;
+    m_AF.F.C = (temp & 0xFF00) > 0;
+
+    m_AF.A = (uint8_t)(temp & 0x00FF);
+
+    SetZeroFlag(m_AF.A);
+
+    return nbCycles;
 }
 
 uint8_t Z80Processor::SUB(uint8_t opcode)
@@ -252,7 +340,7 @@ uint8_t Z80Processor::CP(uint8_t opcode)
 }
 
 // DEC op
-// Increment the value of the given data
+// Decrement the value of the given data
 // and write it back
 // Lowest 4 bits:
 // - 0xB     -> 16 bits mode
@@ -627,7 +715,7 @@ uint8_t Z80Processor::RR(uint8_t opcode)
 // Same as RR op, but special op for the A register
 // done in 1 cycle instead of 2
 // Register A is index 7
-uint8_t Z80Processor::RRA(uint8_t opcode)
+uint8_t Z80Processor::RRA(uint8_t /*opcode*/)
 {
     RR(0x07);
     return 1;
@@ -674,7 +762,7 @@ uint8_t Z80Processor::RRC(uint8_t opcode)
 // Same as RRC op, but special op for the A register
 // done in 1 cycle instead of 2
 // Register A is index 7
-uint8_t Z80Processor::RRCA(uint8_t opcode)
+uint8_t Z80Processor::RRCA(uint8_t /*opcode*/)
 {
     RRC(0x07);
     return 1;
@@ -862,14 +950,47 @@ uint8_t Z80Processor::RST(uint8_t opcode)
 }
 
 // Stack operations
+
+// POP op
+// Pop a word from the stack to the given register
+// Index is encoded in the opcode
+// Nb cycles: 3
+//
+// Flags:
+// Untouched if register BC, DE or HL
+// Set accordingly if register AF
 uint8_t Z80Processor::POP(uint8_t opcode)
 {
-    return 0;
+    uint16_t data = 0;
+    uint8_t index = (opcode >> 4) & 0x03;
+    
+    uint8_t lowData = ReadByte(m_SP++);
+    uint8_t highData = ReadByte(m_SP++);
+
+    data = ((uint16_t)highData << 8) | lowData;
+
+    WriteWordToRegisterIndex(index, data);
+
+    return 3;
 }
 
+// PUSH op
+// Push a word to the stack from the given register
+// Index is encoded in the opcode
+// Nb cycles: 4
+//
+// Flags: Untouched
 uint8_t Z80Processor::PUSH(uint8_t opcode)
 {
-    return 0;
+    uint16_t data = 0;
+    uint8_t index = (opcode >> 4) & 0x03;
+
+    ReadWordFromRegisterIndex(index, data);
+
+    WriteByte(--m_SP, (uint8_t)(data & 0x00FF));
+    WriteByte(--m_SP, (uint8_t)(data >> 8));
+
+    return 4;
 }
 
 uint8_t Z80Processor::LDSP(uint8_t opcode)
@@ -878,14 +999,35 @@ uint8_t Z80Processor::LDSP(uint8_t opcode)
 }
 
 // Misc instructions
-uint8_t Z80Processor::CCF(uint8_t opcode)
+
+// CCF op
+// Complement carry flag: C = ~C
+// Nb cycles: 1
+//
+// Flags:
+// N: 0
+// H: 0
+// C: Inverted
+uint8_t Z80Processor::CCF(uint8_t /*opcode*/)
 {
-    return 0;
+    m_AF.F.C = ~m_AF.F.C;
+    return 1;
 }
 
-uint8_t Z80Processor::CPL(uint8_t opcode)
+// CPL op
+// Complement accumulator: A = ~A
+// Nb cycles: 1
+//
+// Flags:
+// N: 1
+// H: 1
+// Z and C: Untouched
+uint8_t Z80Processor::CPL(uint8_t /*opcode*/)
 {
-    return 0;
+    m_AF.A = ~m_AF.A;
+    m_AF.F.N = 1;
+    m_AF.F.H = 1;
+    return 1;
 }
 
 // DAA op
@@ -902,7 +1044,7 @@ uint8_t Z80Processor::CPL(uint8_t opcode)
 // C: Set or reset, depending on the operation
 // Code was taken from https://forums.nesdev.org/viewtopic.php?t=15944
 // need to do another pass to understand it better
-uint8_t Z80Processor::DAA(uint8_t opcode)
+uint8_t Z80Processor::DAA(uint8_t /*opcode*/)
 {
     // Addition, adjust if (half-)carry occured or 
     // is the result is out-of-bounds
@@ -937,14 +1079,26 @@ uint8_t Z80Processor::DAA(uint8_t opcode)
     return 1;
 }
 
-uint8_t Z80Processor::DI(uint8_t opcode)
+// DI op
+// Disable the IME flag. Immediate
+// Nb cycles: 1
+//
+// Flags: Untouched
+uint8_t Z80Processor::DI(uint8_t /*opcode*/)
 {
-    return 0;
+    m_IMEEnabled = false;
+    return 1;
 }
 
-uint8_t Z80Processor::EI(uint8_t opcode)
+// EI op
+// Enable the IME flag at the next cycle (cf comment in Clock function)
+// Nb cycles: 1
+//
+// Flags: Untouched
+uint8_t Z80Processor::EI(uint8_t /*opcode*/)
 {
-    return 0;
+    m_IMEScheduled = true;
+    return 1;
 }
 
 uint8_t Z80Processor::HALT(uint8_t opcode)
@@ -952,14 +1106,30 @@ uint8_t Z80Processor::HALT(uint8_t opcode)
     return 0;
 }
 
-uint8_t Z80Processor::NOP(uint8_t opcode)
+// NOP op
+// Do nothing
+// Nb cycles: 1
+//
+// Flags: Untouched
+uint8_t Z80Processor::NOP(uint8_t /*opcode*/)
 {
-    return 0;
+    return 1;
 }
 
-uint8_t Z80Processor::SCF(uint8_t opcode)
+// SCF op
+// Set carry flag to 1
+// 1 cycle
+// 
+// Flags:
+// C: 1
+// N: 0
+// H: 0
+uint8_t Z80Processor::SCF(uint8_t /*opcode*/)
 {
-    return 0;
+    m_AF.F.C = 1;
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
+    return 1;
 }
 
 
