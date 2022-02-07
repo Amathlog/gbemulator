@@ -888,9 +888,53 @@ uint8_t Z80Processor::CPL(uint8_t opcode)
     return 0;
 }
 
+// DAA op
+// Adjust the result of a binary addition/subtraction to
+// retroactively turn it into a BCD addition/subtraction
+// cf https://en.wikipedia.org/wiki/Binary-coded_decimal
+// It uses flags N and H and adjust the value in the accumulator (A)
+// Takes 1 cycle
+//
+// Flags:
+// Z: If result is 0
+// H: 0
+// N: Untouched
+// C: Set or reset, depending on the operation
+// Code was taken from https://forums.nesdev.org/viewtopic.php?t=15944
+// need to do another pass to understand it better
 uint8_t Z80Processor::DAA(uint8_t opcode)
 {
-    return 0;
+    // Addition, adjust if (half-)carry occured or 
+    // is the result is out-of-bounds
+    if (m_AF.F.N == 0)
+    {
+        if (m_AF.F.C == 1 || (m_AF.A > 0x99))
+        {
+            m_AF.A += 0x60;
+            m_AF.F.C = 1;
+        }
+        if (m_AF.F.H == 1 || (m_AF.A & 0x0f) > 0x09)
+        {
+            m_AF.A += 0x06;
+        }
+    }
+    // Subtraction, only adjust if (half-)carry occured
+    else
+    {
+        if (m_AF.F.C)
+        {
+            m_AF.A -= 0x60;
+        }
+        if (m_AF.F.H)
+        {
+            m_AF.A -= 0x06;
+        }
+    }
+
+    SetZeroFlag(m_AF.A);
+    m_AF.F.H = 0;
+    
+    return 1;
 }
 
 uint8_t Z80Processor::DI(uint8_t opcode)
