@@ -219,6 +219,7 @@ uint8_t Z80Processor::LDH(uint8_t opcode)
 }
 
 // Arithmetic/Logic instructions
+
 // ADD op
 // General addition
 // There are a lot of cases:
@@ -365,24 +366,158 @@ uint8_t Z80Processor::SBC(uint8_t opcode)
     return nbCycles;
 }
 
+// AND op
+// Bitwise and between the given data and A
+// Nb Cycles:
+// From register: 1 cycle
+// From memory or literal value: 2 cycles
+//
+// Flags:
+// Z: If the result is 0
+// N: 0
+// H: 1
+// C: 0
 uint8_t Z80Processor::AND(uint8_t opcode)
 {
-    return 0;
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    if (opcode == 0xE6)
+    {
+        // Literal value
+        data = ReadByte(m_PC++);
+        nbCycles++;
+    }
+    else
+    {
+        uint8_t index = opcode & 0x07;
+        if (ReadByteFromRegisterIndex(index, data))
+            nbCycles++;
+    }
+
+    m_AF.F.H = 1;
+    m_AF.F.C = 0;
+    m_AF.F.N = 0;
+
+    m_AF.A &= data;
+
+    SetZeroFlag(m_AF.A);
+
+    return nbCycles;
 }
 
+// OR op
+// Bitwise or between the given data and A
+// Nb Cycles:
+// From register: 1 cycle
+// From memory or literal value: 2 cycles
+//
+// Flags:
+// Z: If the result is 0
+// N: 0
+// H: 0
+// C: 0
 uint8_t Z80Processor::OR(uint8_t opcode)
 {
-    return 0;
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    if (opcode == 0xF6)
+    {
+        // Literal value
+        data = ReadByte(m_PC++);
+        nbCycles++;
+    }
+    else
+    {
+        uint8_t index = opcode & 0x07;
+        if (ReadByteFromRegisterIndex(index, data))
+            nbCycles++;
+    }
+
+    m_AF.F.H = 0;
+    m_AF.F.C = 0;
+    m_AF.F.N = 0;
+
+    m_AF.A |= data;
+    
+    SetZeroFlag(m_AF.A);
+
+    return nbCycles;
 }
 
+// XOR op
+// Bitwise xor between the given data and A
+// Nb Cycles:
+// From register: 1 cycle
+// From memory or literal value: 2 cycles
+//
+// Flags:
+// Z: If the result is 0
+// N: 0
+// H: 0
+// C: 0
 uint8_t Z80Processor::XOR(uint8_t opcode)
 {
-    return 0;
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    if (opcode == 0xEE)
+    {
+        // Literal value
+        data = ReadByte(m_PC++);
+        nbCycles++;
+    }
+    else
+    {
+        uint8_t index = opcode & 0x07;
+        if (ReadByteFromRegisterIndex(index, data))
+            nbCycles++;
+    }
+
+    m_AF.F.H = 0;
+    m_AF.F.C = 0;
+    m_AF.F.N = 0;
+
+    m_AF.A ^= data;
+    
+    SetZeroFlag(m_AF.A);
+
+    return nbCycles;
 }
 
+// CP op
+// Like general subtraction, but without storing the result.
+// Used to compare values, and set flags
+// Nb Cycles:
+// From register: 1 cycle
+// From memory or literal value: 2 cycles
+//
+// Flags:
+// Z: If the result is 0
+// N: 1
+// H: If borrow from bit 4
+// C: If borrow (data > A)
 uint8_t Z80Processor::CP(uint8_t opcode)
 {
-    return 0;
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    if (opcode == 0xFE)
+    {
+        // Literal value
+        data = ReadByte(m_PC++);
+        nbCycles++;
+    }
+    else
+    {
+        uint8_t index = opcode & 0x07;
+        if (ReadByteFromRegisterIndex(index, data))
+            nbCycles++;
+    }
+
+    m_AF.F.H = (data > 0) && (m_AF.A & 0x0F) == 0x00;
+    m_AF.F.C = data > m_AF.A;
+    m_AF.F.N = 1;
+    m_AF.F.Z = m_AF.A == data;
+
+    return nbCycles;
 }
 
 // DEC op
