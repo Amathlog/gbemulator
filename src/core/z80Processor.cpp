@@ -196,6 +196,20 @@ void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
     }
 }
 
+inline void Z80Processor::PushWordToStack(uint16_t data)
+{
+    WriteByte(--m_SP, (uint8_t)(data & 0x00FF));
+    WriteByte(--m_SP, (uint8_t)(data >> 8));
+}
+
+inline uint16_t Z80Processor::PopWordFromStack()
+{
+    uint16_t lowData = ReadByte(m_SP++);
+    uint16_t highData = ReadByte(m_SP++);
+
+    return (highData << 8) | lowData;
+}
+
 // Dispatchers
 uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 {
@@ -1100,14 +1114,82 @@ uint8_t Z80Processor::DISP(uint8_t /*opcode*/)
 }
 
 // Jumps and Subroutines
+// CALL op
+// Call address given by litteral word.
+// Will push the address of the next instruction on the stack
+// and then set the PC to the wanted address
+// Nb cycles: 6
+// Can also be a conditional call (depending on flags).
+// If the condition is not met it takes 3 cycles (6 otherwise)
 uint8_t Z80Processor::CALL(uint8_t opcode)
 {
-    return 0;
+    // Always read the address, even if we don't jump
+    uint16_t lowAddr = ReadByte(m_PC++);
+    uint16_t highAddr = ReadByte(m_PC++);
+    uint16_t addr = (highAddr << 8) | lowAddr;
+
+    // 0xC4 => Z not set
+    // 0xD4 => C not set
+    // 0xCC => Z set
+    // 0xDC => C set
+    // 0xCD => Always jump
+    bool conditionMet = 
+        (opcode == 0xC4 && !m_AF.F.Z) ||
+        (opcode == 0xD4 && !m_AF.F.C) ||
+        (opcode == 0xCC && m_AF.F.Z) ||
+        (opcode == 0xDC && m_AF.F.C) ||
+        (opcode == 0xCD);
+
+    if (!conditionMet)
+        return 3;
+
+    // Next instrcution is push on the stack
+    PushWordToStack(m_PC);
+
+    // Then jump
+    m_PC = addr;
+
+    return 6;
 }
 
+// JP op
+// Jump to address given by litteral word.
+// Set the PC to the wanted address
+// JP n16: Jump to address n16, nb cycles 4
+// JP cc,n16: Conditional jump, depending on flags. Nb cycles 4 (3 if condition not met)
+// JP HL: Jump to address pointed by HL, nb cycles 1
 uint8_t Z80Processor::JP(uint8_t opcode)
 {
-    return 0;
+    // Jump to HL
+    if (opcode == 0xE9)
+    {
+        m_PC = m_HL.HL;
+        return 1;
+    }
+
+    // Always read the address, even if we don't jump
+    uint16_t lowAddr = ReadByte(m_PC++);
+    uint16_t highAddr = ReadByte(m_PC++);
+    uint16_t addr = (highAddr << 8) | lowAddr;
+
+    // 0xC2 => Z not set
+    // 0xD2 => C not set
+    // 0xCA => Z set
+    // 0xDA => C set
+    // 0xC3 => Always jump
+    bool conditionMet = 
+        (opcode == 0xC2 && !m_AF.F.Z) ||
+        (opcode == 0xD2 && !m_AF.F.C) ||
+        (opcode == 0xCA && m_AF.F.Z) ||
+        (opcode == 0xDA && m_AF.F.C) ||
+        (opcode == 0xC3);
+
+    if (!conditionMet)
+        return 3;
+
+    m_PC = addr;
+
+    return 4;
 }
 
 uint8_t Z80Processor::JR(uint8_t opcode)
@@ -1142,13 +1224,8 @@ uint8_t Z80Processor::RST(uint8_t opcode)
 // Set accordingly if register AF
 uint8_t Z80Processor::POP(uint8_t opcode)
 {
-    uint16_t data = 0;
+    uint16_t data = PopWordFromStack();
     uint8_t index = (opcode >> 4) & 0x03;
-    
-    uint8_t lowData = ReadByte(m_SP++);
-    uint8_t highData = ReadByte(m_SP++);
-
-    data = ((uint16_t)highData << 8) | lowData;
 
     WriteWordToRegisterIndex(index, data);
 
@@ -1168,8 +1245,7 @@ uint8_t Z80Processor::PUSH(uint8_t opcode)
 
     ReadWordFromRegisterIndex(index, data);
 
-    WriteByte(--m_SP, (uint8_t)(data & 0x00FF));
-    WriteByte(--m_SP, (uint8_t)(data >> 8));
+    PushWordToStack(data);
 
     return 4;
 }
