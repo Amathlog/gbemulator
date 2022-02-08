@@ -309,14 +309,60 @@ uint8_t Z80Processor::ADC(uint8_t opcode)
     return nbCycles;
 }
 
+// SUB op
+// General subtraction
+// There are a less cases than addition:
+// SUB A,r8: 0x80 -> 0x87: Subtract the value from a given register to A (1 or 2 cycles)
+// SUB A,d8: 0xC6: Subtract the litteral value to A (2 cycles)
 uint8_t Z80Processor::SUB(uint8_t opcode)
 {
-    return 0;
+    // In all cases, it's exactly the same than SBC
+    // but with a carry equal to 0
+    // We re-use the same code then
+    uint8_t overridenOpcode = opcode == 0xD6 ? 0xDE : opcode;
+    m_AF.F.C = 0;
+    return SBC(overridenOpcode);
 }
 
+// SBC op
+// Subtract the given data to A, with the carry
+// Nb Cycles:
+// From register: 1 cycle
+// From memory or literal value: 2 cycles
+//
+// Flags:
+// Z: If the result is 0
+// N: 1
+// H: If borrow from bit 4
+// C: If borrow (if data + carry > A)
 uint8_t Z80Processor::SBC(uint8_t opcode)
 {
-    return 0;
+    uint8_t data = 0;
+    uint8_t nbCycles = 1;
+    if (opcode == 0xDE)
+    {
+        // Literal value
+        data = ReadByte(m_PC++);
+        nbCycles++;
+    }
+    else
+    {
+        uint8_t index = opcode & 0x07;
+        if (ReadByteFromRegisterIndex(index, data))
+            nbCycles++;
+    }
+
+    m_AF.F.H = (data > 0 || m_AF.F.C) && (m_AF.A & 0x0F) == 0x00;
+    uint8_t oldCarry = m_AF.F.C;
+    m_AF.F.C = (data + m_AF.F.C) > m_AF.A;
+
+    m_AF.A -= (data + oldCarry);
+
+    m_AF.F.N = 1;
+
+    SetZeroFlag(m_AF.A);
+
+    return nbCycles;
 }
 
 uint8_t Z80Processor::AND(uint8_t opcode)
