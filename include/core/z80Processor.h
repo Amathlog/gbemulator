@@ -118,6 +118,10 @@ namespace GBEmulator
         // Return the number of cycles required by this opcode
         uint8_t DecodeOpcodeAndCall(uint8_t opcode);
 
+        // Fetch data from program
+        uint8_t FetchByte();
+        uint16_t FetchWord();
+
         // Operate the stack
         void PushWordToStack(uint16_t data);
         uint16_t PopWordFromStack();

@@ -71,7 +71,7 @@ void Z80Processor::Clock()
 
     if (m_cycles == 0)
     {
-        uint8_t opcode = ReadByte(m_PC++);
+        uint8_t opcode = FetchByte();
         m_cycles = DecodeOpcodeAndCall(opcode);
     }
 
@@ -214,6 +214,18 @@ inline uint16_t Z80Processor::PopWordFromStack()
     return (highData << 8) | lowData;
 }
 
+inline uint8_t Z80Processor::FetchByte()
+{
+    return ReadByte(m_PC++);
+}
+
+inline uint16_t Z80Processor::FetchWord()
+{
+    uint16_t lsb = (uint16_t)FetchByte();
+    uint16_t msb = (uint16_t)FetchByte();
+    return (msb << 8) | lsb;
+}
+
 // Dispatchers
 uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 {
@@ -226,9 +238,134 @@ uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 /////////////////////////////////////////////////////////////////////
 
 // Load operations
+
+// LD op
+// Transfer data from one place to the other. It can be registers (8 or 16 bits),
+// litteral values (8 or 16 bits) or memory.
+// The rule for the number of cycles is:
+// 8 bits register to 8 bits registers: 1 cycle
+// Read from memory: +1 cycle
+// Write to memory: +1 cycle
+// Read a litteral byte: +1 cycle
+// Read a litteral word: +2 cycles
+// Flags: Untouched for all except 7th case
 uint8_t Z80Processor::LD(uint8_t opcode)
 {
-    return 0;
+    // First 4 rows of instructions
+    if ((opcode & 0x0F) <= 0x03)
+    {
+        uint8_t filteredOpcode = (opcode & 0x0F);
+        uint8_t index = (opcode >> 4) & 0x03;
+
+        // 1st case: Litteral word to 16bits register
+        // 3 cycles
+        if (filteredOpcode == 0x01)
+        {
+            uint16_t data = FetchWord();
+            WriteWordToRegisterIndex(index, data);
+            return 3;
+        }
+
+        // 2nd case: Accumulator to memory
+        // 3rd case: Accumulator from memory
+        // Index 2 and 3 are a bit different, since they designed both HL
+        // but it will be incremented (index 2) or decremented (index 3)
+        // after read/write
+        // 2 cycles
+        if (filteredOpcode == 0x02 || filteredOpcode == 0x0A)
+        {
+            uint16_t& reg = index == 0 ? m_BC.BC : (index == 1 ? m_DE.DE : m_HL.HL);
+
+            if (filteredOpcode == 0x02)
+                WriteByte(reg, m_AF.A);
+            else
+                m_AF.A = ReadByte(reg);
+
+            if (index == 2)
+                reg++;
+            else if (index == 3)
+                reg--;
+
+            return 2;
+        }
+
+        // 4th case: Stack pointer to memory (pointed by litteral word a16)
+        // Store LSB to a16 and MSB to a16 + 1
+        // 5 cycles
+        if (filteredOpcode == 0x08)
+        {
+            uint16_t addr = FetchWord();
+            WriteByte(addr, (uint8_t)(m_SP & 0x00FF));
+            WriteByte(addr + 1, (uint8_t)(m_SP >> 8));
+            return 5;
+        }
+
+        // 5th case: Litteral to register/memory
+        // 2 or 3 cycles
+        index = ((opcode >> 4) & 0x03) | ((filteredOpcode & 0x08) > 0);
+        uint8_t data = FetchByte();
+        return WriteByteToRegisterIndex(index, data) ? 3 : 2;
+    }
+
+    // 6th case: Accumulator to/from memory pointed by $FF00 + Carry
+    // 2 cycles
+    if (opcode == 0xE2 || opcode == 0xF2)
+    {
+        uint16_t addr = 0xFF00 + (m_AF.F.C);
+        if (opcode == 0xE2)
+            WriteByte(addr, m_AF.A);
+        else
+            m_AF.A = ReadByte(addr);
+
+        return 2;
+    }
+
+    // 7th case: Add signed litteral to SP and store value in HL
+    // 3 cycles
+    if (opcode == 0xF8)
+    {
+        int8_t offset = (int8_t)FetchByte();
+        m_AF.F.N = 0;
+        m_AF.F.Z = 0;
+        uint16_t newSP = m_SP + offset;
+        m_AF.F.C = (newSP & 0xFF00) > (m_SP & 0xFF00);
+        m_AF.F.H = (newSP & 0xFFF0) > (m_SP & 0xFFF0);
+        m_HL.HL = newSP;
+        return 3;
+    }
+
+    // 8th case: Load HL in SP
+    // 2 cycles
+    if (opcode == 0xF9)
+    {
+        m_SP = m_HL.HL;
+        return 2;
+    }
+
+    // 9th case: Accumulator to/from memory pointed by litteral word
+    // 4 cycles
+    if (opcode == 0xEA || opcode == 0xFA)
+    {
+        uint16_t addr = FetchWord();
+        if (opcode == 0xEA)
+            WriteByte(addr, m_AF.A);
+        else
+            m_AF.A = ReadByte(addr);
+
+        return 4;
+    }
+
+    // Final case: Register to register (or memory pointed by HL)
+    uint8_t writeIndex = (((opcode & 0x70) >> 5) << 1) | ((opcode & 0x08) > 0);
+    uint8_t readIndex = (opcode & 0x07);
+    uint8_t nbCycles = 1;
+    uint8_t data = 0;
+    if (ReadByteFromRegisterIndex(readIndex, data))
+        nbCycles++;
+    if (WriteByteToRegisterIndex(writeIndex, data))
+        nbCycles++;
+
+    return nbCycles;
 }   
 
 uint8_t Z80Processor::LDH(uint8_t opcode)
@@ -250,7 +387,7 @@ uint8_t Z80Processor::ADD(uint8_t opcode)
     // Signed addition
     if (opcode == 0xE8)
     {
-        int8_t data = (int8_t)(ReadByte(m_PC++));
+        int8_t data = (int8_t)(FetchByte());
         m_AF.F.H = ((data > 0) && ((m_SP & 0x000F) == 0x0F));
         m_AF.F.C = ((data > 0) && ((m_SP & 0x0080) > 0));
 
@@ -304,7 +441,7 @@ uint8_t Z80Processor::ADC(uint8_t opcode)
     if (opcode == 0xCE)
     {
         // Literal value
-        data = ReadByte(m_PC++);
+        data = FetchByte();
         nbCycles++;
     }
     else
@@ -402,7 +539,7 @@ uint8_t Z80Processor::AND(uint8_t opcode)
     if (opcode == 0xE6)
     {
         // Literal value
-        data = ReadByte(m_PC++);
+        data = FetchByte();
         nbCycles++;
     }
     else
@@ -441,7 +578,7 @@ uint8_t Z80Processor::OR(uint8_t opcode)
     if (opcode == 0xF6)
     {
         // Literal value
-        data = ReadByte(m_PC++);
+        data = FetchByte();
         nbCycles++;
     }
     else
@@ -480,7 +617,7 @@ uint8_t Z80Processor::XOR(uint8_t opcode)
     if (opcode == 0xEE)
     {
         // Literal value
-        data = ReadByte(m_PC++);
+        data = FetchByte();
         nbCycles++;
     }
     else
@@ -520,7 +657,7 @@ uint8_t Z80Processor::CP(uint8_t opcode)
     if (opcode == 0xFE)
     {
         // Literal value
-        data = ReadByte(m_PC++);
+        data = FetchByte();
         nbCycles++;
     }
     else
@@ -1082,7 +1219,7 @@ uint8_t Z80Processor::SRL(uint8_t opcode)
 uint8_t Z80Processor::DISP(uint8_t /*opcode*/)
 {
     // First get the second opcode
-    uint8_t opcode = ReadByte(m_PC++);
+    uint8_t opcode = FetchByte();
     
     switch (opcode >> 4)
     {
@@ -1128,9 +1265,7 @@ uint8_t Z80Processor::DISP(uint8_t /*opcode*/)
 uint8_t Z80Processor::CALL(uint8_t opcode)
 {
     // Always read the address, even if we don't jump
-    uint16_t lowAddr = ReadByte(m_PC++);
-    uint16_t highAddr = ReadByte(m_PC++);
-    uint16_t addr = (highAddr << 8) | lowAddr;
+    uint16_t addr = FetchWord();
 
     // 0xC4 => Z not set
     // 0xD4 => C not set
@@ -1172,9 +1307,7 @@ uint8_t Z80Processor::JP(uint8_t opcode)
     }
 
     // Always read the address, even if we don't jump
-    uint16_t lowAddr = ReadByte(m_PC++);
-    uint16_t highAddr = ReadByte(m_PC++);
-    uint16_t addr = (highAddr << 8) | lowAddr;
+    uint16_t addr = FetchWord();
 
     // 0xC2 => Z not set
     // 0xD2 => C not set
@@ -1204,7 +1337,7 @@ uint8_t Z80Processor::JP(uint8_t opcode)
 uint8_t Z80Processor::JR(uint8_t opcode)
 {
     // Always read the litteral, even if we don't jump
-    int8_t offset = (int8_t)ReadByte(m_PC++);
+    int8_t offset = (int8_t)FetchByte();
 
     // 0x20 => Z not set
     // 0x30 => C not set
@@ -1465,7 +1598,7 @@ uint8_t Z80Processor::SCF(uint8_t /*opcode*/)
 uint8_t Z80Processor::STOP(uint8_t opcode)
 {
     // Always read next byte
-    ReadByte(m_PC++);
+    FetchByte();
 
     // TODO
     return 2;
