@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <mutex>
 #include <chrono>
+#include <array>
 
 namespace GBEmulatorExe
 {

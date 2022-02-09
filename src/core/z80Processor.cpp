@@ -226,6 +226,50 @@ inline uint16_t Z80Processor::FetchWord()
     return (msb << 8) | lsb;
 }
 
+constexpr const char* Z80Processor::GetDebugStringForOp(uint8_t opcode)
+{
+    auto opFunc = m_opcodesMap[opcode];
+
+#define TEST_FUNC(x) if (opFunc == &Z80Processor::x) return #x
+
+    TEST_FUNC(LD);   TEST_FUNC(LDH);
+
+    // Arithmetic/Logic instructions
+    TEST_FUNC(ADD);  TEST_FUNC(ADC);  TEST_FUNC(SUB);
+    TEST_FUNC(SBC);  TEST_FUNC(AND);  TEST_FUNC(OR);
+    TEST_FUNC(XOR);  TEST_FUNC(CP);   TEST_FUNC(DEC);
+    TEST_FUNC(INC);
+
+    // Bit operations instructions
+    TEST_FUNC(BIT);  TEST_FUNC(RES);  TEST_FUNC(SET);
+    TEST_FUNC(SWAP);
+
+    // Bit shift instructions
+    TEST_FUNC(RL);   TEST_FUNC(RLA);  TEST_FUNC(RLC);
+    TEST_FUNC(RLCA); TEST_FUNC(RR);   TEST_FUNC(RRA);
+    TEST_FUNC(RRC);  TEST_FUNC(RRCA); TEST_FUNC(SLA);
+    TEST_FUNC(SRA);  TEST_FUNC(SRL);
+
+    // Dispatcher instruction
+    TEST_FUNC(DISP);
+
+    // Jumps and Subroutines
+    TEST_FUNC(CALL); TEST_FUNC(JP);   TEST_FUNC(JR);
+    TEST_FUNC(RET);  TEST_FUNC(RETI); TEST_FUNC(RST);
+
+    // Stack operations
+    TEST_FUNC(POP);  TEST_FUNC(PUSH); TEST_FUNC(LDSP);
+
+    // Misc instructions
+    TEST_FUNC(CCF);  TEST_FUNC(CPL);  TEST_FUNC(DAA);
+    TEST_FUNC(DI);   TEST_FUNC(EI);   TEST_FUNC(HALT);
+    TEST_FUNC(NOP);  TEST_FUNC(SCF);  TEST_FUNC(STOP);
+
+#undef TEST_FUNC
+
+    return "XXX";
+}
+
 // Dispatchers
 uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 {

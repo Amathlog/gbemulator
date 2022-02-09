@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <type_traits>
 #include <array>
+#include <string>
 
 namespace GBEmulator
 {
@@ -211,5 +212,7 @@ namespace GBEmulator
             &Z::LDH,  &Z::POP,  &Z::LD,   &Z::XXX,  &Z::XXX,  &Z::PUSH, &Z::AND,  &Z::RST,  &Z::ADD,  &Z::JP,   &Z::LD,   &Z::XXX,  &Z::XXX,  &Z::XXX,  &Z::XOR,  &Z::RST, 
             &Z::LDH,  &Z::POP,  &Z::LD,   &Z::DI,   &Z::XXX,  &Z::PUSH, &Z::OR,   &Z::RST,  &Z::LDSP, &Z::LD,   &Z::LD,   &Z::EI,   &Z::XXX,  &Z::XXX,  &Z::CP,   &Z::RST, 
         };
+
+        constexpr const char* GetDebugStringForOp(uint8_t opcode);
     };
 }

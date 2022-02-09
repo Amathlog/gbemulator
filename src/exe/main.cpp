@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     auto previous_point = std::chrono::high_resolution_clock::now();
     constexpr bool showRealFPS = false;
     constexpr size_t nbSamples = 120;
-    std::array<float, nbSamples> timeCounter;
+    //std::array<float, nbSamples> timeCounter;
     size_t ptr = 0;
 
     {
