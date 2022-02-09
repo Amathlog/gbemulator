@@ -1,6 +1,8 @@
 #include <core/z80Processor.h>
 #include <core/bus.h>
 #include <cstdint>
+#include <array>
+#include <sys/types.h>
 
 using GBEmulator::Z80Processor;
 
@@ -198,8 +200,10 @@ void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
 
 inline void Z80Processor::PushWordToStack(uint16_t data)
 {
-    WriteByte(--m_SP, (uint8_t)(data & 0x00FF));
+    // MSB
     WriteByte(--m_SP, (uint8_t)(data >> 8));
+    // LSB
+    WriteByte(--m_SP, (uint8_t)(data & 0x00FF));
 }
 
 inline uint16_t Z80Processor::PopWordFromStack()
@@ -1192,24 +1196,91 @@ uint8_t Z80Processor::JP(uint8_t opcode)
     return 4;
 }
 
+// JR op
+// Relative jump. Add the literral signed value to the current PC
+// Can be conditional, depending on the flags.
+// Nb cycles: 3 if jump, 2 if no jump
+// Flags: Untouched
 uint8_t Z80Processor::JR(uint8_t opcode)
 {
-    return 0;
+    // Always read the litteral, even if we don't jump
+    int8_t offset = (int8_t)ReadByte(m_PC++);
+
+    // 0x20 => Z not set
+    // 0x30 => C not set
+    // 0x28 => Z set
+    // 0x38 => C set
+    // 0x18 => Always jump
+    bool conditionMet = 
+        (opcode == 0x20 && !m_AF.F.Z) ||
+        (opcode == 0x30 && !m_AF.F.C) ||
+        (opcode == 0x28 && m_AF.F.Z) ||
+        (opcode == 0x38 && m_AF.F.C) ||
+        (opcode == 0x18);
+
+    if (!conditionMet)
+        return 2;
+
+    m_PC += offset;
+
+    return 3;
 }
 
+// RET op
+// Return from subroutine. Will pop the address from the stack.
+// Can be conditional, depending on the flags
+// Read from the stack only (and moving SP) only if we jump
+// Nb cycles: 4 if no condition, 2 if no jump and 5 if jump with condition
+// Flags: Untouched
 uint8_t Z80Processor::RET(uint8_t opcode)
 {
-    return 0;
+    // 0xC0 => Z not set
+    // 0xD0 => C not set
+    // 0xC8 => Z set
+    // 0xD8 => C set
+    // 0xC9 => Always jump
+    bool conditionMet = 
+        (opcode == 0xC0 && !m_AF.F.Z) ||
+        (opcode == 0xD0 && !m_AF.F.C) ||
+        (opcode == 0xC8 && m_AF.F.Z) ||
+        (opcode == 0xD8 && m_AF.F.C) ||
+        (opcode == 0xC9);
+
+    if (!conditionMet)
+        return 2;
+
+    m_PC = PopWordFromStack();
+
+    return (opcode == 0xC9) ? 4 : 5;
 }
 
+// RETI op
+// Equivalent of EI + RET, but the IME is set immediately
+// (instead of after next instruction)
+// Nb cycles: 4
+// Flags: Untouched
 uint8_t Z80Processor::RETI(uint8_t opcode)
 {
-    return 0;
+    m_PC = PopWordFromStack();
+    m_IMEEnabled = true;
+    return 4;
 }
 
+// RST Op
+// Same than CALL but jumping to predefined locations
+// (encoded in the opcode) and thus faster.
+// Nb cycles: 4
+// Flags: Untouched
 uint8_t Z80Processor::RST(uint8_t opcode)
 {
-    return 0;
+    uint8_t index = ((opcode >> 5) << 1) | (opcode & 0x08);
+    constexpr std::array<uint16_t, 8> addrTable = {
+        0x0000, 0x0008, 0x0010, 0x0018, 0x0020, 0x0028, 0x0030, 0x0038
+    };
+
+    m_PC = addrTable[index];
+
+    return 4;
 }
 
 // Stack operations
@@ -1360,7 +1431,8 @@ uint8_t Z80Processor::EI(uint8_t /*opcode*/)
 
 uint8_t Z80Processor::HALT(uint8_t opcode)
 {
-    return 0;
+    // TODO
+    return 1;
 }
 
 // NOP op
@@ -1392,11 +1464,15 @@ uint8_t Z80Processor::SCF(uint8_t /*opcode*/)
 
 uint8_t Z80Processor::STOP(uint8_t opcode)
 {
-    return 0;
+    // Always read next byte
+    ReadByte(m_PC++);
+
+    // TODO
+    return 2;
 }
 
 // Invalid instruction
 uint8_t Z80Processor::XXX(uint8_t opcode)
 {
-    return 0;
+    return 1;
 }
