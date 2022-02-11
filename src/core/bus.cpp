@@ -140,8 +140,24 @@ void Bus::Reset()
     m_currentWRAMBank = 1;
 }
 
+void Bus::ChangeMode(Mode newMode)
+{
+    if (!m_cartridge)
+        return;
+
+    if (newMode == Mode::GB && m_cartridge->GetHeader().CGBOnly ||
+        newMode == Mode::GBC && !m_cartridge->GetHeader().supportCGBMode)
+        return;
+
+    m_mode = newMode;
+    Reset();
+}
+
 void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
 {
     m_cartridge = cartridge;
     Reset();
+
+    // Set the current mode to the highest supported
+    m_mode = m_cartridge->GetHeader().supportCGBMode ? Mode::GBC : Mode::GB;
 }

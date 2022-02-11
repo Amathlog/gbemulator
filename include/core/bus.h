@@ -35,6 +35,10 @@ namespace GBEmulator
 
         void InsertCartridge(const std::shared_ptr<Cartridge>& cartridge);
 
+        // Change mode if possible.
+        // Will reset the game
+        void ChangeMode(Mode newMode);
+
     private:
         Z80Processor m_cpu;
         Mode m_mode;

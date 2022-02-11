@@ -1,8 +1,11 @@
+#include "core/cartridge.h"
 #include <exe/mainWindow.h>
 #include <core/bus.h>
 #include <filesystem>
+#include <memory>
 #include <vector>
 #include <algorithm>
+#include <core/utils/fileVisitor.h>
 
 
 namespace fs = std::filesystem;
@@ -22,9 +25,9 @@ int main(int argc, char **argv)
 #endif // WIN32
 
     // Mapper 000 also
-    auto path = root / "tests" / "test_roms" / "nestest.nes";
+    auto path = root / "tests" / "cpu_instrs.gb";
 
-    // path = root / "roms" / "smb.nes";
+    // path = root / "roms" / "pokemon_jaune.gb";
 
     // Check the arg, if there is a file to load
     if (argc > 1)
@@ -35,6 +38,10 @@ int main(int argc, char **argv)
     }
 
     GBEmulator::Bus bus;
+
+    GBEmulator::Utils::FileReadVisitor fileVisitor(path.string());  
+    auto cart = std::make_shared<GBEmulator::Cartridge>(fileVisitor);
+    bus.InsertCartridge(cart);
 
     auto previous_point = std::chrono::high_resolution_clock::now();
     constexpr bool showRealFPS = false;
@@ -52,52 +59,10 @@ int main(int argc, char **argv)
             previous_point = std::chrono::high_resolution_clock::now();
             while (!mainWindow.RequestedClose())
             {
-                if (!syncWithAudio)
-                {
-                    // do {
-                    //     bus.Clock();
-                    // } while (!bus.GetPPU().IsFrameComplete());
-                    // DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen(), bus.GetPPU().GetHeight() * bus.GetPPU().GetWidth()));
-
-
-                //     auto start_point = std::chrono::high_resolution_clock::now();
-                //     auto timeSpent = std::chrono::duration_cast<std::chrono::microseconds>(start_point - previous_point).count();
-                //     previous_point = std::chrono::high_resolution_clock::now();
-                //     timeSpent = std::min(timeSpent, 16666l);
-                    
-                //     constexpr double ppuPeriodUS = 1000000.0 / NesEmulator::Cst::NTSC_PPU_FREQUENCY;
-                //     size_t nbClocks = timeSpent / ppuPeriodUS;
-                //     for (auto i = 0; i < nbClocks; ++i)
-                //     {
-                //         bus.Clock();
-                //         if (bus.GetPPU().IsFrameComplete())
-                //             DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen(), bus.GetPPU().GetHeight() * bus.GetPPU().GetWidth()));
-                //     }
-
-                //     if constexpr (showRealFPS)
-                //     {
-                //         auto end_point = std::chrono::high_resolution_clock::now();
-                //         timeSpent = std::chrono::duration_cast<std::chrono::microseconds>(end_point - start_point).count();
-                //         double ratio = (double)(timeSpent) / (ppuPeriodUS * nbClocks); // < 1 = faster than realtime
-                //         timeCounter[ptr++] = 60.0f / (float)ratio;
-                //         if (ptr == nbSamples)
-                //         {
-                //             ptr = 0;
-                //             float res = 0;
-                //             for (auto x : timeCounter)
-                //             {
-                //                 res += x;
-                //             }
-                //             std::cout << "Real FPS: " << res / nbSamples << std::endl;
-                //         }
-                //     }
-                }
-
+                
                 mainWindow.Update(true);
             }
         }
-
-        // audioSystem.Shutdown();
     }
 
     return 0;

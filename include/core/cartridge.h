@@ -1,14 +1,38 @@
 #pragma once
 
 #include <core/serializable.h>
+#include <core/utils/visitor.h>
 #include <vector>
 #include <cstdint>
+#include <array>
 
 namespace GBEmulator
 {
+    struct Header
+    {
+        std::array<uint8_t, 0x30> nintendoLogo;
+        char title[17];
+        char manufacturerCode[5];
+        bool supportCGBMode;
+        bool CGBOnly;
+        uint16_t licenseeCode;
+        uint8_t sgbFlag;
+        uint8_t cartridgeType;
+        uint8_t nbRomBanks;
+        uint8_t nbRamBanks;
+        bool isJapaneseGame;
+        uint8_t maskRomVersionNumber;
+        uint8_t headerChecksum;
+        uint16_t globalChecksum;
+
+        void FillFromData(const uint8_t* data);
+    };
+
     class Cartridge : public ISerializable
     {
     public:
+        Cartridge(Utils::IReadVisitor& visitor);
+
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
@@ -22,7 +46,11 @@ namespace GBEmulator
 
         void Reset();
 
+        const Header& GetHeader() const { return m_header; }
+
     private:
+        Header m_header;
+
         std::vector<uint8_t> m_externalRAM;
         uint8_t m_currentExternalRAMBank = 0;
 
