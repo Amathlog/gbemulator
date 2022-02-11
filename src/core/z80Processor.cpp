@@ -364,21 +364,7 @@ uint8_t Z80Processor::LD(uint8_t opcode)
         return 2;
     }
 
-    // 7th case: Add signed litteral to SP and store value in HL
-    // 3 cycles
-    if (opcode == 0xF8)
-    {
-        int8_t offset = (int8_t)FetchByte();
-        m_AF.F.N = 0;
-        m_AF.F.Z = 0;
-        uint16_t newSP = m_SP + offset;
-        m_AF.F.C = (newSP & 0xFF00) > (m_SP & 0xFF00);
-        m_AF.F.H = (newSP & 0xFFF0) > (m_SP & 0xFFF0);
-        m_HL.HL = newSP;
-        return 3;
-    }
-
-    // 8th case: Load HL in SP
+    // 7th case: Load HL in SP
     // 2 cycles
     if (opcode == 0xF9)
     {
@@ -386,7 +372,7 @@ uint8_t Z80Processor::LD(uint8_t opcode)
         return 2;
     }
 
-    // 9th case: Accumulator to/from memory pointed by litteral word
+    // 8th case: Accumulator to/from memory pointed by litteral word
     // 4 cycles
     if (opcode == 0xEA || opcode == 0xFA)
     {
@@ -412,9 +398,21 @@ uint8_t Z80Processor::LD(uint8_t opcode)
     return nbCycles;
 }   
 
+// LDH op
+// Transfer accumulator to/from memory. Memory address is an offset of 1 byte
+// Offseting from 0xFF00
+// Nb cycles: 2
+// Flags: Untouched
 uint8_t Z80Processor::LDH(uint8_t opcode)
 {
-    return 0;
+    uint8_t offset = FetchByte();
+    uint16_t addr = 0xFF00 | offset;
+    if (opcode == 0xE0)
+        m_AF.A = ReadByte(addr);
+    else
+        WriteByte(addr, m_AF.A);
+
+    return 2;
 }
 
 // Arithmetic/Logic instructions
@@ -1498,9 +1496,24 @@ uint8_t Z80Processor::PUSH(uint8_t opcode)
     return 4;
 }
 
+// LDSP op
+// Add signed litteral to SP and store value in HL
+// Nb cycles: 3
+// Flags: 
+// N: 0
+// Z: 0
+// C: If overflow bit 7
+// H: If overflow bit 3
 uint8_t Z80Processor::LDSP(uint8_t opcode)
 {
-    return 0;
+    int8_t offset = (int8_t)FetchByte();
+    m_AF.F.N = 0;
+    m_AF.F.Z = 0;
+    uint16_t newSP = m_SP + offset;
+    m_AF.F.C = (newSP & 0xFF00) > (m_SP & 0xFF00);
+    m_AF.F.H = (newSP & 0xFFF0) > (m_SP & 0xFFF0);
+    m_HL.HL = newSP;
+    return 3;
 }
 
 // Misc instructions
