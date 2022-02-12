@@ -1,4 +1,6 @@
 #include "core/cartridge.h"
+#include "exe/messageService/coreMessageService.h"
+#include "exe/messageService/messages/coreMessage.h"
 #include <exe/mainWindow.h>
 #include <core/bus.h>
 #include <filesystem>
@@ -6,12 +8,14 @@
 #include <vector>
 #include <algorithm>
 #include <core/utils/fileVisitor.h>
+#include <exe/messageService/messageService.h>
+#include <exe/messageService/messages/screenPayload.h>
 
 
 namespace fs = std::filesystem;
 using namespace GBEmulatorExe;
 
-static bool enableAudioByDefault = true;
+static bool enableAudioByDefault = false;
 static bool syncWithAudio = false;
 
 int main(int argc, char **argv)
@@ -39,9 +43,11 @@ int main(int argc, char **argv)
 
     GBEmulator::Bus bus;
 
-    GBEmulator::Utils::FileReadVisitor fileVisitor(path.string());  
-    auto cart = std::make_shared<GBEmulator::Cartridge>(fileVisitor);
-    bus.InsertCartridge(cart);
+    GBEmulatorExe::CoreMessageService coreMessageService(bus, dir);
+    GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(&coreMessageService);
+
+    LoadNewGameMessage msg(path.string());
+    //GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(msg);
 
     auto previous_point = std::chrono::high_resolution_clock::now();
     constexpr bool showRealFPS = false;
@@ -51,7 +57,7 @@ int main(int argc, char **argv)
 
     {
         MainWindow mainWindow("GB/GBC Emulator", 160*5, 144*5, 160, 144);
-        // mainWindow.SetUserData(&bus);
+        mainWindow.SetUserData(&bus);
         mainWindow.ConnectController();
 
         // if (audioSystem.Initialize() || !enableAudioByDefault)
@@ -59,7 +65,21 @@ int main(int argc, char **argv)
             previous_point = std::chrono::high_resolution_clock::now();
             while (!mainWindow.RequestedClose())
             {
+                auto start_point = std::chrono::high_resolution_clock::now();
+                auto timeSpent = std::chrono::duration_cast<std::chrono::microseconds>(start_point - previous_point).count();
+                previous_point = std::chrono::high_resolution_clock::now();
+                timeSpent = std::min(timeSpent, 16666l);
                 
+                double cpuPeriodUS = 1000000.0 / bus.GetCurrentFrequency();
+                size_t nbClocks = timeSpent / cpuPeriodUS;
+
+                for (auto i = 0; i < nbClocks; ++i)
+                {
+                    bus.Clock();
+                    // if (bus.GetPPU().IsFrameComplete())
+                    //     DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen(), bus.GetPPU().GetHeight() * bus.GetPPU().GetWidth()));
+                }
+
                 mainWindow.Update(true);
             }
         }

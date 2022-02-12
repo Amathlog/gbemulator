@@ -41,7 +41,7 @@ void Image::Draw()
         return;
 
     int paletteLocation = glGetUniformLocation(m_shader.GetProgramId(), "palette");
-    // glUniform3fv(paletteLocation, 64, NesEmulator::Palette::GetPaletteFloat());
+    // glUniform3fv(paletteLocation, 64, GBEmulator::Palette::GetPaletteFloat());
 
     int screenFormatLocation = glad_glGetUniformLocation(m_shader.GetProgramId(), "screenFormat");
     glUniform2fv(screenFormatLocation, 1, m_imageFormat);

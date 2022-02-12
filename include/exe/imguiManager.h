@@ -1,8 +1,6 @@
 #pragma once
 
-// #include <core/constants.h>
 #include <string>
-// #include <new_exe/messageService/messages/screenPayload.h>
 #include <exe/rendering/image.h>
 #include <array>
 

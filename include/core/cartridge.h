@@ -47,9 +47,12 @@ namespace GBEmulator
         void Reset();
 
         const Header& GetHeader() const { return m_header; }
+        const std::string& GetSHA1() const { return m_sha1; }
 
     private:
         Header m_header;
+
+        std::string m_sha1;
 
         std::vector<uint8_t> m_externalRAM;
         uint8_t m_currentExternalRAMBank = 0;

@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cassert>
 #include <sys/types.h>
+#include <core/utils/sha1.h>
 
 using GBEmulator::Cartridge;
 using GBEmulator::Header;
@@ -93,6 +94,11 @@ Cartridge::Cartridge(Utils::IReadVisitor& visitor)
 
     // Create the mapper
     // TODO
+
+    // When all is done, compute the SHA1 of the ROM
+    Utils::SHA1 sha1;
+    sha1.update(m_prgData);
+    m_sha1 = sha1.final();
 }
 
 void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const

@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cassert>
+#include <exe/messageService/screenMessageService.h>
 
 using GBEmulatorExe::Screen;
 
@@ -16,15 +17,15 @@ Screen::Screen(unsigned internalResWidth, unsigned internalResHeight)
 
     m_initialized = true;
 
-    // m_screenMessageService = std::make_unique<ScreenMessageService>(*this);
-    // DispatchMessageServiceSingleton::GetInstance().Connect(m_screenMessageService.get());
+    m_screenMessageService = std::make_unique<ScreenMessageService>(*this);
+    DispatchMessageServiceSingleton::GetInstance().Connect(m_screenMessageService.get());
 
     m_lastTick = std::chrono::high_resolution_clock::now();
 }
 
 Screen::~Screen()
 {
-    // DispatchMessageServiceSingleton::GetInstance().Disconnect(m_screenMessageService.get());
+    DispatchMessageServiceSingleton::GetInstance().Disconnect(m_screenMessageService.get());
 }
 
 void Screen::Update()

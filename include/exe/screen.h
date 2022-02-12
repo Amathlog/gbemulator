@@ -1,6 +1,5 @@
 #pragma once
 
-// #include <new_exe/messageService/messages/screenPayload.h>
 #include <exe/rendering/image.h>
 #include <memory>
 #include <vector>
@@ -11,7 +10,7 @@
 
 namespace GBEmulatorExe
 {
-    // class ScreenMessageService;
+    class ScreenMessageService;
     
     class Screen
     {
@@ -37,7 +36,7 @@ namespace GBEmulatorExe
         Image m_image;
         bool m_initialized = false;
 
-        // std::unique_ptr<ScreenMessageService> m_screenMessageService;
+        std::unique_ptr<ScreenMessageService> m_screenMessageService;
 
         std::array<float, 100> m_frametimes = {};
         size_t m_frametimeOffset = 0;

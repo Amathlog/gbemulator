@@ -11,6 +11,8 @@
 
 #include <iostream>
 #include <thread>
+#include <exe/messageService/messageService.h>
+#include <exe/messageService/messages/screenMessage.h>
 
 using GBEmulatorExe::MainWindow;
 
@@ -19,7 +21,7 @@ namespace {
     {
         glViewport(0, 0, width, height);
         // Notify the screen that we have resized
-        // NesEmulatorGL::DispatchMessageServiceSingleton::GetInstance().Push(NesEmulatorGL::ResizeMessage(width, height));
+        GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(GBEmulatorExe::ResizeMessage(width, height));
     } 
 }
 
@@ -47,7 +49,7 @@ void MainWindow::InternalUpdate(bool externalSync)
     //     // No user data, something is wrong
     //     return;
 
-    // NesEmulator::Bus* bus = reinterpret_cast<NesEmulator::Bus*>(m_userData);
+    // GBEmulator::Bus* bus = reinterpret_cast<GBEmulator::Bus*>(m_userData);
 
     m_controller->Update();
 
@@ -84,7 +86,7 @@ void MainWindow::ConnectController()
         // No user data, something is wrong
         return;
 
-    // NesEmulator::Bus* bus = reinterpret_cast<NesEmulator::Bus*>(m_userData);
+    // GBEmulator::Bus* bus = reinterpret_cast<GBEmulator::Bus*>(m_userData);
     // bus->ConnectController(m_controller, 0);
 }
 

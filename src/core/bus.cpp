@@ -87,6 +87,21 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     }
 }
 
+void Bus::Clock()
+{
+    // No cartridge mean nothing to do
+    if (!m_cartridge)
+        return;
+
+    // CPU is clocked every 4 ticks
+    if (m_nbCycles % 4 == 0)
+    {
+        m_cpu.Clock();
+    }
+
+    m_nbCycles++;
+}
+
 void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
     // If we have no cartridge, nothing to do
@@ -100,6 +115,7 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_currentVRAMBank);
     visitor.WriteContainer(m_WRAM);
     visitor.WriteValue(m_currentWRAMBank);
+    visitor.WriteValue(m_nbCycles);
 }
 
 void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -115,6 +131,7 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_currentVRAMBank);
     visitor.ReadContainer(m_WRAM);
     visitor.ReadValue(m_currentWRAMBank);
+    visitor.ReadValue(m_nbCycles);
 }
 
 void Bus::Reset()
@@ -138,6 +155,8 @@ void Bus::Reset()
     // Each WRAM bank is 4kB in size and two banks can be "mapped" at the same time.
     // The first one (always) and another one (switchable in GBC mode, fixed to second bank in GB mode)
     m_currentWRAMBank = 1;
+
+    m_nbCycles = 0;
 }
 
 void Bus::ChangeMode(Mode newMode)

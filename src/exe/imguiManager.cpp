@@ -10,6 +10,11 @@
 #include <ImGuiFileBrowser.h>
 #include <string>
 #include <chrono>
+#include <exe/messageService/messageService.h>
+#include <exe/messageService/messages/coreMessage.h>
+#include <exe/messageService/messages/screenMessage.h>
+#include <exe/messageService/messages/screenPayload.h>
+
 
 using GBEmulatorExe::ImguiManager;
 
@@ -35,6 +40,13 @@ ImguiManager::ImguiManager(Window* window)
 
     m_requestSaveState.fill(false);
     m_requestLoadState.fill(false);
+
+    GetFormatMessage msg;
+    if (DispatchMessageServiceSingleton::GetInstance().Pull(msg))
+    {
+        m_currentFormat = msg.GetTypedPayload().m_format;
+        m_changeFormats[(unsigned)m_currentFormat] = true;
+    }
 }
 
 ImguiManager::~ImguiManager()
@@ -130,7 +142,7 @@ void ImguiManager::Update()
                 ImGui::EndMenu();
             }
 
-            ImGui::MenuItem("Enable Audio", nullptr, &m_isSoundEnabled);
+            // ImGui::MenuItem("Enable Audio", nullptr, &m_isSoundEnabled);
 
             ImGui::EndMenu();
         }
@@ -138,7 +150,7 @@ void ImguiManager::Update()
         if (ImGui::BeginMenu("Debug"))
         {
             ImGui::MenuItem("Show FPS", nullptr, &showFPS);
-            ImGui::MenuItem("Nametables", nullptr, &openNameTableWindow);
+            // ImGui::MenuItem("Nametables", nullptr, &openNameTableWindow);
             ImGui::EndMenu();
         }
 
@@ -148,43 +160,43 @@ void ImguiManager::Update()
     HandleFileExplorer();
     HandlePerf(showFPS);
 
-    // for (auto i = 0; i < MAX_SAVE_STATES; ++i)
-    // {
-    //     if (m_requestSaveState[i])
-    //     {
-    //         DispatchMessageServiceSingleton::GetInstance().Push(SaveStateMessage("", (int)i));
-    //         m_requestSaveState[i] = false;
-    //         break;
-    //     }
+    for (auto i = 0; i < MAX_SAVE_STATES; ++i)
+    {
+        if (m_requestSaveState[i])
+        {
+            DispatchMessageServiceSingleton::GetInstance().Push(SaveStateMessage("", (int)i));
+            m_requestSaveState[i] = false;
+            break;
+        }
 
-    //     if (m_requestLoadState[i])
-    //     {
-    //         DispatchMessageServiceSingleton::GetInstance().Push(LoadStateMessage("", (int)i));
-    //         m_requestLoadState[i] = false;
-    //         break;
-    //     }
-    // }
+        if (m_requestLoadState[i])
+        {
+            DispatchMessageServiceSingleton::GetInstance().Push(LoadStateMessage("", (int)i));
+            m_requestLoadState[i] = false;
+            break;
+        }
+    }
 
-    // // Check format
-    // for (auto i = 0; i < m_changeFormats.size(); ++i)
-    // {
-    //     if (m_changeFormats[i] && i != (size_t)m_currentFormat)
-    //     {
-    //         if (m_currentFormat != Format::UNDEFINED)
-    //             m_changeFormats[(unsigned)m_currentFormat] = false;
+    // Check format
+    for (auto i = 0; i < m_changeFormats.size(); ++i)
+    {
+        if (m_changeFormats[i] && i != (size_t)m_currentFormat)
+        {
+            if (m_currentFormat != Format::UNDEFINED)
+                m_changeFormats[(unsigned)m_currentFormat] = false;
 
-    //         m_currentFormat = (Format)i;
-    //         DispatchMessageServiceSingleton::GetInstance().Push(ChangeFormatMessage(m_currentFormat));
-    //         break;
-    //     }
-    // }
+            m_currentFormat = (Format)i;
+            DispatchMessageServiceSingleton::GetInstance().Push(ChangeFormatMessage(m_currentFormat));
+            break;
+        }
+    }
 
     // Check reset
-    // if (reset)
-    // {
-    //     DispatchMessageServiceSingleton::GetInstance().Push(ResetMessage());
-    //     reset = false;
-    // }
+    if (reset)
+    {
+        DispatchMessageServiceSingleton::GetInstance().Push(ResetMessage());
+        reset = false;
+    }
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -210,10 +222,10 @@ void ImguiManager::HandleFileExplorer()
     if(fileDialog.showFileDialog("Open File", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2(0, 0), ".nes"))
     {
         // Load a new file
-        // if (!fileDialog.selected_path.empty())
-        // {
-        //     DispatchMessageServiceSingleton::GetInstance().Push(LoadNewGameMessage(fileDialog.selected_path));
-        // }
+        if (!fileDialog.selected_path.empty())
+        {
+            DispatchMessageServiceSingleton::GetInstance().Push(LoadNewGameMessage(fileDialog.selected_path));
+        }
     }
 }
 

@@ -1,17 +1,17 @@
 #pragma once
 
-// #include <core/cartridge.h>
+#include <core/cartridge.h>
 #include <filesystem>
 
 namespace GBEmulatorExe 
 {
-    // inline std::string GetCartridgeUniqueID(const NesEmulator::Cartridge* cartridge)
-    // {
-    //     if (cartridge != nullptr)
-    //         return cartridge->GetSHA1();
+    inline std::string GetCartridgeUniqueID(const GBEmulator::Cartridge* cartridge)
+    {
+        if (cartridge != nullptr)
+            return cartridge->GetSHA1();
 
-    //     return "";
-    // }
+        return "";
+    }
 
     inline std::filesystem::path GetSaveFolder(std::filesystem::path exeDir, std::string uniqueID)
     {
