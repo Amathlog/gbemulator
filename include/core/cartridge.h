@@ -54,6 +54,8 @@ namespace GBEmulator
 
         std::string m_sha1;
 
+        bool m_ramEnabled = false;
+
         std::vector<uint8_t> m_externalRAM;
         uint8_t m_currentExternalRAMBank = 0;
 

@@ -120,6 +120,7 @@ void Cartridge::Reset()
     std::fill(m_externalRAM.begin(), m_externalRAM.end(), 0x00);
     m_currentExternalRAMBank = 0;
     m_currentPrgDataBank = 1;
+    m_ramEnabled = false;
 }
 
 bool Cartridge::ReadByte(uint16_t addr, uint8_t& data)
@@ -135,7 +136,7 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data)
         return true;
     }
     // RAM zone
-    else if (addr >= 0xA000 && addr < 0xC000)
+    else if (addr >= 0xA000 && addr < 0xC000 && m_ramEnabled)
     {
         // RAM banks are 8kB in size
         data = m_externalRAM[m_currentExternalRAMBank * 0x2000 + (addr & 0x1FFF)];
@@ -148,7 +149,7 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data)
 bool Cartridge::WriteByte(uint16_t addr, uint8_t data)
 {
     // We can only write to the RAM
-    if (addr >= 0xA000 && addr < 0xC000)
+    if (addr >= 0xA000 && addr < 0xC000 && m_ramEnabled)
     {
         // RAM banks are 8kB in size
         m_externalRAM[m_currentExternalRAMBank * 0x2000 + (addr & 0x1FFF)] = data;

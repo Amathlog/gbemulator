@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(&coreMessageService);
 
     LoadNewGameMessage msg(path.string());
-    //GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(msg);
+    GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(msg);
 
     auto previous_point = std::chrono::high_resolution_clock::now();
     constexpr bool showRealFPS = false;
