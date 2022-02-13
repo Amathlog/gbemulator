@@ -85,7 +85,7 @@ namespace GBEmulator
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
         void Reset();
-        void Clock();
+        bool Clock();
 
         uint8_t ReadByte(uint16_t addr);
         void WriteByte(uint16_t addr, uint8_t data);

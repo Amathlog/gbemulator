@@ -28,7 +28,10 @@ namespace GBEmulator
         void Reset();
         Mode GetCurrentMode() const { return m_mode; }
 
-        void Clock();
+        bool IsInBreak() const { return m_isInBreakMode; }
+        void BreakContinue() { m_isInBreakMode = !m_isInBreakMode; }
+
+        bool Clock();
 
         // Read a single byte of data
         uint8_t ReadByte(uint16_t addr);
@@ -50,7 +53,7 @@ namespace GBEmulator
 
         double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? 8338608.0 : 4194304.0; }
 
-    private:
+    private:        
         Z80Processor m_cpu;
         Mode m_mode;
 
@@ -66,5 +69,7 @@ namespace GBEmulator
 
         std::shared_ptr<Cartridge> m_cartridge;
         size_t m_nbCycles;
+
+        bool m_isInBreakMode = false;
     };
 }

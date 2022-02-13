@@ -1,8 +1,9 @@
+#include <cstdint>
 #include <exe/messageService/message.h>
 #include <exe/messageService/messages/coreMessage.h>
 #include <exe/messageService/coreMessageService.h>
 #include <exe/messageService/messages/corePayload.h>
-// #include <exe/messageService/messages/debugPayload.h>
+#include <exe/messageService/messages/debugPayload.h>
 #include <core/utils/fileVisitor.h>
 #include <core/utils/vectorVisitor.h>
 #include <core/bus.h>
@@ -35,29 +36,53 @@ bool CreateFolders(const std::string& file)
 
 bool CoreMessageService::Push(const Message &message)
 {
-    if (message.GetType() != DefaultMessageType::CORE)
+    if (message.GetType() != DefaultMessageType::CORE && message.GetType() != DefaultMessageType::DEBUG)
         return true;
     
-    auto payload = reinterpret_cast<const CorePayload*>(message.GetPayload());
-
-    switch(payload->m_type)
+    if (message.GetType() == DefaultMessageType::CORE)
     {
-    case DefaultCoreMessageType::LOAD_NEW_GAME:
-        return LoadNewGame(payload->m_data);
-    case DefaultCoreMessageType::SAVE_GAME:
-        return SaveGame(payload->m_data);
-    case DefaultCoreMessageType::LOAD_SAVE:
-        return LoadSaveGame(payload->m_data);
-    case DefaultCoreMessageType::LOAD_STATE:
-        return LoadState(payload->m_data, payload->m_saveStateNumber);
-    case DefaultCoreMessageType::SAVE_STATE:
-        return SaveState(payload->m_data, payload->m_saveStateNumber);
-    case DefaultCoreMessageType::CHANGE_MODE:
-        m_bus.ChangeMode(payload->m_mode);
-        return true;
-    case DefaultCoreMessageType::RESET:
-        m_bus.Reset();
-        return true;
+        auto payload = reinterpret_cast<const CorePayload*>(message.GetPayload());
+
+        switch(payload->m_type)
+        {
+        case DefaultCoreMessageType::LOAD_NEW_GAME:
+            return LoadNewGame(payload->m_data);
+        case DefaultCoreMessageType::SAVE_GAME:
+            return SaveGame(payload->m_data);
+        case DefaultCoreMessageType::LOAD_SAVE:
+            return LoadSaveGame(payload->m_data);
+        case DefaultCoreMessageType::LOAD_STATE:
+            return LoadState(payload->m_data, payload->m_saveStateNumber);
+        case DefaultCoreMessageType::SAVE_STATE:
+            return SaveState(payload->m_data, payload->m_saveStateNumber);
+        case DefaultCoreMessageType::CHANGE_MODE:
+            m_bus.ChangeMode(payload->m_mode);
+            return true;
+        case DefaultCoreMessageType::RESET:
+            m_bus.Reset();
+            return true;
+        }
+    }
+    else if (message.GetType() == DefaultMessageType::DEBUG)
+    {
+        auto payload = reinterpret_cast<const DebugPayload*>(message.GetPayload());
+
+        switch (payload->m_type)
+        {
+        case DefaultDebugMessageType::STEP:
+        {
+            if (!m_bus.IsInBreak())
+                return false;
+            
+            while (!m_bus.Clock()){}
+            return true;
+        }
+        case DefaultDebugMessageType::BREAK_CONTINUE:
+        {
+            m_bus.BreakContinue();
+            return true;
+        }
+        }
     }
 
     return true;
@@ -79,17 +104,24 @@ bool CoreMessageService::Pull(Message &message)
             return true;
         }
     }
-    // else if (message.GetType() == DefaultMessageType::DEBUG)
-    // {
-    //     auto payload = reinterpret_cast<DebugPayload*>(message.GetPayload());
+    else if (message.GetType() == DefaultMessageType::DEBUG)
+    {
+        auto payload = reinterpret_cast<DebugPayload*>(message.GetPayload());
 
-    //     switch (payload->m_type)
-    //     {
-    //     case DefaultDebugMessageType::READ_NAMETABLES:
-    //         m_bus.GetPPU().CompleteReadOfNameTables(payload->m_data);
-    //         return true;
-    //     }
-    // }
+        switch (payload->m_type)
+        {
+        case DefaultDebugMessageType::RAM_DATA:
+        {
+            for (uint16_t addr = 0; addr < payload->m_dataSize; ++addr)
+            {
+                payload->m_data[addr] = m_bus.ReadByte(payload->m_addressStart + addr);
+                if (addr == 0xFFFF)
+                    break;
+            }
+            return true;
+        }
+        }
+    }
 
     return true;
 }

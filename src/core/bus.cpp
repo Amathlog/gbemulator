@@ -87,19 +87,24 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     }
 }
 
-void Bus::Clock()
+// Return true if it has terminated the latest instruction (or there is nothing to do)
+bool Bus::Clock()
 {
     // No cartridge mean nothing to do
     if (!m_cartridge)
-        return;
+        return true;
+
+    bool res = false;
 
     // CPU is clocked every 4 ticks
     if (m_nbCycles % 4 == 0)
     {
-        m_cpu.Clock();
+        res = m_cpu.Clock();
     }
 
     m_nbCycles++;
+
+    return res;
 }
 
 void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const

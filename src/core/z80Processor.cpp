@@ -59,7 +59,8 @@ inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data)
 // Each operation will be done in one shot, regardless of their
 // number of cycles. Each time we clock, we only decrement the cycle
 // counter if it is not zero.
-void Z80Processor::Clock()
+// Will return true if the next clock will execute a new instruction
+bool Z80Processor::Clock()
 {
     // IME enabling is done the next cycle after a EI instruction.
     // Handle it here.
@@ -76,6 +77,8 @@ void Z80Processor::Clock()
     }
 
     m_cycles--;
+
+    return m_cycles == 0;
 }
 
 bool Z80Processor::ReadByteFromRegisterIndex(uint8_t index, uint8_t& data)

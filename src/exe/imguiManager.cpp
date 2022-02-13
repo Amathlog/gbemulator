@@ -1,3 +1,4 @@
+#include "exe/windows/ramWindow.h"
 #include <exe/window.h>
 #include <cstddef>
 #include <exe/imguiManager.h>
@@ -94,7 +95,7 @@ void ImguiManager::Update()
 
     static bool showFPS = false;
     static bool reset = false;
-    static bool openNameTableWindow = false;
+    static bool openRamWindow = false;
 
     if (m_showMainMenu)
     {
@@ -150,11 +151,17 @@ void ImguiManager::Update()
         if (ImGui::BeginMenu("Debug"))
         {
             ImGui::MenuItem("Show FPS", nullptr, &showFPS);
-            // ImGui::MenuItem("Nametables", nullptr, &openNameTableWindow);
+            ImGui::MenuItem("Ram visualizer", nullptr, &openRamWindow);
             ImGui::EndMenu();
         }
 
         ImGui::EndMainMenuBar();
+    }
+
+    if (openRamWindow)
+    {
+        m_window->CreateNewChildWindow<RamWindow>(600, 480);
+        openRamWindow = false;
     }
 
     HandleFileExplorer();
