@@ -11,6 +11,7 @@ namespace GBEmulatorExe
         RAM_DATA,
         STEP,
         BREAK_CONTINUE,
+        DISASSEMBLY
     };
 
     class DebugPayload : public GenericPayload

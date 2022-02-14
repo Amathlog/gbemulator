@@ -1,4 +1,6 @@
 #include <core/utils/disassenbly.h>
+#include <cstdint>
+#include <cstdio>
 #include <string>
 #include <array>
 #include <string_view>
@@ -6,9 +8,9 @@
 
 struct Instruction
 {
-    const char* name;
-    const char* op1;
-    const char* op2;
+    std::string name;
+    std::string op1;
+    std::string op2;
 };
 
 const Instruction opcodesMap[256] =
@@ -30,3 +32,147 @@ const Instruction opcodesMap[256] =
     {"LDH", "(a8)", "A"}, {"POP", "HL"},       {"LD", "(C)", "A"},   {"XXX"},             {"XXX"},             {"PUSH", "HL"},      {"AND", "d8"},        {"RST", "20h"},      {"ADD", "SP", "r8"},     {"JP", "HL"},        {"LD", "(a16)", "A"}, {"XXX"},           {"XXX"},           {"XXX"},           {"XOR", "d8"},        {"RST", "28h"}, 
     {"LDH", "A", "(a8)"}, {"POP", "AF"},       {"LD", "A", "(C)"},   {"DI"},              {"XXX"},             {"PUSH", "AF"},      {"OR", "d8"},         {"RST", "30h"},      {"LD", "HL", "SP + r8"}, {"LD", "SP", "HL"},  {"LD", "A", "(a16)"}, {"EI"},            {"XXX"},           {"XXX"},           {"CP", "d8"},         {"RST", "38h"}, 
 };
+
+
+const char* GetRegisterName(uint8_t index)
+{
+    switch(index)
+    {
+    case 0:
+        return "B";
+    case 1:
+        return "C";
+    case 2:
+        return "D";
+    case 3:
+        return "E";
+    case 4:
+        return "H";
+    case 5:
+        return "L";
+    case 6:
+        return "(HL)";
+    default:
+        return "A";
+    }
+
+    return "";
+}
+
+
+Instruction GetPrefixedInst(uint8_t opcode)
+{
+    uint8_t bitToCheck = (opcode & 0x38) >> 3;
+    uint8_t registerIndex = opcode & 0x07;
+
+    switch (opcode >> 4)
+    {
+    case 0x0: // RLC and RRC
+        return (opcode & 0x08) ? Instruction{"RRC", GetRegisterName(registerIndex)} : Instruction{"RLC", GetRegisterName(registerIndex)};
+    case 0x1: // RL and RR
+        return (opcode & 0x08) ? Instruction{"RR", GetRegisterName(registerIndex)} : Instruction{"RL", GetRegisterName(registerIndex)};
+    case 0x2: // SLA and SRA
+        return (opcode & 0x08) ? Instruction{"SRA", GetRegisterName(registerIndex)} : Instruction{"SLA", GetRegisterName(registerIndex)};
+    case 0x3: // SWAP and SRL
+        return (opcode & 0x08) ? Instruction{"SRL", GetRegisterName(registerIndex)} : Instruction{"SWAP", GetRegisterName(registerIndex)};
+
+    case 0x4: // fall-through
+    case 0x5: // fall-through
+    case 0x6: // fall-through
+    case 0x7: // BIT
+        return Instruction{"BIT", std::to_string(bitToCheck), GetRegisterName(registerIndex)};
+
+    case 0x8: // fall-through
+    case 0x9: // fall-through
+    case 0xA: // fall-through
+    case 0xB: // RES
+        return Instruction{"RES", std::to_string(bitToCheck), GetRegisterName(registerIndex)};
+
+    case 0xC: // fall-through
+    case 0xD: // fall-through
+    case 0xE: // fall-through
+    case 0xF: // SET
+        return Instruction{"SET", std::to_string(bitToCheck), GetRegisterName(registerIndex)};
+    };
+
+    return Instruction();
+}
+
+std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uint16_t& pc)
+{
+    if (input.empty())
+        return "";
+
+    bool fromToMemory = input[0] == '(';
+
+    std::string temp = fromToMemory ? input.substr(1, input.size() - 1) : input;
+    std::string res;
+
+    if (temp == "d8")
+    {
+        uint8_t data = bus.ReadByte(pc++);
+        res.resize(5);
+        std::sprintf(res.data(), "0x%20X", data);
+    }
+    else if (temp == "r8")
+    {
+        int8_t data = bus.ReadByte(pc++);
+        res.resize(6);
+        std::sprintf(res.data(), data >= 0 ? "0x%20X" : "-0x%20X", data);
+    }
+    else if (temp == "a16" || temp == "d16")
+    {
+        uint8_t dataLSB = bus.ReadByte(pc++);
+        uint8_t dataMSB = bus.ReadByte(pc++);
+        uint16_t data = ((uint16_t)dataMSB << 8) | dataLSB;
+        res.resize(7);
+        std::sprintf(res.data(), "0x%40X", data);
+    }
+    else if (temp == "SP + r8")
+    {
+        int8_t data = bus.ReadByte(pc++);
+        res.resize(10);
+        std::sprintf(res.data(), data >= 0 ? "SP + 0x%20X" : "SP - 0x%20X", data);
+    }
+    else
+    {
+        res = temp;
+    }
+
+
+    return fromToMemory ? "(" + res + ")" : res;
+}
+
+
+std::vector<std::string> GBEmulator::Disassemble(GBEmulator::Bus bus, uint16_t startAddress, unsigned nbLines)
+{
+    std::vector<std::string> res;
+    res.resize(nbLines);
+
+    uint16_t pc = startAddress;
+    for (unsigned i = 0; i < nbLines; ++i)
+    {
+        uint8_t opcode = bus.ReadByte(pc++);
+
+        Instruction inst;
+
+        if (opcode == 0xCB)
+        {
+            uint8_t newOpcode = bus.ReadByte(pc++);
+            inst = GetPrefixedInst(newOpcode);
+        }
+        else
+        {
+            inst = opcodesMap[opcode];
+        }
+
+        std::string temp;
+        temp = inst.name + " " + GetDataFromString(bus, inst.op1, pc);
+        if (!inst.op2.empty())
+            temp += ", " + GetDataFromString(bus, inst.op2, pc);
+
+        res.push_back(std::move(temp));
+    }
+
+    return res;
+}

@@ -100,6 +100,8 @@ namespace GBEmulator
 
         void ConnectBus(Bus* bus) { m_bus = bus; }
 
+        uint16_t GetPC() const { return m_PC; }
+
     private:
         // Utility functions
         void SetZeroFlag(uint16_t res) { m_AF.F.Z = (res == 0); }
