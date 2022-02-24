@@ -131,6 +131,17 @@ bool CoreMessageService::Pull(Message &message)
             payload->m_isInBreakMode = m_bus.IsInBreak();
             return true;
         }
+        case DefaultDebugMessageType::GET_CPU_REGISTERS:
+        {
+            payload->m_cpuRegistersInfo.m_AF = m_bus.GetCPU().GetAFRegister();
+            payload->m_cpuRegistersInfo.m_BC = m_bus.GetCPU().GetBCRegister();
+            payload->m_cpuRegistersInfo.m_DE = m_bus.GetCPU().GetDERegister();
+            payload->m_cpuRegistersInfo.m_HL = m_bus.GetCPU().GetHLRegister();
+            payload->m_cpuRegistersInfo.m_PC = m_bus.GetCPU().GetPC();
+            payload->m_cpuRegistersInfo.m_SP = m_bus.GetCPU().GetStackPointer();
+            payload->m_cpuRegistersInfo.m_IMEEnabled = m_bus.GetCPU().IsIMEEnabled();
+            return true;
+        }
         }
     }
 

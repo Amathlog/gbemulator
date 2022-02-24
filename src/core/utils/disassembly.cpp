@@ -105,20 +105,23 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
 
     bool fromToMemory = input[0] == '(';
 
-    std::string temp = fromToMemory ? input.substr(1, input.size() - 1) : input;
+    std::string temp = fromToMemory ? input.substr(1, input.size() - 2) : input;
     std::string res;
+    bool printfUsed = true;
 
     if (temp == "d8")
     {
         uint8_t data = bus.ReadByte(pc++);
         res.resize(5);
         std::sprintf(res.data(), "0x%02X", data);
+        res.resize(4);
     }
     else if (temp == "r8")
     {
         int8_t data = bus.ReadByte(pc++);
         res.resize(6);
         std::sprintf(res.data(), data >= 0 ? "0x%02X" : "-0x%02X", data);
+        res.resize(5);
     }
     else if (temp == "a16" || temp == "d16")
     {
@@ -127,20 +130,26 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
         uint16_t data = ((uint16_t)dataMSB << 8) | dataLSB;
         res.resize(7);
         std::sprintf(res.data(), "0x%04X", data);
+        res.resize(6);
     }
     else if (temp == "SP + r8")
     {
         int8_t data = bus.ReadByte(pc++);
         res.resize(10);
         std::sprintf(res.data(), data >= 0 ? "SP + 0x%02X" : "SP - 0x%02X", data);
+        res.resize(9);
     }
     else
     {
         res = temp;
     }
 
+    if (fromToMemory)
+    {
+        res = "[" + res + "]";
+    }
 
-    return fromToMemory ? "(" + res + ")" : res;
+    return res;
 }
 
 

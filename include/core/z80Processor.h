@@ -101,6 +101,7 @@ namespace GBEmulator
         void ConnectBus(Bus* bus) { m_bus = bus; }
 
         uint16_t GetPC() const { return m_PC; }
+        bool IsIMEEnabled() const { return m_IMEEnabled; }
 
     private:
         // Utility functions

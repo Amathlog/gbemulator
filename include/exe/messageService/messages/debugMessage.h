@@ -39,4 +39,10 @@ namespace GBEmulatorExe
         GetBreakStatusMessage() : DebugMessage(DefaultDebugMessageType::GET_BREAK_STATUS, nullptr, 0, 0, 0, 0)
         {}
     };
+
+    struct GetCPURegistersInfoMessage : DebugMessage
+    {
+        GetCPURegistersInfoMessage() : DebugMessage(DefaultDebugMessageType::GET_CPU_REGISTERS, nullptr, 0, 0, 0, 0)
+        {}
+    };
 }

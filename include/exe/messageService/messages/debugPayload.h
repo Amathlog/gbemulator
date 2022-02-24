@@ -5,6 +5,7 @@
 #include <exe/messageService/message.h>
 #include <vector>
 #include <string>
+#include <core/z80Processor.h>
 
 namespace GBEmulatorExe 
 {
@@ -17,6 +18,22 @@ namespace GBEmulatorExe
         BREAK_CONTINUE,
         DISASSEMBLY,
         GET_BREAK_STATUS,
+        GET_CPU_REGISTERS
+    };
+
+    struct CPURegistersInfo
+    {
+        // Registers
+        GBEmulator::RegisterAF m_AF;
+        GBEmulator::RegisterBC m_BC;
+        GBEmulator::RegisterDE m_DE;
+        GBEmulator::RegisterHL m_HL;
+
+        uint16_t m_SP;
+        uint16_t m_PC;
+
+        // IME flag
+        bool m_IMEEnabled = false;
     };
 
     class DebugPayload : public GenericPayload
@@ -34,5 +51,6 @@ namespace GBEmulatorExe
         std::vector<std::string> m_disassemblyLines;
         uint16_t m_nbDisassemblyLines = 0x0000;
         bool m_isInBreakMode = false;
+        CPURegistersInfo m_cpuRegistersInfo;
     };
 }

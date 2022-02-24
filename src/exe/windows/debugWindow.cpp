@@ -81,13 +81,20 @@ void DebugWindow::InternalUpdate(bool externalSync)
         {
             m_data = std::move(msg.GetTypedPayload().m_disassemblyLines);
         }
+
+        GetCPURegistersInfoMessage msg2;
+        if (DispatchMessageServiceSingleton::GetInstance().Pull(msg2))
+        {
+            m_cpuRegisterInfo = std::move(msg2.GetTypedPayload().m_cpuRegistersInfo);
+        }
     }
 
     static bool open = true;
     static char addressStart[10] = "0000";
+    int limit = 2 * m_width / 5;
     ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(m_width, m_height)); 
-    if (ImGui::Begin("Debug#12", &open, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
+    ImGui::SetNextWindowSize(ImVec2(limit, m_height));
+    if (ImGui::Begin("Disassembly#12", &open, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
     {
         for (auto i = 0; i < m_data.size(); ++i)
         {
@@ -108,6 +115,42 @@ void DebugWindow::InternalUpdate(bool externalSync)
             DispatchMessageServiceSingleton::GetInstance().Push(StepMessage());
         }
         ImGui::EndDisabled();
+
+        ImGui::End();
+    }
+
+    ImGui::SetNextWindowPos(ImVec2(limit, 0));
+    ImGui::SetNextWindowSize(ImVec2(m_width - limit, m_height));
+
+    if(ImGui::Begin("Status#12", &open, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
+    {
+        const ImVec4 greenColor(0.f, 1.f, 0.f, 1.f); 
+        const ImVec4 redColor(1.f, 0.f, 0.f, 1.f);
+
+        ImGui::Text("Flags: ");
+        ImGui::SameLine();
+        ImGui::TextColored(m_cpuRegisterInfo.m_AF.F.Z ? greenColor : redColor, "%c  ", 'Z');
+        ImGui::SameLine();
+        ImGui::TextColored(m_cpuRegisterInfo.m_AF.F.H ? greenColor : redColor, "%c  ", 'H');
+        ImGui::SameLine();
+        ImGui::TextColored(m_cpuRegisterInfo.m_AF.F.N ? greenColor : redColor, "%c  ", 'N');
+        ImGui::SameLine();
+        ImGui::TextColored(m_cpuRegisterInfo.m_AF.F.C ? greenColor : redColor, "%c  ", 'C');
+        ImGui::SameLine();
+        ImGui::TextColored(m_cpuRegisterInfo.m_IMEEnabled ? greenColor : redColor, "%s", "IME");
+
+        ImGui::Text("A: 0x%02X [%3d]", m_cpuRegisterInfo.m_AF.A, m_cpuRegisterInfo.m_AF.A);
+        ImGui::Text("BC: 0x%04X ; B: 0x%02X [%3d] ; C: 0x%02X [%3d]", m_cpuRegisterInfo.m_BC.BC, 
+                                                                        m_cpuRegisterInfo.m_BC.B, m_cpuRegisterInfo.m_BC.B, 
+                                                                        m_cpuRegisterInfo.m_BC.C, m_cpuRegisterInfo.m_BC.C);
+        ImGui::Text("DE: 0x%04X ; D: 0x%02X [%3d] ; E: 0x%02X [%3d]", m_cpuRegisterInfo.m_DE.DE, 
+                                                                        m_cpuRegisterInfo.m_DE.D, m_cpuRegisterInfo.m_DE.D, 
+                                                                        m_cpuRegisterInfo.m_DE.E, m_cpuRegisterInfo.m_DE.E);
+        ImGui::Text("HL: 0x%04X ; H: 0x%02X [%3d] ; L: 0x%02X [%3d]", m_cpuRegisterInfo.m_HL.HL, 
+                                                                        m_cpuRegisterInfo.m_HL.H, m_cpuRegisterInfo.m_HL.H, 
+                                                                        m_cpuRegisterInfo.m_HL.L, m_cpuRegisterInfo.m_HL.L);
+        ImGui::Text("SP: 0x%04X", m_cpuRegisterInfo.m_SP);
+        ImGui::Text("PC: 0x%04X", m_cpuRegisterInfo.m_PC);
 
         ImGui::End();
     }

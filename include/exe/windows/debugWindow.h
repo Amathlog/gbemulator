@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exe/messageService/messages/debugPayload.h"
 #include <exe/window.h>
 #include <memory>
 #include <string>
@@ -28,5 +29,6 @@ namespace GBEmulatorExe
 
         uint16_t m_addressStart = 0x0000;
         std::vector<std::string> m_data;
+        CPURegistersInfo m_cpuRegisterInfo;
     };
 }
