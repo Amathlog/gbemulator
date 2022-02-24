@@ -112,13 +112,13 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
     {
         uint8_t data = bus.ReadByte(pc++);
         res.resize(5);
-        std::sprintf(res.data(), "0x%20X", data);
+        std::sprintf(res.data(), "0x%02X", data);
     }
     else if (temp == "r8")
     {
         int8_t data = bus.ReadByte(pc++);
         res.resize(6);
-        std::sprintf(res.data(), data >= 0 ? "0x%20X" : "-0x%20X", data);
+        std::sprintf(res.data(), data >= 0 ? "0x%02X" : "-0x%02X", data);
     }
     else if (temp == "a16" || temp == "d16")
     {
@@ -126,13 +126,13 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
         uint8_t dataMSB = bus.ReadByte(pc++);
         uint16_t data = ((uint16_t)dataMSB << 8) | dataLSB;
         res.resize(7);
-        std::sprintf(res.data(), "0x%40X", data);
+        std::sprintf(res.data(), "0x%04X", data);
     }
     else if (temp == "SP + r8")
     {
         int8_t data = bus.ReadByte(pc++);
         res.resize(10);
-        std::sprintf(res.data(), data >= 0 ? "SP + 0x%20X" : "SP - 0x%20X", data);
+        std::sprintf(res.data(), data >= 0 ? "SP + 0x%02X" : "SP - 0x%02X", data);
     }
     else
     {
@@ -152,6 +152,8 @@ std::vector<std::string> GBEmulator::Disassemble(GBEmulator::Bus bus, uint16_t s
     uint16_t pc = startAddress;
     for (unsigned i = 0; i < nbLines; ++i)
     {
+        char currentPC[9];
+        std::sprintf(currentPC, "0x%04X: ", pc);
         uint8_t opcode = bus.ReadByte(pc++);
 
         Instruction inst;
@@ -166,12 +168,12 @@ std::vector<std::string> GBEmulator::Disassemble(GBEmulator::Bus bus, uint16_t s
             inst = opcodesMap[opcode];
         }
 
-        std::string temp;
-        temp = inst.name + " " + GetDataFromString(bus, inst.op1, pc);
+        std::string temp = currentPC;
+        temp += inst.name + " " + GetDataFromString(bus, inst.op1, pc);
         if (!inst.op2.empty())
             temp += ", " + GetDataFromString(bus, inst.op2, pc);
 
-        res.push_back(std::move(temp));
+        res[i] = std::move(temp);
     }
 
     return res;

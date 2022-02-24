@@ -1,3 +1,4 @@
+#include "core/utils/disassenbly.h"
 #include <cstdint>
 #include <exe/messageService/message.h>
 #include <exe/messageService/messages/coreMessage.h>
@@ -118,6 +119,16 @@ bool CoreMessageService::Pull(Message &message)
                 if (addr == 0xFFFF)
                     break;
             }
+            return true;
+        }
+        case DefaultDebugMessageType::DISASSEMBLY:
+        {
+            payload->m_disassemblyLines = GBEmulator::Disassemble(m_bus, m_bus.GetCPU().GetPC(), payload->m_nbDisassemblyLines);
+            return true;
+        }
+        case DefaultDebugMessageType::GET_BREAK_STATUS:
+        {
+            payload->m_isInBreakMode = m_bus.IsInBreak();
             return true;
         }
         }

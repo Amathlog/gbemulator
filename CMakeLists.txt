@@ -11,6 +11,10 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
+if (${CMAKE_BUILD_TYPE} STREQUAL "Debug" OR ${CMAKE_BUILD_TYPE} STREQUAL RelWithDebInfo)
+  add_compile_definitions("_GLIBCXX_DEBUG")
+endif()
+
 set(EXTERNAL_FOLDER "External")
 set(MAIN_FOLDER "GBEmulator")
 

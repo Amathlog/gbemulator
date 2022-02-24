@@ -1,3 +1,4 @@
+#include "exe/windows/debugWindow.h"
 #include "exe/windows/ramWindow.h"
 #include <exe/window.h>
 #include <cstddef>
@@ -96,6 +97,7 @@ void ImguiManager::Update()
     static bool showFPS = false;
     static bool reset = false;
     static bool openRamWindow = false;
+    static bool openDebugWindow = false;
 
     if (m_showMainMenu)
     {
@@ -152,6 +154,7 @@ void ImguiManager::Update()
         {
             ImGui::MenuItem("Show FPS", nullptr, &showFPS);
             ImGui::MenuItem("Ram visualizer", nullptr, &openRamWindow);
+            ImGui::MenuItem("Disassembly", nullptr, &openDebugWindow);
             ImGui::EndMenu();
         }
 
@@ -162,6 +165,12 @@ void ImguiManager::Update()
     {
         m_window->CreateNewChildWindow<RamWindow>(600, 480);
         openRamWindow = false;
+    }
+
+    if (openDebugWindow)
+    {
+        m_window->CreateNewChildWindow<DebugWindow>(600, 480);
+        openDebugWindow = false;
     }
 
     HandleFileExplorer();

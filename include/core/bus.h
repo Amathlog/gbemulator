@@ -42,6 +42,7 @@ namespace GBEmulator
         void InsertCartridge(const std::shared_ptr<Cartridge>& cartridge);
 
         const Cartridge* GetCartridge() const { return m_cartridge.get(); }
+        const Z80Processor& GetCPU() const { return m_cpu; }
 
         void SaveCartridgeRAM(Utils::IWriteVisitor& visitor) const { m_cartridge->SerializeTo(visitor); }
         void LoadCartridgeRAM(Utils::IReadVisitor& visitor) { m_cartridge->DeserializeFrom(visitor); }

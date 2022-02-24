@@ -17,6 +17,7 @@ using namespace GBEmulatorExe;
 
 static bool enableAudioByDefault = false;
 static bool syncWithAudio = false;
+static bool breakOnStart = true;
 
 int main(int argc, char **argv)
 {
@@ -42,6 +43,9 @@ int main(int argc, char **argv)
     }
 
     GBEmulator::Bus bus;
+
+    if (breakOnStart)
+        bus.BreakContinue();
 
     GBEmulatorExe::CoreMessageService coreMessageService(bus, dir);
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(&coreMessageService);
@@ -72,12 +76,14 @@ int main(int argc, char **argv)
                 
                 double cpuPeriodUS = 1000000.0 / bus.GetCurrentFrequency();
                 size_t nbClocks = timeSpent / cpuPeriodUS;
-
-                for (auto i = 0; i < nbClocks; ++i)
+                if (!bus.IsInBreak())
                 {
-                    bus.Clock();
-                    // if (bus.GetPPU().IsFrameComplete())
-                    //     DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen(), bus.GetPPU().GetHeight() * bus.GetPPU().GetWidth()));
+                    for (auto i = 0; i < nbClocks; ++i)
+                    {
+                        bus.Clock();
+                        // if (bus.GetPPU().IsFrameComplete())
+                        //     DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen(), bus.GetPPU().GetHeight() * bus.GetPPU().GetWidth()));
+                    }
                 }
 
                 mainWindow.Update(true);

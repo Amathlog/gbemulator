@@ -1451,7 +1451,7 @@ uint8_t Z80Processor::RETI(uint8_t opcode)
 // Flags: Untouched
 uint8_t Z80Processor::RST(uint8_t opcode)
 {
-    uint8_t index = ((opcode >> 5) << 1) | (opcode & 0x08);
+    uint8_t index = (((opcode >> 4) & 0x03) << 1) | ((opcode & 0x08) > 0);
     constexpr std::array<uint16_t, 8> addrTable = {
         0x0000, 0x0008, 0x0010, 0x0018, 0x0020, 0x0028, 0x0030, 0x0038
     };
