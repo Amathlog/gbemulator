@@ -299,7 +299,7 @@ uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 uint8_t Z80Processor::LD(uint8_t opcode)
 {
     // First 4 rows of instructions
-    if ((opcode & 0x0F) <= 0x03)
+    if (opcode < 0x40)
     {
         uint8_t filteredOpcode = (opcode & 0x0F);
         uint8_t index = (opcode >> 4) & 0x03;
@@ -349,7 +349,7 @@ uint8_t Z80Processor::LD(uint8_t opcode)
 
         // 5th case: Litteral to register/memory
         // 2 or 3 cycles
-        index = ((opcode >> 4) & 0x03) | ((filteredOpcode & 0x08) > 0);
+        index = (index << 1) | ((filteredOpcode & 0x08) > 0);
         uint8_t data = FetchByte();
         return WriteByteToRegisterIndex(index, data) ? 3 : 2;
     }

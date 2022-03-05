@@ -1,5 +1,6 @@
-#include "exe/windows/debugWindow.h"
-#include "exe/windows/ramWindow.h"
+#include "exe/imguiWindows/debugWindow.h"
+#include "exe/imguiWindows/imguiWindow.h"
+#include "exe/imguiWindows/ramWindow.h"
 #include <exe/window.h>
 #include <cstddef>
 #include <exe/imguiManager.h>
@@ -10,6 +11,7 @@
 
 #include <glad/glad.h>
 #include <ImGuiFileBrowser.h>
+#include <memory>
 #include <string>
 #include <chrono>
 #include <exe/messageService/messageService.h>
@@ -19,6 +21,7 @@
 
 
 using GBEmulatorExe::ImguiManager;
+using GBEmulatorExe::DebugWindow;
 
 ImguiManager::ImguiManager(Window* window)
     : m_window(window)
@@ -28,7 +31,7 @@ ImguiManager::ImguiManager(Window* window)
     m_context = ImGui::CreateContext();
     ImGui::SetCurrentContext(m_context);
     ImGuiIO& io = ImGui::GetIO();
-    // io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -49,6 +52,10 @@ ImguiManager::ImguiManager(Window* window)
         m_currentFormat = msg.GetTypedPayload().m_format;
         m_changeFormats[(unsigned)m_currentFormat] = true;
     }
+
+    // Create all windows
+    m_childWidgets.emplace(DebugWindow::GetStaticWindowId(), std::make_unique<DebugWindow>());
+    m_childWidgets.emplace(RamWindow::GetStaticWindowId(), std::make_unique<RamWindow>());
 }
 
 ImguiManager::~ImguiManager()
@@ -96,8 +103,6 @@ void ImguiManager::Update()
 
     static bool showFPS = false;
     static bool reset = false;
-    static bool openRamWindow = false;
-    static bool openDebugWindow = false;
 
     if (m_showMainMenu)
     {
@@ -153,25 +158,13 @@ void ImguiManager::Update()
         if (ImGui::BeginMenu("Debug"))
         {
             ImGui::MenuItem("Show FPS", nullptr, &showFPS);
-            ImGui::MenuItem("Ram visualizer", nullptr, &openRamWindow);
-            ImGui::MenuItem("Disassembly", nullptr, &openDebugWindow);
+            ImGui::MenuItem("Ram visualizer", nullptr, &m_childWidgets[RamWindow::GetStaticWindowId()]->m_open);
+            ImGui::MenuItem("Disassembly", nullptr, &m_childWidgets[DebugWindow::GetStaticWindowId()]->m_open);
             ImGui::EndMenu();
         }
 
         ImGui::EndMainMenuBar();
-    }
-
-    if (openRamWindow)
-    {
-        m_window->CreateNewChildWindow<RamWindow>(600, 480);
-        openRamWindow = false;
-    }
-
-    if (openDebugWindow)
-    {
-        m_window->CreateNewChildWindow<DebugWindow>(600, 480);
-        openDebugWindow = false;
-    }
+    }    
 
     HandleFileExplorer();
     HandlePerf(showFPS);
@@ -214,16 +207,22 @@ void ImguiManager::Update()
         reset = false;
     }
 
+
+    for (auto& childWidget : m_childWidgets)
+    {
+        childWidget.second->Draw();
+    }
+
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     ImGui::EndFrame();
 
     // Update and Render additional Platform Windows
-    //if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    //{
-    //    ImGui::UpdatePlatformWindows();
-    //    ImGui::RenderPlatformWindowsDefault();
-    //}
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+       ImGui::UpdatePlatformWindows();
+       ImGui::RenderPlatformWindowsDefault();
+    }
 }
 
 void ImguiManager::HandleFileExplorer()
@@ -235,7 +234,7 @@ void ImguiManager::HandleFileExplorer()
 
     static imgui_addons::ImGuiFileBrowser fileDialog;
 
-    if(fileDialog.showFileDialog("Open File", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2(0, 0), ".nes"))
+    if(fileDialog.showFileDialog("Open File", imgui_addons::ImGuiFileBrowser::DialogMode::OPEN, ImVec2(0, 0), ".gb,.gbc"))
     {
         // Load a new file
         if (!fileDialog.selected_path.empty())

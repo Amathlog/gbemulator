@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <exe/messageService/messageService.h>
 // #include <exe/messageService/messages/debugMessage.h>
-#include <exe/windows/ramWindow.h>
+#include <exe/imguiWindows/ramWindow.h>
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -13,61 +13,18 @@
 #include <iostream>
 
 using GBEmulatorExe::RamWindow;
-using GBEmulatorExe::Window;
 
-RamWindow::RamWindow(unsigned width, unsigned height)
-    : Window("RAM", width, height)
-    , m_width(width)
-    , m_height(height)
+RamWindow::RamWindow()
 {
-    GLFWwindow* previousContextGLFW = glfwGetCurrentContext();
-    glfwMakeContextCurrent(m_window);
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGuiContext* previousContext = ImGui::GetCurrentContext();
-    m_context = ImGui::CreateContext();
-    ImGui::SetCurrentContext(m_context);
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(m_window, true);
-    ImGui_ImplOpenGL3_Init("#version 330 core");
-
-    if (previousContext != nullptr)
-        ImGui::SetCurrentContext(previousContext);
-
-    if (previousContextGLFW != nullptr)
-        glfwMakeContextCurrent(previousContextGLFW);
-
     m_lastUpdateTime = ImGui::GetTime();
     m_forceUpdate = true;
     m_data.resize(16 * 20);
 }
 
-RamWindow::~RamWindow()
+void RamWindow::Draw()
 {
-    // Cleanup
-    ImGui::DestroyContext(m_context);
-
-    GLFWwindow* previousContextGLFW = glfwGetCurrentContext();
-    glfwMakeContextCurrent(m_window);
-
-    if (previousContextGLFW != nullptr)
-        glfwMakeContextCurrent(previousContextGLFW);
-}
-
-void RamWindow::InternalUpdate(bool externalSync)
-{
-    ImGui::SetCurrentContext(m_context);
-
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    if (!m_open)
+        return;
 
     double elapsedTime = ImGui::GetTime();
     constexpr double updateDeltaTime = 1.0;
@@ -79,11 +36,8 @@ void RamWindow::InternalUpdate(bool externalSync)
         DispatchMessageServiceSingleton::GetInstance().Pull(msg);
     }
 
-    static bool open = true;
     static char addressStart[10] = "0000";
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2(m_width, m_height)); 
-    if (ImGui::Begin("Ram#12", &open, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
+    if (ImGui::Begin("Ram#12", &m_open))
     {
         ImGui::Text("%s", "Go to address: 0x");
         ImGui::SameLine();
@@ -130,11 +84,6 @@ void RamWindow::InternalUpdate(bool externalSync)
             ImGui::EndTable();
         }
 
-        ImGui::End();
     }
-
-
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    ImGui::EndFrame();
+    ImGui::End();
 }

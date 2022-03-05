@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exe/imguiWindows/imguiWindow.h"
 #include "exe/messageService/messages/debugPayload.h"
 #include <exe/window.h>
 #include <memory>
@@ -9,18 +10,15 @@ struct ImGuiContext;
 
 namespace GBEmulatorExe
 {
-    class DebugWindow : public Window
+    class DebugWindow : public ImGuiWindow
     {
     public:
-        DebugWindow(unsigned width, unsigned height);
-        ~DebugWindow();
+        DebugWindow();
+        void Draw() override;
 
-        void OnScreenResized(int width, int height) override { m_width = width; m_height = height; }
+        WINDOW_ID_IMPL(AllWindowsId::DebugWindowId);
 
     protected:
-        void InternalUpdate(bool externalSync) override;
-        ImGuiContext* m_context;
-
         double m_lastUpdateTime;
         bool m_forceUpdate = false;
         bool m_isInBreakMode = false;

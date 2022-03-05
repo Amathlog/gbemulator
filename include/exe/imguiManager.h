@@ -1,8 +1,10 @@
 #pragma once
 
+#include "exe/imguiWindows/imguiWindow.h"
 #include <string>
 #include <exe/rendering/image.h>
 #include <array>
+#include <map>
 
 
 struct ImGuiContext;
@@ -42,5 +44,7 @@ namespace GBEmulatorExe
         inline static constexpr unsigned MAX_SAVE_STATES = 4;
         std::array<bool, MAX_SAVE_STATES> m_requestSaveState;
         std::array<bool, MAX_SAVE_STATES> m_requestLoadState;
+
+        std::map<int, std::unique_ptr<ImGuiWindow>> m_childWidgets;
     };
 }
