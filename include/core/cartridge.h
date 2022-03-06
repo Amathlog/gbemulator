@@ -5,6 +5,7 @@
 #include <vector>
 #include <cstdint>
 #include <array>
+#include <string>
 
 namespace GBEmulator
 {

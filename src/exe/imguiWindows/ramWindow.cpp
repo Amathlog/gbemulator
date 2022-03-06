@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <core/utils/utils.h>
 
 using GBEmulatorExe::RamWindow;
 
@@ -56,16 +57,18 @@ void RamWindow::Draw()
         
         if (ImGui::BeginTable("Table", 17))
         {
-            ImGui::TableSetupColumn("Addr");
+            ImGui::TableSetupColumn("Addr", ImGuiTableColumnFlags_WidthFixed, 50.0f);
             for (uint8_t i = 0; i < 16; ++i)
             {
                 char c[2];
-                std::sprintf(c, "%X", i);
+                GBEmulator::Utils::sprintf(c, 2, "%X", i);
                 ImGui::TableSetupColumn(c);
             }
             ImGui::TableHeadersRow();
 
             uint16_t addr = m_addressStart;
+            ImVec4 reddish(1.f, .7f, .7f, 1.f);
+            ImVec4 white(1.f, 1.f, 1.f, 1.f);
 
             for (int row = 0; row < (int)m_data.size() / 16; row++)
             {
@@ -78,7 +81,10 @@ void RamWindow::Draw()
                 for (int column = 0; column < 16; column++)
                 {
                     ImGui::TableSetColumnIndex(column + 1);
-                    ImGui::Text("%02X", m_data[row * 16 + column]);
+                    auto value = m_data[row * 16 + column];
+                    auto offset = 1.f - (float)value / 255.f;
+                    ImVec4 color(1.f, offset, offset, 1.f);
+                    ImGui::TextColored(color, "%02X", value);
                 }
             }
             ImGui::EndTable();

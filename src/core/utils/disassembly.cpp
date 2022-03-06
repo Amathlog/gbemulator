@@ -1,10 +1,12 @@
 #include <core/utils/disassenbly.h>
+#include <core/utils/utils.h>
 #include <cstdint>
 #include <cstdio>
 #include <string>
 #include <array>
 #include <string_view>
 
+namespace Utils = GBEmulator::Utils;
 
 struct Instruction
 {
@@ -113,14 +115,14 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
     {
         uint8_t data = bus.ReadByte(pc++);
         res.resize(5);
-        std::sprintf(res.data(), "0x%02X", data);
+        Utils::sprintf(res.data(), res.size(), "0x%02X", data);
         res.resize(4);
     }
     else if (temp == "r8")
     {
         int8_t data = bus.ReadByte(pc++);
         res.resize(6);
-        std::sprintf(res.data(), data >= 0 ? "0x%02X" : "-0x%02X", data);
+        Utils::sprintf(res.data(), res.size(), data >= 0 ? "0x%02X" : "-0x%02X", data);
         res.resize(5);
     }
     else if (temp == "a16" || temp == "d16")
@@ -129,14 +131,14 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
         uint8_t dataMSB = bus.ReadByte(pc++);
         uint16_t data = ((uint16_t)dataMSB << 8) | dataLSB;
         res.resize(7);
-        std::sprintf(res.data(), "0x%04X", data);
+        Utils::sprintf(res.data(), res.size(), "0x%04X", data);
         res.resize(6);
     }
     else if (temp == "SP + r8")
     {
         int8_t data = bus.ReadByte(pc++);
         res.resize(10);
-        std::sprintf(res.data(), data >= 0 ? "SP + 0x%02X" : "SP - 0x%02X", data);
+        Utils::sprintf(res.data(), res.size(), data >= 0 ? "SP + 0x%02X" : "SP - 0x%02X", data);
         res.resize(9);
     }
     else
@@ -162,7 +164,7 @@ std::vector<std::string> GBEmulator::Disassemble(GBEmulator::Bus bus, uint16_t s
     for (unsigned i = 0; i < nbLines; ++i)
     {
         char currentPC[9];
-        std::sprintf(currentPC, "0x%04X: ", pc);
+        Utils::sprintf(currentPC, sizeof(currentPC), "0x%04X: ", pc);
         uint8_t opcode = bus.ReadByte(pc++);
 
         Instruction inst;

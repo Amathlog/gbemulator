@@ -22,8 +22,8 @@ namespace GBEmulatorExe
         double m_lastUpdateTime;
         bool m_forceUpdate = false;
         bool m_isInBreakMode = false;
-        int m_width;
-        int m_height;
+        float m_width;
+        float m_height;
 
         uint16_t m_addressStart = 0x0000;
         std::vector<std::string> m_data;

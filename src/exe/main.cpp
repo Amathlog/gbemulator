@@ -47,7 +47,7 @@ int main(int argc, char **argv)
     if (breakOnStart)
         bus.BreakContinue();
 
-    GBEmulatorExe::CoreMessageService coreMessageService(bus, dir);
+    GBEmulatorExe::CoreMessageService coreMessageService(bus, dir.string());
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(&coreMessageService);
 
     LoadNewGameMessage msg(path.string());
@@ -72,10 +72,10 @@ int main(int argc, char **argv)
                 auto start_point = std::chrono::high_resolution_clock::now();
                 auto timeSpent = std::chrono::duration_cast<std::chrono::microseconds>(start_point - previous_point).count();
                 previous_point = std::chrono::high_resolution_clock::now();
-                timeSpent = std::min(timeSpent, 16666l);
+                timeSpent = std::min(timeSpent, 16666ll);
                 
                 double cpuPeriodUS = 1000000.0 / bus.GetCurrentFrequency();
-                size_t nbClocks = timeSpent / cpuPeriodUS;
+                size_t nbClocks = (size_t)(timeSpent / cpuPeriodUS);
                 if (!bus.IsInBreak())
                 {
                     for (auto i = 0; i < nbClocks; ++i)

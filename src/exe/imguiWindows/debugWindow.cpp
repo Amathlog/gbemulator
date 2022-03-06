@@ -55,7 +55,7 @@ void DebugWindow::Draw()
 
         static bool open = true;
         static char addressStart[10] = "0000";
-        int limit = 2 * m_width / 5;
+        float limit = 2.f * m_width / 5.f;
         ImGui::SetNextWindowPos(windowPos);
         if (ImGui::BeginChild("Disassembly#12", ImVec2(limit, m_height), false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
         {
