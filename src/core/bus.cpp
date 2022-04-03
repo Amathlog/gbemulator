@@ -26,7 +26,8 @@ Bus::Bus()
 
 uint8_t Bus::ReadByte(uint16_t addr)
 {
-    uint8_t data;
+    uint8_t data = 0;
+
     // First try to read from the cartridge, if it returns true, it's done
     if (m_cartridge && m_cartridge->ReadByte(addr, data))
     {
@@ -39,8 +40,15 @@ uint8_t Bus::ReadByte(uint16_t addr)
         data = m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)];
     }
     // WRAM zone
-    else if (addr >= 0xC000 && addr < 0xE000)
+    else if (addr >= 0xC000 && addr <= 0xFDFF)
     {
+        // WRAM is between 0xC000 and 0xDFFF, but zone between 0xE000 and 0xFDFF, even if it should
+        // not be used, will echo the RAM (0xC000 -> 0xDDFF)
+        if (addr >= 0xE000)
+        {
+            addr -= 0x2000;
+        }
+
         // Get the WRAM bank
         // Between 0xC000 and 0xCFFF it's bank 0
         // Between 0xD000 and 0xDFFF it's bank switchable
@@ -48,9 +56,80 @@ uint8_t Bus::ReadByte(uint16_t addr)
         // WRAM banks are 4kB in size
         data = m_WRAM[wramBank * 0x1000 + (addr & 0x0FFF)];
     }
-    // Misc zone
-    else if (addr >= 0xE000)
+    // Sprite attribute table (OAM)
+    else if (addr >= 0xFE00 && addr <= 0xFE9F)
     {
+        // TODO
+    }
+    // Special RAM space
+    else if (addr >= 0xFEA0 && addr <= 0xFEFF)
+    {
+        // TODO
+    }
+    // Misc zone
+    else if (addr == 0xFF00)
+    {
+        // Controller
+        // TODO
+    }
+    else if (addr == 0xFF01 || addr == 0xFF02)
+    {
+        // Communication
+        // TODO
+    }
+    else if (addr >= 0xFF04 && addr <= 0xFF07)
+    {
+        // Divider and timer
+        // TODO
+    }
+    else if (addr >= 0xFF10 && addr <= 0xFF26)
+    {
+        // Sound
+        // TODO
+    }
+    else if (addr >= 0xFF30 && addr <= 0xFF3F)
+    {
+        // Waveform RAM
+        // TODO
+    }
+    else if (addr >= 0xFF40 && addr <= 0xFF4B)
+    {
+        // LCD
+        // TODO
+    }
+    else if (addr == 0xFF4F && m_mode == Mode::GBC)
+    {
+        // VRAM bank select (GBC only)
+        // TODO
+    }
+    else if (addr == 0xFF50)
+    {
+        // Set to non-zero to disable boot ROM
+        // Not used in Read
+    }
+    else if (addr >= 0xFF51 && addr <= 0xFF55 && m_mode == Mode::GBC)
+    {
+        // VRAM DMA (GBC only)
+        // TODO
+    }
+    else if (addr == 0xFF68 || addr == 0xFF69 && m_mode == Mode::GBC)
+    {
+        // BG/OBJ palettes (GBC only)
+        // TODO
+    }
+    else if (addr == 0xFF70 && m_mode == Mode::GBC)
+    {
+        // WRAM Bank select (GBC only)
+        // TODO
+    }
+    else if (addr >= 0xFF80 && addr <= 0xFFFE)
+    {
+        // High RAM
+        // TODO
+    }
+    else if (addr == 0xFFFF)
+    {
+        // Interupt Enable Register (IE)
         // TODO
     }
 
@@ -71,8 +150,15 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
         m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)] = data;
     }
     // WRAM zone
-    else if (addr >= 0xC000 && addr < 0xE000)
+    else if (addr >= 0xC000 && addr <= 0xFDFF)
     {
+        // WRAM is between 0xC000 and 0xDFFF, but zone between 0xE000 and 0xFDFF, even if it should
+        // not be used, will echo the RAM (0xC000 -> 0xDDFF)
+        if (addr >= 0xE000)
+        {
+            addr -= 0x2000;
+        }
+
         // Get the WRAM bank
         // Between 0xC000 and 0xCFFF it's bank 0
         // Between 0xD000 and 0xDFFF it's bank switchable
@@ -80,16 +166,81 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
         // WRAM banks are 4kB in size
         m_WRAM[wramBank * 0x1000 + (addr & 0x0FFF)] = data;
     }
-    // Misc zone
-    else if (addr >= 0xE000)
+    // Sprite attribute table (OAM)
+    else if (addr >= 0xFE00 && addr <= 0xFE9F)
     {
         // TODO
-        // Serial transfer data (SB)
-        if (addr == 0xFF01)
-        {
-            // TODO
-            data = data;
-        }
+    }
+    // Special RAM space
+    else if (addr >= 0xFEA0 && addr <= 0xFEFF)
+    {
+        // TODO
+    }
+    // Misc zone
+    else if (addr == 0xFF00)
+    {
+        // Controller
+        // TODO
+    }
+    else if (addr == 0xFF01 || addr == 0xFF02)
+    {
+        // Communication
+        // TODO
+    }
+    else if (addr >= 0xFF04 && addr <= 0xFF07)
+    {
+        // Divider and timer
+        // TODO
+    }
+    else if (addr >= 0xFF10 && addr <= 0xFF26)
+    {
+        // Sound
+        // TODO
+    }
+    else if (addr >= 0xFF30 && addr <= 0xFF3F)
+    {
+        // Waveform RAM
+        // TODO
+    }
+    else if (addr >= 0xFF40 && addr <= 0xFF4B)
+    {
+        // LCD
+        // TODO
+    }
+    else if (addr == 0xFF4F && m_mode == Mode::GBC)
+    {
+        // VRAM bank select (GBC only)
+        // TODO
+    }
+    else if (addr == 0xFF50)
+    {
+        // Set to non-zero to disable boot ROM
+        // TODO
+    }
+    else if (addr >= 0xFF51 && addr <= 0xFF55 && m_mode == Mode::GBC)
+    {
+        // VRAM DMA (GBC only)
+        // TODO
+    }
+    else if (addr == 0xFF68 || addr == 0xFF69 && m_mode == Mode::GBC)
+    {
+        // BG/OBJ palettes (GBC only)
+        // TODO
+    }
+    else if (addr == 0xFF70 && m_mode == Mode::GBC)
+    {
+        // WRAM Bank select (GBC only)
+        // TODO
+    }
+    else if (addr >= 0xFF80 && addr <= 0xFFFE)
+    {
+        // High RAM
+        // TODO
+    }
+    else if (addr == 0xFFFF)
+    {
+        // Interupt Enable Register (IE)
+        // TODO
     }
 }
 
