@@ -121,8 +121,9 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
     else if (temp == "r8")
     {
         int8_t data = bus.ReadByte(pc++);
+        uint8_t positiveData = data >= 0 ? (uint8_t)data : (uint8_t)-data;
         res.resize(6);
-        Utils::sprintf(res.data(), res.size(), data >= 0 ? "0x%02X" : "-0x%02X", data);
+        Utils::sprintf(res.data(), res.size(), data >= 0 ? "0x%02X" : "-0x%02X", positiveData);
         res.resize(5);
     }
     else if (temp == "a16" || temp == "d16")
@@ -137,8 +138,9 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
     else if (temp == "SP + r8")
     {
         int8_t data = bus.ReadByte(pc++);
+        uint8_t positiveData = data >= 0 ? (uint8_t)data : (uint8_t)-data;
         res.resize(10);
-        Utils::sprintf(res.data(), res.size(), data >= 0 ? "SP + 0x%02X" : "SP - 0x%02X", data);
+        Utils::sprintf(res.data(), res.size(), data >= 0 ? "SP + 0x%02X" : "SP - 0x%02X", positiveData);
         res.resize(9);
     }
     else

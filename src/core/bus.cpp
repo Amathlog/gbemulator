@@ -84,6 +84,12 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xE000)
     {
         // TODO
+        // Serial transfer data (SB)
+        if (addr == 0xFF01)
+        {
+            // TODO
+            data = data;
+        }
     }
 }
 
