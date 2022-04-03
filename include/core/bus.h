@@ -3,6 +3,7 @@
 #include "core/utils/visitor.h"
 #include <core/serializable.h>
 #include <core/z80Processor.h>
+#include <core/2C02Processor.h>
 #include <core/cartridge.h>
 #include <vector>
 #include <array>
@@ -11,7 +12,7 @@
 
 namespace GBEmulator 
 {
-    enum Mode
+    enum class Mode
     {
         GB,
         GBC
@@ -43,6 +44,7 @@ namespace GBEmulator
 
         const Cartridge* GetCartridge() const { return m_cartridge.get(); }
         const Z80Processor& GetCPU() const { return m_cpu; }
+        const Processor2C02& GetPPU() const { return m_ppu; }
 
         void SaveCartridgeRAM(Utils::IWriteVisitor& visitor) const { m_cartridge->SerializeTo(visitor); }
         void LoadCartridgeRAM(Utils::IReadVisitor& visitor) { m_cartridge->DeserializeFrom(visitor); }
@@ -56,6 +58,8 @@ namespace GBEmulator
 
     private:        
         Z80Processor m_cpu;
+        Processor2C02 m_ppu;
+
         Mode m_mode;
 
         bool m_isDoubleSpeedMode = false;

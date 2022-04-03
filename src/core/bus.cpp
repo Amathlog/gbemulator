@@ -95,7 +95,7 @@ uint8_t Bus::ReadByte(uint16_t addr)
     else if (addr >= 0xFF40 && addr <= 0xFF4B)
     {
         // LCD
-        // TODO
+        data = m_ppu.ReadByte(addr);
     }
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
@@ -205,7 +205,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xFF40 && addr <= 0xFF4B)
     {
         // LCD
-        // TODO
+        m_ppu.WriteByte(addr, data);
     }
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
@@ -271,6 +271,7 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
         return;
         
     m_cpu.SerializeTo(visitor);
+    m_ppu.SerializeTo(visitor);
     m_cartridge->SerializeTo(visitor);
 
     visitor.WriteContainer(m_VRAM);
@@ -287,6 +288,7 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
         return;
 
     m_cpu.DeserializeFrom(visitor);
+    m_ppu.DeserializeFrom(visitor);
     m_cartridge->DeserializeFrom(visitor);
 
     visitor.ReadContainer(m_VRAM);
