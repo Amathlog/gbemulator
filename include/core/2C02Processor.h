@@ -21,6 +21,35 @@ namespace GBEmulator
         uint8_t flags = 0x00;
     };
 
+    union LCDStatus
+    {
+        struct
+        {
+            uint8_t unused : 1;
+            // Interrupt sources (IS)
+            uint8_t lYcEqualLYIS : 1;
+            uint8_t mode2OAMIS : 1;
+            uint8_t mode1VBlankIS : 1;
+            uint8_t mode0HBlankIS : 1;
+            uint8_t lYcEqualLY : 1;
+            uint8_t mode : 2;
+        };
+
+        uint8_t flags = 0x00;
+    };
+
+    union GBPaletteData
+    {
+        struct
+        {
+            uint8_t color3 : 2;
+            uint8_t color2 : 2;
+            uint8_t color1 : 2;
+            uint8_t color0 : 2;
+        };
+
+        uint8_t flags = 0x00;
+    };
 
     class Processor2C02 : public ISerializable
     {
@@ -33,5 +62,17 @@ namespace GBEmulator
 
     private:
         LCDRegister m_lcdRegister;
+        LCDStatus m_lcdStatus;
+
+        uint8_t m_scrollY;
+        uint8_t m_scrollX;
+        uint8_t m_lY;
+        uint8_t m_lYC;
+        uint8_t m_wY;
+        uint8_t m_wX;
+
+        GBPaletteData m_gbBGPalette;
+        GBPaletteData m_gbOBJ0Palette;
+        GBPaletteData m_gbOBJ1alette;
     };
 }
