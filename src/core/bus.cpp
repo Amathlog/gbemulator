@@ -112,10 +112,10 @@ uint8_t Bus::ReadByte(uint16_t addr)
         // VRAM DMA (GBC only)
         // TODO
     }
-    else if (addr == 0xFF68 || addr == 0xFF69 && m_mode == Mode::GBC)
+    else if (addr >= 0xFF68 || addr <= 0xFF6B && m_mode == Mode::GBC)
     {
         // BG/OBJ palettes (GBC only)
-        // TODO
+        data = m_ppu.ReadByte(addr);
     }
     else if (addr == 0xFF70 && m_mode == Mode::GBC)
     {
@@ -222,10 +222,10 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
         // VRAM DMA (GBC only)
         // TODO
     }
-    else if (addr == 0xFF68 || addr == 0xFF69 && m_mode == Mode::GBC)
+    else if (addr >= 0xFF68 || addr <= 0xFF6B && m_mode == Mode::GBC)
     {
         // BG/OBJ palettes (GBC only)
-        // TODO
+        m_ppu.WriteByte(addr, data);
     }
     else if (addr == 0xFF70 && m_mode == Mode::GBC)
     {
@@ -301,6 +301,7 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
 void Bus::Reset()
 {
     m_cpu.Reset();
+    m_ppu.Reset();
 
     if (m_cartridge)
         m_cartridge->Reset();

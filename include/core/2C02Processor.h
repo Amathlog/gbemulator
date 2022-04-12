@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/serializable.h>
+#include <array>
 
 namespace GBEmulator
 {
@@ -51,6 +52,37 @@ namespace GBEmulator
         uint8_t flags = 0x00;
     };
 
+    union RGB555
+    {
+        struct
+        {
+            uint16_t R : 5;
+            uint16_t G : 5;
+            uint16_t B : 5;
+            uint16_t unused : 1;
+        };
+
+        uint16_t data = 0x0000;
+    };
+
+    struct GBCPaletteData
+    {
+        std::array<RGB555, 4> colors;
+
+        void Reset();
+
+        void SerializeTo(Utils::IWriteVisitor& visitor) const;
+        void DeserializeFrom(Utils::IReadVisitor& visitor);
+    };
+
+    struct GBCPaletteAccess
+    {
+        bool shouldIncr = false;
+        uint8_t address = 0x00;
+
+        void Reset() { shouldIncr = false; address = 0x00; }
+    };
+
     class Processor2C02 : public ISerializable
     {
     public:
@@ -59,6 +91,10 @@ namespace GBEmulator
 
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
+
+        void Reset();
+
+        using GBCPaletteDataArray = std::array<GBCPaletteData, 8>;
 
     private:
         LCDRegister m_lcdRegister;
@@ -73,6 +109,13 @@ namespace GBEmulator
 
         GBPaletteData m_gbBGPalette;
         GBPaletteData m_gbOBJ0Palette;
-        GBPaletteData m_gbOBJ1alette;
+        GBPaletteData m_gbOBJ1Palette;
+
+        // GBC Spcific
+
+        GBCPaletteDataArray m_gbcBGPalettes;
+        GBCPaletteDataArray m_gbcOBJPalettes;
+        GBCPaletteAccess m_gbcBGPaletteAccess;
+        GBCPaletteAccess m_gbcOBJPaletteAccess;
     };
 }
