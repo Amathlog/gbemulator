@@ -28,7 +28,7 @@ namespace Utils
         return sprintf_s(buffer, bufferCount, format, std::forward<Args&&>(args)...);
 #else
         (void)(&bufferCount);
-        return std::sprintf(buffer, format, std::forward<Args&&>(args)...)
+        return std::sprintf(buffer, format, std::forward<Args&&>(args)...);
 #endif
     }
 }    
