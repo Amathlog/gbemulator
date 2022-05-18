@@ -79,8 +79,8 @@ int main(int argc, char** argv) {
                     start_point - previous_point)
                     .count();
                 previous_point = std::chrono::high_resolution_clock::now();
-                timeSpent = std::min(timeSpent, 16666ll);
-
+                timeSpent = std::min<int64_t>(timeSpent, 16666ll);
+                
                 double cpuPeriodUS = 1000000.0 / bus.GetCurrentFrequency();
                 size_t nbClocks = (size_t)(timeSpent / cpuPeriodUS);
                 if (!bus.IsInBreak()) {
