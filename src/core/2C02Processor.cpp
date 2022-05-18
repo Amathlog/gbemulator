@@ -34,6 +34,16 @@ namespace // annonymous
         if (paletteAccess.shouldIncr)
             paletteAccess.address = (paletteAccess.address + 1) % 0x3F;
     }
+
+    inline uint32_t RGB555ToRGBA8888(GBEmulator::RGB555 inputColor)
+    {
+        // For each color, we add a left shift of 3 to transform
+        // 0-31 range (5 bits) to 0-255 range (8 bits)
+        return (0xFF000000) // Alpha
+            + ((uint32_t)(inputColor.R) << 19)
+            + ((uint32_t)(inputColor.G) << 11)
+            + ((uint32_t)(inputColor.B) << 3);
+    }
 }
 
 inline void GBCPaletteData::Reset()
@@ -259,4 +269,9 @@ void Processor2C02::Reset()
 
     m_gbcBGPaletteAccess.Reset();
     m_gbcOBJPaletteAccess.Reset();
+}
+
+void Processor2C02::Clock()
+{
+
 }

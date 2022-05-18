@@ -1,7 +1,9 @@
 #pragma once
 
 #include <core/serializable.h>
+#include <core/constants.h>
 #include <array>
+#include <queue>
 
 namespace GBEmulator
 {
@@ -52,19 +54,6 @@ namespace GBEmulator
         uint8_t flags = 0x00;
     };
 
-    union RGB555
-    {
-        struct
-        {
-            uint16_t R : 5;
-            uint16_t G : 5;
-            uint16_t B : 5;
-            uint16_t unused : 1;
-        };
-
-        uint16_t data = 0x0000;
-    };
-
     struct GBCPaletteData
     {
         std::array<RGB555, 4> colors;
@@ -93,6 +82,7 @@ namespace GBEmulator
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
         void Reset();
+        void Clock();
 
         using GBCPaletteDataArray = std::array<GBCPaletteData, 8>;
 
@@ -117,5 +107,9 @@ namespace GBEmulator
         GBCPaletteDataArray m_gbcOBJPalettes;
         GBCPaletteAccess m_gbcBGPaletteAccess;
         GBCPaletteAccess m_gbcOBJPaletteAccess;
+
+        // FIFOs
+        std::queue<RGB555> m_bgFifo;
+        std::queue<RGB555> m_objFifo;
     };
 }
