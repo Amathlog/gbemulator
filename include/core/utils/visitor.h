@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <queue>
 
 using std::size_t;
 
@@ -56,6 +57,23 @@ namespace GBEmulator
                 Read(data.data(), size);
             }
 
+            template <typename DataType, typename Container>
+            void ReadQueue(std::queue<DataType, Container>& data)
+            {
+                // First make sure the queue is empty
+                while (!data.empty())
+                    data.pop();
+
+                size_t size = 0;
+                ReadValue(size);
+                for (size_t i = 0; i < size; ++i)
+                {
+                    DataType value;
+                    ReadValue(value);
+                    data.push(std::move(value));
+                }
+            }
+
             virtual void Advance(size_t size) = 0;
             
             virtual size_t Remaining() const = 0;
@@ -85,6 +103,17 @@ namespace GBEmulator
             {
                 WriteValue(data.size());
                 Write(data.data(), data.size());
+            }
+
+            template <typename DataType, typename Container>
+            void WriteQueue(std::queue<DataType, Container>& data)
+            {
+                WriteValue(data.size());
+                while (!data.empty())
+                {
+                    WriteValue(data.front());
+                    data.pop();
+                }
             }
 
             virtual size_t Written() const = 0;

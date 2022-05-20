@@ -224,6 +224,16 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_gbcBGPaletteAccess.address);
     visitor.WriteValue(m_gbcOBJPaletteAccess.shouldIncr);
     visitor.WriteValue(m_gbcOBJPaletteAccess.address);
+
+    // Need to copy here.
+    auto bgFifoCopy = m_bgFifo;
+    auto objFifoCopy = m_objFifo;
+
+    visitor.WriteQueue(bgFifoCopy);
+    visitor.WriteQueue(objFifoCopy);
+
+    visitor.WriteValue(m_lineDots);
+    visitor.WriteValue(m_scanlines);
 }
 
 void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -247,6 +257,12 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_gbcBGPaletteAccess.address);
     visitor.ReadValue(m_gbcOBJPaletteAccess.shouldIncr);
     visitor.ReadValue(m_gbcOBJPaletteAccess.address);
+
+    visitor.ReadQueue(m_bgFifo);
+    visitor.ReadQueue(m_objFifo);
+
+    visitor.ReadValue(m_lineDots);
+    visitor.ReadValue(m_scanlines);
 }
 
 void Processor2C02::Reset()

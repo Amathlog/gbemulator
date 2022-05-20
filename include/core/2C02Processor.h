@@ -111,5 +111,9 @@ namespace GBEmulator
         // FIFOs
         std::queue<RGB555> m_bgFifo;
         std::queue<RGB555> m_objFifo;
+
+        // Counters
+        unsigned m_lineDots;
+        unsigned m_scanlines;
     };
 }
