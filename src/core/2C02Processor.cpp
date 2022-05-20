@@ -1,4 +1,5 @@
 #include <core/2C02Processor.h>
+#include <core/utils/utils.h>
 #include <algorithm>
 
 using GBEmulator::Processor2C02;
@@ -285,9 +286,62 @@ void Processor2C02::Reset()
 
     m_gbcBGPaletteAccess.Reset();
     m_gbcOBJPaletteAccess.Reset();
+
+    Utils::ClearContainer(m_bgFifo);
+    Utils::ClearContainer(m_objFifo);
+
+    m_lineDots = 0;
+    m_scanlines = 0;
 }
 
 void Processor2C02::Clock()
 {
+    if (m_scanlines <= 143)
+    {
+        // Drawing mode
+        // 0 - 80 = OAM scan (Mode 2)
+        if (m_lineDots <= 80)
+        {
+            m_lcdStatus.mode = 2;
+        }
+        else
+        {
+            // We can be in Drawing pixels (Mode 3) or Horizontal Blank (Mode 0)
+            if (m_lcdStatus.mode == 3)
+            {
+                // Drawing pixels
+                // Max number of dots = 289 (after the 80 from OAM scan)
+                if (m_lineDots == 368)
+                {
+                    m_lcdStatus.mode = 0;
+                }
+            }
+            else
+            {
+                // Horizontal Blank
+            }
+        }
+    }
+    else
+    {
+        // Vertical blank (Mode 1)
+    }
 
+    if (++m_lineDots == 456)
+    {
+        ++m_scanlines;
+        if (m_scanlines == 144)
+        {
+            // Vertical blank mode (mode 1)
+            m_lcdStatus.mode = 1;
+        }
+        else if (m_scanlines == 154)
+        {
+            // Start a new frame, with OAM scan (mode 2)
+            m_scanlines = 0;
+            m_lcdStatus.mode = 2;
+        }
+
+        m_lineDots = 0;
+    }
 }

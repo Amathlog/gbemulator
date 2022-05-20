@@ -31,5 +31,12 @@ namespace Utils
         return std::sprintf(buffer, format, std::forward<Args&&>(args)...);
 #endif
     }
+
+    template<typename Container>
+    void ClearContainer(Container& container)
+    {
+        while (!container.empty())
+            container.pop();
+    }
 }    
 }
