@@ -1,6 +1,7 @@
-#include "exe/imguiWindows/debugWindow.h"
-#include "exe/imguiWindows/imguiWindow.h"
-#include "exe/imguiWindows/ramWindow.h"
+#include <exe/imguiWindows/debugWindow.h>
+#include <exe/imguiWindows/imguiWindow.h>
+#include <exe/imguiWindows/ramWindow.h>
+#include <exe/imguiWindows/tileDataWindow.h>
 #include <exe/window.h>
 #include <cstddef>
 #include <exe/imguiManager.h>
@@ -56,6 +57,7 @@ ImguiManager::ImguiManager(Window* window)
     // Create all windows
     m_childWidgets.emplace(DebugWindow::GetStaticWindowId(), std::make_unique<DebugWindow>());
     m_childWidgets.emplace(RamWindow::GetStaticWindowId(), std::make_unique<RamWindow>());
+    m_childWidgets.emplace(TileDataWindow::GetStaticWindowId(), std::make_unique<TileDataWindow>());
 }
 
 ImguiManager::~ImguiManager()
@@ -160,6 +162,7 @@ void ImguiManager::Update()
             ImGui::MenuItem("Show FPS", nullptr, &showFPS);
             ImGui::MenuItem("Ram visualizer", nullptr, &m_childWidgets[RamWindow::GetStaticWindowId()]->m_open);
             ImGui::MenuItem("Disassembly", nullptr, &m_childWidgets[DebugWindow::GetStaticWindowId()]->m_open);
+            ImGui::MenuItem("Tile data", nullptr, &m_childWidgets[TileDataWindow::GetStaticWindowId()]->m_open);
             ImGui::EndMenu();
         }
 

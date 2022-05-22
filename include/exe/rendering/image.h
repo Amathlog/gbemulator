@@ -34,7 +34,7 @@ namespace GBEmulatorExe
         Format GetImageFormat() const { return m_format; }
 
         void UpdateInternalBuffer(const uint8_t* data, size_t size);
-        void UpdateGLTexture();
+        void UpdateGLTexture(bool bindBefore = false);
         unsigned GetTextureId() const { return m_texture; }
 
         auto& GetInternalBuffer() { return m_imageBuffer; }

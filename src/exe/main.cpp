@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     // Mapper 000 also
     auto path = root / "tests" / "cpu_instrs.gb";
 
-    // path = root / "roms" / "pokemon_jaune.gb";
+    //path = root / "roms" / "SuperMarioLand.gb";
 
     // Check the arg, if there is a file to load
     if (argc > 1) {

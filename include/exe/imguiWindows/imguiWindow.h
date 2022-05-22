@@ -10,6 +10,7 @@ namespace GBEmulatorExe
     {
         DebugWindowId,
         RamWindowId,
+        TileDataWindowId,
 
         Undefined = 0xFFFFFFFF
     };

@@ -57,11 +57,22 @@ void Image::Draw()
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 }
 
-void Image::UpdateGLTexture()
+void Image::UpdateGLTexture(bool bindBefore)
 {
     std::unique_lock<std::mutex> lk(m_lock);
+    if (bindBefore)
+    {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_texture);
+    }
+
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_internalResWidth, m_internalResHeight, GL_RGB, GL_UNSIGNED_BYTE, m_imageBuffer.data());
     m_bufferWasUpdated = false;
+
+    if (bindBefore)
+    {
+        glBindTexture(GL_TEXTURE_2D, 0);
+    }
 }
 
 void Image::UpdateInternalBuffer(const uint8_t* data, size_t size)

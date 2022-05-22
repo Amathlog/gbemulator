@@ -1,4 +1,5 @@
 #include <core/2C02Processor.h>
+#include <core/bus.h>
 #include <core/utils/utils.h>
 #include <algorithm>
 
@@ -34,15 +35,6 @@ namespace // annonymous
 
         if (paletteAccess.shouldIncr)
             paletteAccess.address = (paletteAccess.address + 1) % 0x3F;
-    }
-
-    inline uint32_t RGB555ToRGB888(GBEmulator::RGB555 inputColor)
-    {
-        // For each color, we add a left shift of 3 to transform
-        // 0-31 range (5 bits) to 0-255 range (8 bits)
-        return ((uint32_t)(inputColor.R) << 19)
-            + ((uint32_t)(inputColor.G) << 11)
-            + ((uint32_t)(inputColor.B) << 3);
     }
 }
 
@@ -300,6 +292,76 @@ void Processor2C02::Reset()
     m_isFrameComplete = false;
 }
 
+void Processor2C02::DebugRenderNoise()
+{
+    // Debug function to render noise on the screen, to test that
+    // rendering is working
+
+    unsigned index = m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel;
+    if ((float)rand() / RAND_MAX > 0.5)
+    {
+        m_screen[3 * index] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
+        m_screen[3 * index + 1] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
+        m_screen[3 * index + 2] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
+    }
+    else
+    {
+        m_screen[3 * index] = 0;
+        m_screen[3 * index + 1] = 0;
+        m_screen[3 * index + 2] = 0;
+    }
+}
+
+void Processor2C02::DebugRenderTileIds()
+{
+    // Debug function to render the tile map ids
+    // It maps all possible ids (256) to a gradient color
+    // 0 -> 64:     Red -> Yellow
+    // 64 -> 128:   Yellow -> Green
+    // 128 -> 192:  Green -> Cyan
+    // 192 -> 255:  Cyan -> Blue
+    // 
+    // Find the tile map index
+    unsigned columnIndex = m_currentLinePixel / 5;
+    unsigned rowIndex = m_scanlines / 4;
+
+    uint16_t tileMapAddress = 0x9800 + rowIndex * 32 + columnIndex;
+
+    uint8_t data = m_bus->ReadByte(tileMapAddress);
+
+    unsigned screenIndex = m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel;
+
+    uint8_t r, g, b;
+    if (data < 64)
+    {
+        r = 255;
+        g = data * 4;
+        b = 0;
+    }
+    else if (data < 128)
+    {
+        r = 255 - (data - 64) * 4;
+        g = 255;
+        b = 0;
+    }
+    else if (data < 192)
+    {
+        r = 0;
+        g = 255;
+        b = (data - 128) * 4;
+    }
+    else
+    {
+        r = 0;
+        g = 255 - (data - 192) * 4;
+        b = 255;
+    }
+
+    m_screen[screenIndex * 3] = r;
+    m_screen[screenIndex * 3 + 1] = g;
+    m_screen[screenIndex * 3 + 2] = b;
+}
+
 void Processor2C02::Clock()
 {
     m_isFrameComplete = false;
@@ -335,21 +397,31 @@ void Processor2C02::Clock()
     }
 
     // Set screen pixel
+    // There are multiple modes
+    enum class RenderMode
+    {
+        DEBUG_RANDOM_NOISE,
+        DEBUG_TILE_ID,
+        NORMAL
+    };
+
+    constexpr RenderMode currentMode = RenderMode::DEBUG_RANDOM_NOISE;
+
     if (m_currentLinePixel < 160 && m_scanlines < 144)
     {
-        unsigned index = m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel;
-        if ((float)rand() / RAND_MAX > 0.5)
+        switch (currentMode)
         {
-            m_screen[3 * index] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
-            m_screen[3 * index + 1] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
-            m_screen[3 * index + 2] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
+        case RenderMode::DEBUG_RANDOM_NOISE:
+            DebugRenderNoise();
+            break;
+        case RenderMode::DEBUG_TILE_ID:
+            DebugRenderTileIds();
+            break;
+        case RenderMode::NORMAL:
+            // TODO
+            break;
         }
-        else
-        {
-            m_screen[3 * index] = 0;
-            m_screen[3 * index + 1] = 0;
-            m_screen[3 * index + 2] = 0;
-        }
+
         m_currentLinePixel++;
     }
 

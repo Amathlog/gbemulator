@@ -7,6 +7,8 @@
 
 namespace GBEmulator
 {
+    class Bus;
+
     union LCDRegister
     {
         struct
@@ -72,6 +74,14 @@ namespace GBEmulator
         void Reset() { shouldIncr = false; address = 0x00; }
     };
 
+    struct PixelFIFO
+    {
+        uint8_t color;
+        uint8_t palette;
+        uint8_t spritePriority;
+        uint8_t bgPriority;
+    };
+
     class Processor2C02 : public ISerializable
     {
     public:
@@ -89,12 +99,19 @@ namespace GBEmulator
 
         bool IsFrameComplete() const { return m_isFrameComplete; }
 
+        void ConnectBus(Bus* bus) { m_bus = bus; }
+
         void Reset();
         void Clock();
 
         using GBCPaletteDataArray = std::array<GBCPaletteData, 8>;
 
     private:
+
+        void DebugRenderNoise();
+        void DebugRenderTileIds();
+
+        Bus* m_bus = nullptr;
         LCDRegister m_lcdRegister;
         LCDStatus m_lcdStatus;
 
