@@ -21,10 +21,9 @@ in vec2 TexCoords;
 out vec4 color;
 
 uniform sampler2D Texture;
-uniform vec3 palette[64];
 
 void main()
 {   
-    color = vec4(palette[int(texture(Texture, TexCoords) * 255.0f)], 1.0);
+    color = texture(Texture, TexCoords);
 }  
 )foo";

@@ -75,11 +75,19 @@ namespace GBEmulator
     class Processor2C02 : public ISerializable
     {
     public:
+        Processor2C02();
+
         uint8_t ReadByte(uint16_t addr);
         void WriteByte(uint16_t addr, uint8_t data);
 
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
+
+        constexpr unsigned GetHeight() const { return GB_INTERNAL_HEIGHT; }
+        constexpr unsigned GetWidth() const { return GB_INTERNAL_WIDTH; }
+        const auto& GetScreen() const { return m_screen; }
+
+        bool IsFrameComplete() const { return m_isFrameComplete; }
 
         void Reset();
         void Clock();
@@ -115,5 +123,10 @@ namespace GBEmulator
         // Counters
         unsigned m_lineDots;
         unsigned m_scanlines;
+        unsigned m_currentLinePixel;
+
+        // Screen
+        std::vector<uint8_t> m_screen;
+        bool m_isFrameComplete;
     };
 }

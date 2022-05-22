@@ -37,7 +37,7 @@ namespace GBEmulatorExe
         void UpdateGLTexture();
         unsigned GetTextureId() const { return m_texture; }
 
-        std::vector<uint8_t>& GetInternalBuffer() { return m_imageBuffer; }
+        auto& GetInternalBuffer() { return m_imageBuffer; }
 
     private:
         bool InitializeImage();

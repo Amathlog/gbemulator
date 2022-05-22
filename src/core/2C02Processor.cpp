@@ -36,12 +36,11 @@ namespace // annonymous
             paletteAccess.address = (paletteAccess.address + 1) % 0x3F;
     }
 
-    inline uint32_t RGB555ToRGBA8888(GBEmulator::RGB555 inputColor)
+    inline uint32_t RGB555ToRGB888(GBEmulator::RGB555 inputColor)
     {
         // For each color, we add a left shift of 3 to transform
         // 0-31 range (5 bits) to 0-255 range (8 bits)
-        return (0xFF000000) // Alpha
-            + ((uint32_t)(inputColor.R) << 19)
+        return ((uint32_t)(inputColor.R) << 19)
             + ((uint32_t)(inputColor.G) << 11)
             + ((uint32_t)(inputColor.B) << 3);
     }
@@ -60,6 +59,11 @@ inline void GBCPaletteData::SerializeTo(Utils::IWriteVisitor& visitor) const
 inline void GBCPaletteData::DeserializeFrom(Utils::IReadVisitor& visitor)
 {
     std::for_each(colors.begin(), colors.end(), [&visitor](auto& item) { visitor.ReadValue(item.data); });
+}
+
+Processor2C02::Processor2C02()
+{
+    m_screen.resize(GB_NB_PIXELS * 3);
 }
 
 uint8_t Processor2C02::ReadByte(uint16_t addr)
@@ -292,17 +296,20 @@ void Processor2C02::Reset()
 
     m_lineDots = 0;
     m_scanlines = 0;
+    std::memset(m_screen.data(), 0, m_screen.size());
+    m_isFrameComplete = false;
 }
 
 void Processor2C02::Clock()
 {
+    m_isFrameComplete = false;
     if (m_scanlines <= 143)
     {
         // Drawing mode
         // 0 - 80 = OAM scan (Mode 2)
         if (m_lineDots <= 80)
         {
-            m_lcdStatus.mode = 2;
+            // TODO
         }
         else
         {
@@ -327,7 +334,27 @@ void Processor2C02::Clock()
         // Vertical blank (Mode 1)
     }
 
-    if (++m_lineDots == 456)
+    // Set screen pixel
+    if (m_currentLinePixel < 160 && m_scanlines < 144)
+    {
+        unsigned index = m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel;
+        if ((float)rand() / RAND_MAX > 0.5)
+        {
+            m_screen[3 * index] = 255;
+            m_screen[3 * index + 1] = 255;
+            m_screen[3 * index + 2] = 255;
+        }
+        else
+        {
+            m_screen[3 * index] = 0;
+            m_screen[3 * index + 1] = 0;
+            m_screen[3 * index + 2] = 0;
+        }
+        m_currentLinePixel++;
+    }
+
+    ++m_lineDots;
+    if (m_lineDots == 456)
     {
         ++m_scanlines;
         if (m_scanlines == 144)
@@ -344,4 +371,15 @@ void Processor2C02::Clock()
 
         m_lineDots = 0;
     }
+    else if (m_lineDots == 80)
+    {
+        // OAM scan is done, go to mode 3.
+        // Also clear the FIFOs
+        m_lcdStatus.mode = 3;
+        Utils::ClearContainer(m_bgFifo);
+        Utils::ClearContainer(m_objFifo);
+        m_currentLinePixel = 0;
+    }
+
+    m_isFrameComplete = m_currentLinePixel == 160 && m_scanlines == 143;
 }

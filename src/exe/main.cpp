@@ -7,6 +7,7 @@
 #include <exe/messageService/coreMessageService.h>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
+#include <exe/messageService/messages/screenMessage.h>
 #include <exe/messageService/messages/screenPayload.h>
 #include <filesystem>
 #include <memory>
@@ -17,7 +18,7 @@ using namespace GBEmulatorExe;
 
 static bool enableAudioByDefault = false;
 static bool syncWithAudio = false;
-static bool breakOnStart = true;
+static bool breakOnStart = false;
 
 static unsigned windowScalingFactor = 5;
 
@@ -62,10 +63,10 @@ int main(int argc, char** argv) {
 
     {
         MainWindow mainWindow("GB/GBC Emulator", 
-            GBEmulator::GB_INTERNAL_HEIGHT * windowScalingFactor, 
             GBEmulator::GB_INTERNAL_WIDTH * windowScalingFactor,
-            GBEmulator::GB_INTERNAL_HEIGHT, 
-            GBEmulator::GB_INTERNAL_WIDTH);
+            GBEmulator::GB_INTERNAL_HEIGHT * windowScalingFactor, 
+            GBEmulator::GB_INTERNAL_WIDTH, 
+            GBEmulator::GB_INTERNAL_HEIGHT);
 
         mainWindow.SetUserData(&bus);
         mainWindow.ConnectController();
@@ -86,9 +87,9 @@ int main(int argc, char** argv) {
                 if (!bus.IsInBreak()) {
                     for (auto i = 0; i < nbClocks; ++i) {
                         bus.Clock();
-                        // if (bus.GetPPU().IsFrameComplete())
-                        //     DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen(),
-                        //     bus.GetPPU().GetHeight() * bus.GetPPU().GetWidth()));
+                         if (bus.GetPPU().IsFrameComplete())
+                             DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen().data(),
+                             bus.GetPPU().GetScreen().size()));
                     }
                 }
 

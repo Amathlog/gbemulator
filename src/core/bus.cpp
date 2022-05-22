@@ -259,6 +259,8 @@ bool Bus::Clock()
         res = m_cpu.Clock();
     }
 
+    m_ppu.Clock();
+
     m_nbCycles++;
 
     return res;

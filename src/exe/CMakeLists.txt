@@ -66,7 +66,8 @@ endif(WIN32)
 include_directories(${GBEmulator_SOURCE_DIR}/include)
 
 file(GLOB_RECURSE NEW_EXE_SRC
-    "${GBEmulator_SOURCE_DIR}/src/exe/*.cpp" 
+    "${GBEmulator_SOURCE_DIR}/src/exe/*.cpp"
+    "${GBEmulator_SOURCE_DIR}/include/exe/*.h"
     "${GLAD_DIR}/src/glad.c"
 )
 
