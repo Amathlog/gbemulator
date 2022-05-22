@@ -340,9 +340,9 @@ void Processor2C02::Clock()
         unsigned index = m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel;
         if ((float)rand() / RAND_MAX > 0.5)
         {
-            m_screen[3 * index] = 255;
-            m_screen[3 * index + 1] = 255;
-            m_screen[3 * index + 2] = 255;
+            m_screen[3 * index] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
+            m_screen[3 * index + 1] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
+            m_screen[3 * index + 2] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
         }
         else
         {
