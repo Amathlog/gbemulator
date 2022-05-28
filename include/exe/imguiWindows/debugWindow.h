@@ -27,7 +27,6 @@ namespace GBEmulatorExe
         float m_width;
         float m_height;
 
-        uint16_t m_addressStart = 0x0000;
         std::vector<std::string> m_data;
         CPURegistersInfo m_cpuRegisterInfo;
     };

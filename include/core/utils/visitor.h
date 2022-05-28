@@ -10,6 +10,12 @@ namespace GBEmulator
 {
     namespace Utils
     {
+        template<typename T>
+        struct IsStdArray : std::false_type {};
+
+        template<typename T, std::size_t N>
+        struct IsStdArray<std::array<T, N>> : std::true_type {};
+
         class IReadVisitor
         {
         public:
@@ -53,7 +59,9 @@ namespace GBEmulator
             {
                 size_t size = 0;
                 ReadValue(size);
-                data.resize(size);
+                if constexpr (!IsStdArray<Container>::value)
+                    data.resize(size);
+
                 Read(data.data(), size);
             }
 

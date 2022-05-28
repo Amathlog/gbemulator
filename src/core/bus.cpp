@@ -83,6 +83,11 @@ uint8_t Bus::ReadByte(uint16_t addr)
         // Divider and timer
         // TODO
     }
+    else if (addr == IF_REG_ADDR)
+    {
+        // IF - Interupt flag
+        data = m_IF.flag;
+    }
     else if (addr >= 0xFF10 && addr <= 0xFF26)
     {
         // Sound
@@ -113,7 +118,7 @@ uint8_t Bus::ReadByte(uint16_t addr)
         // VRAM DMA (GBC only)
         // TODO
     }
-    else if (addr >= 0xFF68 || addr <= 0xFF6B && m_mode == Mode::GBC)
+    else if (addr >= 0xFF68 && addr <= 0xFF6B && m_mode == Mode::GBC)
     {
         // BG/OBJ palettes (GBC only)
         data = m_ppu.ReadByte(addr);
@@ -126,12 +131,12 @@ uint8_t Bus::ReadByte(uint16_t addr)
     else if (addr >= 0xFF80 && addr <= 0xFFFE)
     {
         // High RAM
-        // TODO
+        data = m_HRAM[addr - 0xFF80];
     }
-    else if (addr == 0xFFFF)
+    else if (addr == IE_REG_ADDR)
     {
         // Interupt Enable Register (IE)
-        // TODO
+        data = m_IE.flag;
     }
 
     return data;
@@ -193,6 +198,11 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
         // Divider and timer
         // TODO
     }
+    else if (addr == IF_REG_ADDR)
+    {
+        // IF - Interupt flag
+        m_IF.flag = data & 0x1F;
+    }
     else if (addr >= 0xFF10 && addr <= 0xFF26)
     {
         // Sound
@@ -223,7 +233,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
         // VRAM DMA (GBC only)
         // TODO
     }
-    else if (addr >= 0xFF68 || addr <= 0xFF6B && m_mode == Mode::GBC)
+    else if (addr >= 0xFF68 && addr <= 0xFF6B && m_mode == Mode::GBC)
     {
         // BG/OBJ palettes (GBC only)
         m_ppu.WriteByte(addr, data);
@@ -236,12 +246,12 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xFF80 && addr <= 0xFFFE)
     {
         // High RAM
-        // TODO
+        m_HRAM[addr - 0xFF80] = data;
     }
-    else if (addr == 0xFFFF)
+    else if (addr == IE_REG_ADDR)
     {
         // Interupt Enable Register (IE)
-        // TODO
+        m_IE.flag = data & 0x1F;
     }
 }
 
@@ -258,6 +268,12 @@ bool Bus::Clock()
     if (m_nbCycles % 4 == 0)
     {
         res = m_cpu.Clock();
+
+        if (m_runToAddress != 0xFFFFFFFF && (uint32_t)m_cpu.GetPC() == m_runToAddress)
+        {
+            m_runToAddress = 0xFFFFFFFF;
+            m_isInBreakMode = true;
+        }
     }
 
     m_ppu.Clock();
@@ -282,6 +298,10 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteContainer(m_WRAM);
     visitor.WriteValue(m_currentWRAMBank);
     visitor.WriteValue(m_nbCycles);
+
+    visitor.WriteContainer(m_HRAM);
+    visitor.WriteValue(m_IE.flag);
+    visitor.WriteValue(m_IF.flag);
 }
 
 void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -299,6 +319,10 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadContainer(m_WRAM);
     visitor.ReadValue(m_currentWRAMBank);
     visitor.ReadValue(m_nbCycles);
+
+    visitor.ReadContainer(m_HRAM);
+    visitor.ReadValue(m_IE.flag);
+    visitor.ReadValue(m_IF.flag);
 }
 
 void Bus::Reset()
@@ -314,6 +338,7 @@ void Bus::Reset()
     // you boot a Gameboy
     std::fill(m_WRAM.begin(), m_WRAM.end(), 0x00);
     std::fill(m_VRAM.begin(), m_VRAM.end(), 0x00);
+    m_HRAM.fill(0x00);
 
     // By default, we point on the first VRAM bank (won't move in GB mode)
     // Each VRAM bank is 8kB size
@@ -323,6 +348,9 @@ void Bus::Reset()
     // Each WRAM bank is 4kB in size and two banks can be "mapped" at the same time.
     // The first one (always) and another one (switchable in GBC mode, fixed to second bank in GB mode)
     m_currentWRAMBank = 1;
+
+    m_IE.flag = 0x00;
+    m_IF.flag = 0x00;
 
     m_nbCycles = 0;
 }
@@ -347,4 +375,10 @@ void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
 
     // Set the current mode to the highest supported
     m_mode = m_cartridge->GetHeader().supportCGBMode ? Mode::GBC : Mode::GB;
+}
+
+void Bus::SetRunToAddress(uint16_t address)
+{
+    m_runToAddress = address;
+    m_isInBreakMode = false;
 }

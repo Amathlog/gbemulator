@@ -87,9 +87,6 @@ namespace GBEmulator
         void Reset();
         bool Clock();
 
-        uint8_t ReadByte(uint16_t addr);
-        void WriteByte(uint16_t addr, uint8_t data);
-
         RegisterAF GetAFRegister() const { return m_AF; } 
         RegisterBC GetBCRegister() const { return m_BC; } 
         RegisterDE GetDERegister() const { return m_DE; } 
@@ -104,6 +101,9 @@ namespace GBEmulator
         bool IsIMEEnabled() const { return m_IMEEnabled; }
 
     private:
+        uint8_t ReadByte(uint16_t addr);
+        void WriteByte(uint16_t addr, uint8_t data);
+
         // Utility functions
         void SetZeroFlag(uint16_t res) { m_AF.F.Z = (res == 0); }
         // Will get/write the value of the register with a given index in data
@@ -129,6 +129,9 @@ namespace GBEmulator
         // Operate the stack
         void PushWordToStack(uint16_t data);
         uint16_t PopWordFromStack();
+
+        // Interrupt handling
+        uint8_t HandleInterrupt();
 
         // Declaration of all "types" of opcodes
         // We also pass the opcode to the function as
@@ -189,6 +192,7 @@ namespace GBEmulator
         // IME flags
         bool m_IMEScheduled = false;
         bool m_IMEEnabled = false;
+        bool m_isPaused = false;
 
         // Other members
         Bus* m_bus;

@@ -23,4 +23,8 @@ namespace GBEmulator
     constexpr unsigned GB_INTERNAL_HEIGHT = 144;
     constexpr unsigned GB_INTERNAL_WIDTH = 160;
     constexpr unsigned GB_NB_PIXELS = GB_INTERNAL_HEIGHT * GB_INTERNAL_WIDTH;
+
+    // Special addresses
+    constexpr uint16_t IF_REG_ADDR = 0xFF0F;
+    constexpr uint16_t IE_REG_ADDR = 0xFFFF;
 }

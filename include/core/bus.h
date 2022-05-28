@@ -18,6 +18,21 @@ namespace GBEmulator
         GBC
     };
 
+    union InterruptRegister
+    {
+        struct
+        {
+            uint8_t vBlank : 1;
+            uint8_t lcdStat : 1;
+            uint8_t timer : 1;
+            uint8_t serial : 1;
+            uint8_t joypad : 1;
+            uint8_t unused : 3;
+        };
+
+        uint8_t flag = 0x00;
+    };
+
     class Bus : public ISerializable
     {
     public:
@@ -31,6 +46,7 @@ namespace GBEmulator
 
         bool IsInBreak() const { return m_isInBreakMode; }
         void BreakContinue() { m_isInBreakMode = !m_isInBreakMode; }
+        void SetRunToAddress(uint16_t address);
 
         bool Clock();
 
@@ -70,11 +86,17 @@ namespace GBEmulator
         std::vector<uint8_t> m_WRAM;
         uint8_t m_currentWRAMBank;
 
+        std::array<uint8_t, 127> m_HRAM;
+
+        InterruptRegister m_IE;
+        InterruptRegister m_IF;
+
         std::array<uint8_t, 256> m_ROM;
 
         std::shared_ptr<Cartridge> m_cartridge;
         size_t m_nbCycles;
 
         bool m_isInBreakMode = false;
+        uint32_t m_runToAddress = 0xFFFFFFFF;
     };
 }

@@ -20,6 +20,10 @@ void Z80Processor::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_SP);
     visitor.WriteValue(m_PC);
     visitor.WriteValue(m_cycles);
+
+    visitor.WriteValue(m_IMEEnabled);
+    visitor.WriteValue(m_IMEScheduled);
+    visitor.WriteValue(m_isPaused);
 }
 
 void Z80Processor::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -31,6 +35,10 @@ void Z80Processor::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_SP);
     visitor.ReadValue(m_PC);
     visitor.ReadValue(m_cycles);
+
+    visitor.ReadValue(m_IMEEnabled);
+    visitor.ReadValue(m_IMEScheduled);
+    visitor.ReadValue(m_isPaused);
 }
 
 void Z80Processor::Reset()
@@ -43,6 +51,10 @@ void Z80Processor::Reset()
     m_PC = 0x0100;
 
     m_cycles = 0;
+
+    m_IMEEnabled = false;
+    m_IMEScheduled = false;
+    m_isPaused = false;
 }
 
 inline uint8_t Z80Processor::ReadByte(uint16_t addr)
@@ -68,6 +80,18 @@ bool Z80Processor::Clock()
     {
         m_IMEScheduled = false;
         m_IMEEnabled = true;
+    }
+
+    uint8_t interruptResult = HandleInterrupt();
+
+    if (interruptResult != 0)
+    {
+        m_cycles = interruptResult;
+    }
+
+    if (m_isPaused)
+    {
+        return false;
     }
 
     if (m_cycles == 0)
@@ -174,6 +198,9 @@ void Z80Processor::ReadWordFromRegisterIndex(uint8_t index, uint16_t& data)
     case 3:
         data = m_SP;
         break;
+    case 4:
+        data = m_AF.AF;
+        break;
     default:
         data = 0;
         break;
@@ -195,6 +222,9 @@ void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
         break;
     case 3:
         m_SP = data;
+        break;
+    case 4:
+        data = m_AF.AF;
         break;
     default:
         break;
@@ -278,6 +308,77 @@ uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 {
     auto opCall = m_opcodesMap[opcode];
     return (this->*opCall)(opcode);
+}
+
+uint8_t Z80Processor::HandleInterrupt()
+{
+    if (!m_IMEEnabled && !m_isPaused)
+        return 0;
+
+    InterruptRegister IE;
+    IE.flag = ReadByte(IE_REG_ADDR);
+
+    if (IE.flag == 0x00)
+        return 0;
+
+    InterruptRegister IF;
+    IF.flag = ReadByte(IF_REG_ADDR);
+
+    bool interruptPending = (IF.flag & IE.flag) != 0x00;
+
+    if (!interruptPending)
+        return 0;
+
+    if (m_isPaused)
+    {
+        m_isPaused = false;
+
+        // If IME == 0, we don't do anything and just resume the CPU
+        if (!m_IMEEnabled)
+            return 0;
+    }
+
+    // At this point, we are handling interrupts (IME == 1) and we have one requested
+    // that is enabled (IF & IE != 0)
+    // Check them in order, as if there are multiple interrupt requested, the lowest bit
+    // of IF has priority
+    // Also, IME is not disabled
+    m_IMEEnabled = false;
+    uint16_t jumpingAddress = 0x0000;
+
+    if (IF.vBlank == 1 && IE.vBlank == 1)
+    {
+        IF.vBlank = 0;
+        jumpingAddress = 0x0040;
+    }
+    else if (IF.lcdStat == 1 && IE.lcdStat == 1)
+    {
+        IF.lcdStat = 0;
+        jumpingAddress = 0x0048;
+    }
+    else if (IF.timer == 1 && IE.timer == 1)
+    {
+        IF.timer = 0;
+        jumpingAddress = 0x0050;
+    }
+    else if (IF.serial == 1 && IE.serial == 1)
+    {
+        IF.serial = 0;
+        jumpingAddress = 0x0058;
+    }
+    else if (IF.joypad == 1 && IE.joypad == 1)
+    {
+        IF.joypad = 0;
+        jumpingAddress = 0x0060;
+    }
+
+    // Next instruction is push on the stack
+    PushWordToStack(m_PC);
+
+    // Then we jump
+    m_PC = jumpingAddress;
+
+    return 5;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -1456,6 +1557,9 @@ uint8_t Z80Processor::RST(uint8_t opcode)
         0x0000, 0x0008, 0x0010, 0x0018, 0x0020, 0x0028, 0x0030, 0x0038
     };
 
+    // Next instrcution is push on the stack
+    PushWordToStack(m_PC);
+
     m_PC = addrTable[index];
 
     return 4;
@@ -1476,6 +1580,10 @@ uint8_t Z80Processor::POP(uint8_t opcode)
     uint16_t data = PopWordFromStack();
     uint8_t index = (opcode >> 4) & 0x03;
 
+    // cf. PUSH
+    if (index == 3)
+        index = 4;
+
     WriteWordToRegisterIndex(index, data);
 
     return 3;
@@ -1491,6 +1599,12 @@ uint8_t Z80Processor::PUSH(uint8_t opcode)
 {
     uint16_t data = 0;
     uint8_t index = (opcode >> 4) & 0x03;
+
+    // In ReadWordFromRegisterIndex, index 3 correspond to SP,
+    // beacuse in ADD, DEC, and INC the third index is SP
+    // But in PUSH, it's AF, and it is mapped to index 4 in this function.
+    if (index == 3)
+        index = 4;
 
     ReadWordFromRegisterIndex(index, data);
 
@@ -1624,7 +1738,7 @@ uint8_t Z80Processor::EI(uint8_t /*opcode*/)
 
 uint8_t Z80Processor::HALT(uint8_t opcode)
 {
-    // TODO
+    m_isPaused = true;
     return 1;
 }
 

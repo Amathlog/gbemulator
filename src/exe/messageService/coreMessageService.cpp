@@ -83,6 +83,11 @@ bool CoreMessageService::Push(const Message &message)
             m_bus.BreakContinue();
             return true;
         }
+        case DefaultDebugMessageType::RUN_TO:
+        {
+            m_bus.SetRunToAddress(payload->m_addressStart);
+            return true;
+        }
         }
     }
 

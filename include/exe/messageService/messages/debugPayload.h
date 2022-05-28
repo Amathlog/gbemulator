@@ -30,8 +30,8 @@ namespace GBEmulatorExe
         GBEmulator::RegisterDE m_DE;
         GBEmulator::RegisterHL m_HL;
 
-        uint16_t m_SP;
-        uint16_t m_PC;
+        uint16_t m_SP = 0x0000;
+        uint16_t m_PC = 0x0000;
 
         // IME flag
         bool m_IMEEnabled = false;

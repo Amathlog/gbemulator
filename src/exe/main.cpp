@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
 #endif // WIN32
 
     // Mapper 000 also
-    auto path = root / "tests" / "cpu_instrs.gb";
+    auto path = root / "tests" / "bgbtest.gb";
 
     //path = root / "roms" / "SuperMarioLand.gb";
 
@@ -87,9 +87,12 @@ int main(int argc, char** argv) {
                 if (!bus.IsInBreak()) {
                     for (auto i = 0; i < nbClocks; ++i) {
                         bus.Clock();
-                         if (bus.GetPPU().IsFrameComplete())
+                        if (bus.GetPPU().IsFrameComplete())
                              DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen().data(),
                              bus.GetPPU().GetScreen().size()));
+
+                        if (bus.IsInBreak())
+                            break;
                     }
                 }
 

@@ -56,10 +56,13 @@ void DebugWindow::Draw()
             {
                 m_cpuRegisterInfo = std::move(msg2.GetTypedPayload().m_cpuRegistersInfo);
             }
+
+            UpdateBreakStatus();
         }
 
         static bool open = true;
         static char addressStart[10] = "0000";
+        static char addressRunTo[5] = "0000";
         float limit = 2.f * m_width / 5.f;
         ImGui::SetNextWindowPos(windowPos);
         if (ImGui::BeginChild("Disassembly#12", ImVec2(limit, m_height), false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
@@ -68,6 +71,8 @@ void DebugWindow::Draw()
             {
                 ImGui::Text("%s", m_data[i].c_str());
             }
+
+            ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
             if (ImGui::Button(m_isInBreakMode ? "Continue" : "Break"))
             {
@@ -82,8 +87,22 @@ void DebugWindow::Draw()
             {
                 DispatchMessageServiceSingleton::GetInstance().Push(StepMessage());
             }
-            ImGui::EndDisabled();
 
+            ImGui::Dummy(ImVec2(0.0f, 10.0f));
+
+
+            ImGui::Text("Run to: 0x");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(40.f);
+            ImGui::InputText("##address", addressRunTo, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+            ImGui::SameLine();
+            if (ImGui::Button("Go"))
+            {
+                uint16_t address = (uint16_t)std::stoul(addressRunTo, nullptr, 16);
+                DispatchMessageServiceSingleton::GetInstance().Push(RunToMessage(address));
+                m_isInBreakMode = false;
+            }
+            ImGui::EndDisabled();
         }
 
         ImGui::EndChild();

@@ -436,6 +436,12 @@ void Processor2C02::Clock()
         {
             // Vertical blank mode (mode 1)
             m_lcdStatus.mode = 1;
+
+            // Set the IF register bit for VBlank to 1
+            InterruptRegister ifRegister;
+            ifRegister.flag = m_bus->ReadByte(IF_REG_ADDR);
+            ifRegister.vBlank = 1;
+            m_bus->WriteByte(IF_REG_ADDR, ifRegister.flag);
         }
         else if (m_scanlines == 154)
         {

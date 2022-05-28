@@ -42,9 +42,8 @@ void RamWindow::Draw()
     {
         ImGui::Text("%s", "Go to address: 0x");
         ImGui::SameLine();
-        ImGui::InputText("##AddressText", addressStart, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
-        ImGui::SameLine();
-        if (ImGui::Button("Apply") && addressStart[0] != '\0')
+        if (ImGui::InputText("##AddressText", addressStart, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase)
+            && addressStart[0] != '\0')
         {
             m_forceUpdate = true;
             auto addressStartN = std::stoul(addressStart, 0, 16);
