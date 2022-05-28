@@ -18,7 +18,8 @@ namespace GBEmulatorExe
         BREAK_CONTINUE,
         DISASSEMBLY,
         GET_BREAK_STATUS,
-        GET_CPU_REGISTERS
+        GET_CPU_REGISTERS,
+        RUN_TO
     };
 
     struct CPURegistersInfo

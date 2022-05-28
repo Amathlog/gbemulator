@@ -12,6 +12,11 @@ DebugWindow::DebugWindow()
     m_lastUpdateTime = ImGui::GetTime();
     m_forceUpdate = true;
 
+    UpdateBreakStatus();
+}
+
+void DebugWindow::UpdateBreakStatus()
+{
     GetBreakStatusMessage msg;
     if (DispatchMessageServiceSingleton::GetInstance().Pull(msg))
     {

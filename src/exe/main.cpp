@@ -18,7 +18,7 @@ using namespace GBEmulatorExe;
 
 static bool enableAudioByDefault = false;
 static bool syncWithAudio = false;
-static bool breakOnStart = false;
+static bool breakOnStart = true;
 
 static unsigned windowScalingFactor = 5;
 

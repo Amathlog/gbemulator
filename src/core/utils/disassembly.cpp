@@ -118,6 +118,13 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
         Utils::sprintf(res.data(), res.size(), "0x%02X", data);
         res.resize(4);
     }
+    else if (temp == "a8")
+    {
+        uint8_t data = bus.ReadByte(pc++);
+        res.resize(11);
+        Utils::sprintf(res.data(), res.size(), "0xFF00+$%02X", data);
+        res.resize(10);
+    }
     else if (temp == "r8")
     {
         int8_t data = bus.ReadByte(pc++);

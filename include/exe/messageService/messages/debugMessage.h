@@ -45,4 +45,10 @@ namespace GBEmulatorExe
         GetCPURegistersInfoMessage() : DebugMessage(DefaultDebugMessageType::GET_CPU_REGISTERS, nullptr, 0, 0, 0, 0)
         {}
     };
+
+    struct RunToMessage : DebugMessage
+    {
+        RunToMessage(uint16_t address) : DebugMessage(DefaultDebugMessageType::RUN_TO, nullptr, 0, 0, address, 0)
+        {}
+    };
 }

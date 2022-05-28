@@ -19,6 +19,8 @@ namespace GBEmulatorExe
         WINDOW_ID_IMPL(AllWindowsId::DebugWindowId);
 
     protected:
+        void UpdateBreakStatus();
+
         double m_lastUpdateTime;
         bool m_forceUpdate = false;
         bool m_isInBreakMode = false;

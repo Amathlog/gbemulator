@@ -411,9 +411,9 @@ uint8_t Z80Processor::LDH(uint8_t opcode)
     uint8_t offset = FetchByte();
     uint16_t addr = 0xFF00 | offset;
     if (opcode == 0xE0)
-        m_AF.A = ReadByte(addr);
-    else
         WriteByte(addr, m_AF.A);
+    else
+        m_AF.A = ReadByte(addr);
 
     return 2;
 }

@@ -364,6 +364,9 @@ void Processor2C02::DebugRenderTileIds()
 
 void Processor2C02::Clock()
 {
+    // Update the status
+    m_lcdStatus.lYcEqualLY = m_lY == m_lYC;
+
     m_isFrameComplete = false;
     if (m_scanlines <= 143)
     {
@@ -405,7 +408,7 @@ void Processor2C02::Clock()
         NORMAL
     };
 
-    constexpr RenderMode currentMode = RenderMode::DEBUG_RANDOM_NOISE;
+    constexpr RenderMode currentMode = RenderMode::DEBUG_TILE_ID;
 
     if (m_currentLinePixel < 160 && m_scanlines < 144)
     {
@@ -442,6 +445,7 @@ void Processor2C02::Clock()
         }
 
         m_lineDots = 0;
+        m_lY = (uint8_t)m_scanlines;
     }
     else if (m_lineDots == 80)
     {
