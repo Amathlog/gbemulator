@@ -8,7 +8,7 @@ namespace GBEmulator
 {
 namespace Utils
 {
-    std::array<uint8_t, 64> GetTileDataFromBytes(const uint8_t* data)
+    inline std::array<uint8_t, 64> GetTileDataFromBytes(const uint8_t* data)
     {
         std::array<uint8_t, 64> res;
         for (auto i = 0; i < 8; ++i)
@@ -27,7 +27,7 @@ namespace Utils
         return res;
     }
 
-    constexpr void RGB555ToRGB888(const RGB555& colorIn, uint8_t& rOut, uint8_t& gOut, uint8_t& bOut)
+    constexpr inline void RGB555ToRGB888(const RGB555& colorIn, uint8_t& rOut, uint8_t& gOut, uint8_t& bOut)
     {
         rOut = colorIn.R << 3;
         gOut = colorIn.G << 3;

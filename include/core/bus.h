@@ -76,7 +76,7 @@ namespace GBEmulator
         Z80Processor m_cpu;
         Processor2C02 m_ppu;
 
-        Mode m_mode;
+        Mode m_mode = Mode::GB;
 
         bool m_isDoubleSpeedMode = false;
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cassert>
 #include <queue>
 
 using std::size_t;
@@ -60,7 +61,13 @@ namespace GBEmulator
                 size_t size = 0;
                 ReadValue(size);
                 if constexpr (!IsStdArray<Container>::value)
+                {
                     data.resize(size);
+                }
+                else
+                {
+                    assert(size == data.size());
+                }
 
                 Read(data.data(), size);
             }

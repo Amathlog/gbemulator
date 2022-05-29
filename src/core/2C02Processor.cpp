@@ -1,10 +1,13 @@
 #include <core/2C02Processor.h>
 #include <core/bus.h>
 #include <core/utils/utils.h>
+#include <core/utils/tile.h>
+#include <core/constants.h>
 #include <algorithm>
 
 using GBEmulator::Processor2C02;
 using GBEmulator::GBCPaletteData;
+using GBEmulator::GBPaletteData;
 using GBEmulator::GBCPaletteAccess;
 
 namespace // annonymous
@@ -35,6 +38,11 @@ namespace // annonymous
 
         if (paletteAccess.shouldIncr)
             paletteAccess.address = (paletteAccess.address + 1) % 0x3F;
+    }
+
+    inline uint8_t GetColorIndexFromGBPalette(const GBPaletteData& palette, uint8_t index)
+    {
+        return (palette.flags >> (index << 1)) & 0x03;
     }
 }
 
@@ -231,6 +239,15 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
 
     visitor.WriteValue(m_lineDots);
     visitor.WriteValue(m_scanlines);
+    visitor.WriteValue(m_currentLinePixel);
+    visitor.WriteValue(m_currentBGX);
+
+    visitor.WriteContainer(m_currentFetchedBGPixels);
+    visitor.WriteContainer(m_currentFetchedOBJPixels);
+    visitor.WriteValue(m_currentStagePixelFetcher);
+    visitor.WriteValue(m_XOffsetBGTile);
+    visitor.WriteValue(m_lsbXScroll);
+    visitor.WriteValue(m_BGTileAddress);
 }
 
 void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -260,6 +277,15 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
 
     visitor.ReadValue(m_lineDots);
     visitor.ReadValue(m_scanlines);
+    visitor.ReadValue(m_currentLinePixel);
+    visitor.ReadValue(m_currentBGX);
+
+    visitor.ReadContainer(m_currentFetchedBGPixels);
+    visitor.ReadContainer(m_currentFetchedOBJPixels);
+    visitor.ReadValue(m_currentStagePixelFetcher);
+    visitor.ReadValue(m_XOffsetBGTile);
+    visitor.ReadValue(m_lsbXScroll);
+    visitor.ReadValue(m_BGTileAddress);
 }
 
 void Processor2C02::Reset()
@@ -288,11 +314,18 @@ void Processor2C02::Reset()
 
     m_lineDots = 0;
     m_scanlines = 0;
+    m_currentLinePixel = 0;
+    m_currentBGX = 0;
     std::memset(m_screen.data(), 0, m_screen.size());
     m_isFrameComplete = false;
+
+    m_currentStagePixelFetcher = 0;
+    m_XOffsetBGTile = 0;
+    m_lsbXScroll = 0;
+    m_BGTileAddress = 0;
 }
 
-void Processor2C02::DebugRenderNoise()
+inline void Processor2C02::DebugRenderNoise()
 {
     // Debug function to render noise on the screen, to test that
     // rendering is working
@@ -312,7 +345,7 @@ void Processor2C02::DebugRenderNoise()
     }
 }
 
-void Processor2C02::DebugRenderTileIds()
+inline void Processor2C02::DebugRenderTileIds()
 {
     // Debug function to render the tile map ids
     // It maps all possible ids (256) to a gradient color
@@ -325,7 +358,8 @@ void Processor2C02::DebugRenderTileIds()
     unsigned columnIndex = m_currentLinePixel / 5;
     unsigned rowIndex = m_scanlines / 4;
 
-    uint16_t tileMapAddress = 0x9800 + rowIndex * 32 + columnIndex;
+    uint16_t baseAddress = m_lcdRegister.bgTileMapArea == 0 ? 0x9800 : 0x9C00;
+    uint16_t tileMapAddress = baseAddress + rowIndex * 32 + columnIndex;
 
     uint8_t data = m_bus->ReadByte(tileMapAddress);
 
@@ -362,6 +396,59 @@ void Processor2C02::DebugRenderTileIds()
     m_screen[screenIndex * 3 + 2] = b;
 }
 
+inline void Processor2C02::RenderPixelFifos()
+{
+    if (m_bgFifo.empty() && m_objFifo.empty())
+        return;
+
+    PixelFIFO bgPixel;
+    if (!m_bgFifo.empty())
+    {
+        bgPixel = m_bgFifo.front();
+        m_bgFifo.pop();
+    }
+
+    PixelFIFO objPixel;
+    if (!m_objFifo.empty())
+    {
+        objPixel = m_objFifo.front();
+        m_objFifo.pop();
+    }
+
+    unsigned screenIndex = 3 * (m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel);
+
+    // We can render either the BG pixel, or the OBJ pixel
+    // BG: If the OBJ color is 0 (transparent) or BG over OBJ flag is on
+    const RGB555* pixelColor = nullptr;
+    if (objPixel.color == 0 || objPixel.bgPriority == 1)
+    {
+        // Draw BG pixel
+        if (m_bus->GetMode() == Mode::GB)
+        {
+            pixelColor = &DEFAULT_PALETTE[GetColorIndexFromGBPalette(m_gbBGPalette, bgPixel.color)];
+        }
+        else
+        {
+            pixelColor = &(m_gbcBGPalettes[bgPixel.palette].colors[bgPixel.color]);
+        }
+    }
+    else
+    {
+        // Draw OBJ pixel
+        if (m_bus->GetMode() == Mode::GB)
+        {
+            pixelColor = &DEFAULT_PALETTE[GetColorIndexFromGBPalette(objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
+        }
+        else
+        {
+            pixelColor = &(m_gbcOBJPalettes[objPixel.palette].colors[objPixel.color]);
+        }
+    }
+
+    Utils::RGB555ToRGB888(*pixelColor, m_screen[screenIndex], m_screen[screenIndex + 1], m_screen[screenIndex + 2]);
+    m_currentLinePixel++;
+}
+
 void Processor2C02::Clock()
 {
     // Update the status
@@ -370,6 +457,11 @@ void Processor2C02::Clock()
     m_isFrameComplete = false;
     if (m_scanlines <= 143)
     {
+        if (m_lineDots == 0)
+        {
+            m_lsbXScroll = m_scrollX & 0x07;
+        }
+
         // Drawing mode
         // 0 - 80 = OAM scan (Mode 2)
         if (m_lineDots <= 80)
@@ -382,6 +474,103 @@ void Processor2C02::Clock()
             if (m_lcdStatus.mode == 3)
             {
                 // Drawing pixels
+
+                // First step: BG
+                switch (m_currentStagePixelFetcher)
+                {
+                // For the first 3 steps, it takes 2 dots for each,
+                // so sleep for this ones.
+                case 1: // Fall-through
+                case 3: // Fall-through
+                case 5:
+                    m_currentStagePixelFetcher++;
+                    break;
+                // Get Tile
+                case 0:
+                {
+                    // To get the tile, we need first to know our vertical/horizontal scrolling
+                    // For horizontal scrolling, we only update the 5 msb bits of the scroll X register.
+                    // the 3 lsb one are fixed during the whole scanline.
+                    // If we exceed 256, it wraps around.
+                    uint8_t currentY = m_scrollY + m_scanlines;
+                    uint8_t scrollX = (m_scrollX & 0xF8) | m_lsbXScroll;
+                    uint8_t currentX = scrollX + m_currentBGX;
+
+                    // We can then compute the coordinate of the tile to fetch
+                    uint16_t tileCoordinate = (currentY / 8) * 32 + (currentX / 8);
+                    // If we are in a middle of a tile, because of X scroll, take it into account
+                    m_XOffsetBGTile = currentX % 8;
+
+                    // Then fetch the tile ID in the tile map
+                    uint16_t address = m_lcdRegister.bgTileMapArea == 0 ? 0x9800 : 0x9C00;
+                    address += tileCoordinate;
+                    uint8_t tileId = m_bus->ReadByte(address);
+
+                    // Finally, compute the address of the tile data to read from in the next stage
+                    // If tileAreaData is 0, the starting address is 0x9000 and the tileId is a signed integer
+                    // Otherwise, the starting address is 0x8000 and the tileId is an unsigned integer
+                    m_BGTileAddress = m_lcdRegister.BGAndWindowTileAreaData == 0 ? 0x9000 : 0x8000;
+                    int16_t realTileId = 0x0000;
+                    if (m_lcdRegister.BGAndWindowTileAreaData == 0)
+                    {
+                        int8_t temp = (int8_t)(tileId);
+                        realTileId = temp;
+                    }
+                    else
+                    {
+                        realTileId = tileId;
+                    }
+
+                    m_BGTileAddress += realTileId * 16; // Each tile is 16 bytes
+                    // And offset the address given the current line
+                    uint8_t YOffset = currentY % 8;
+                    m_BGTileAddress += YOffset * 2;
+
+                    m_currentStagePixelFetcher++;
+                    break;
+                }
+                // Get Tile data low
+                case 2:
+                {
+                    uint8_t tileLsb = m_bus->ReadByte(m_BGTileAddress);
+                    tileLsb <<= m_XOffsetBGTile;
+                    for (auto i = 0; i < 8 - m_XOffsetBGTile; ++i)
+                    {
+                        m_currentFetchedBGPixels[i].color = (tileLsb & 0x80) >> 7;
+                        tileLsb <<= 1;
+                    }
+
+                    m_currentStagePixelFetcher++;
+                    break;
+                }
+                // Get Tile data high
+                case 4:
+                {
+                    uint8_t tileMsb = m_bus->ReadByte(m_BGTileAddress + 1);
+                    tileMsb <<= m_XOffsetBGTile;
+                    for (auto i = 0; i < 8 - m_XOffsetBGTile; ++i)
+                    {
+                        m_currentFetchedBGPixels[i].color |= (tileMsb & 0x80) >> 6;
+                        tileMsb <<= 1;
+                    }
+
+                    m_currentStagePixelFetcher++;
+                    break;
+                }
+                // Push when ready
+                default:
+                    if (m_bgFifo.empty())
+                    {
+                        for (auto i = 0; i < 8 - m_XOffsetBGTile; ++i)
+                        {
+                            m_bgFifo.push(m_currentFetchedBGPixels[i]);
+                        }
+                        m_currentStagePixelFetcher = 0;
+                        m_currentBGX += 8 - m_XOffsetBGTile;
+                    }
+                    break;
+                }
+
                 // Max number of dots = 289 (after the 80 from OAM scan)
                 if (m_lineDots == 368)
                 {
@@ -408,7 +597,7 @@ void Processor2C02::Clock()
         NORMAL
     };
 
-    constexpr RenderMode currentMode = RenderMode::DEBUG_TILE_ID;
+    constexpr RenderMode currentMode = RenderMode::NORMAL;
 
     if (m_currentLinePixel < 160 && m_scanlines < 144)
     {
@@ -416,16 +605,18 @@ void Processor2C02::Clock()
         {
         case RenderMode::DEBUG_RANDOM_NOISE:
             DebugRenderNoise();
+            m_currentLinePixel++;
             break;
         case RenderMode::DEBUG_TILE_ID:
             DebugRenderTileIds();
+            m_currentLinePixel++;
             break;
         case RenderMode::NORMAL:
-            // TODO
+            // m_currentLinePixel will be incremented if a pixel was emitted from the FIFO
+            // Therefore let this method handle the increment, if needed.
+            RenderPixelFifos();
             break;
         }
-
-        m_currentLinePixel++;
     }
 
     ++m_lineDots;
@@ -451,6 +642,7 @@ void Processor2C02::Clock()
         }
 
         m_lineDots = 0;
+        m_currentBGX = 0;
         m_lY = (uint8_t)m_scanlines;
     }
     else if (m_lineDots == 80)

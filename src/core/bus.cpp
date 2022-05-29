@@ -370,11 +370,20 @@ void Bus::ChangeMode(Mode newMode)
 
 void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
 {
-    m_cartridge = cartridge;
-    Reset();
+    if (!cartridge)
+        return;
 
     // Set the current mode to the highest supported
-    m_mode = m_cartridge->GetHeader().supportCGBMode ? Mode::GBC : Mode::GB;
+    // GBC not supported yet
+    if (cartridge->GetHeader().CGBOnly)
+        return;
+
+    m_cartridge = cartridge;
+
+    //m_mode = m_cartridge->GetHeader().supportCGBMode ? Mode::GBC : Mode::GB;
+    m_mode = Mode::GB;
+
+    Reset();
 }
 
 void Bus::SetRunToAddress(uint16_t address)
