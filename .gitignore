@@ -45,4 +45,4 @@ tests/scripts/our_log.txt
 **/imgui.ini
 
 # Compiled roms for test
-tests/asm/**.gb
+tests/asm/*/**.gb
