@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cassert>
 #include <queue>
+#include <array>
 
 using std::size_t;
 
