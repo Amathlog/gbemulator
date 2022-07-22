@@ -52,6 +52,10 @@ set_target_properties(Tonic PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
 add_subdirectory("src")
 
+if(UNIX)
+  add_subdirectory("external/rgbds")
+endif(UNIX)
+
 # if (BUILD_TESTS)
 #     add_subdirectory("tests")
 # endif(BUILD_TESTS)

@@ -43,3 +43,6 @@ roms/
 CMakeLists.txt.user
 tests/scripts/our_log.txt
 **/imgui.ini
+
+# Compiled roms for test
+tests/asm/**.gb
