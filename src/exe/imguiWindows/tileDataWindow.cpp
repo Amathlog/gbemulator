@@ -12,6 +12,7 @@
 #include <iostream>
 #include <core/utils/utils.h>
 #include <core/utils/tile.h>
+#include <cstring>
 
 using GBEmulatorExe::TileDataWindow;
 
@@ -32,7 +33,8 @@ void TileDataWindow::UpdateImage()
     int i = 0;
     for (auto& color : { GBEmulator::WHITE_COLOR, GBEmulator::LIGHT_GREY_COLOR, GBEmulator::DARK_GREY_COLOR, GBEmulator::BLACK_COLOR })
     {
-        GBEmulator::Utils::RGB555ToRGB888(color, paletteColors[i++], paletteColors[i++], paletteColors[i++]);
+        GBEmulator::Utils::RGB555ToRGB888(color, paletteColors[i], paletteColors[i+1], paletteColors[i+2]);
+        i += 3;
     }
 
     for (auto i = 0; i < 256; ++i)
@@ -89,7 +91,6 @@ void TileDataWindow::Draw()
             {
                 m_checkBoxesBlocks[m_currentBlock] = false;
                 m_currentBlock = i;
-                m_forceUpdate;
                 break;
             }
         }

@@ -4,6 +4,7 @@
 #include <core/utils/tile.h>
 #include <core/constants.h>
 #include <algorithm>
+#include <cstring>
 
 using GBEmulator::Processor2C02;
 using GBEmulator::GBCPaletteData;
@@ -331,11 +332,11 @@ inline void Processor2C02::DebugRenderNoise()
     // rendering is working
 
     unsigned index = m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel;
-    if ((float)rand() / RAND_MAX > 0.5)
+    if ((float)rand() / (float)RAND_MAX > 0.5)
     {
-        m_screen[3 * index] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
-        m_screen[3 * index + 1] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
-        m_screen[3 * index + 2] = (uint8_t)((float)rand() / RAND_MAX * 255.0f);
+        m_screen[3 * index] = (uint8_t)((float)rand() / (float)RAND_MAX * 255.0f);
+        m_screen[3 * index + 1] = (uint8_t)((float)rand() / (float)RAND_MAX * 255.0f);
+        m_screen[3 * index + 2] = (uint8_t)((float)rand() / (float)RAND_MAX * 255.0f);
     }
     else
     {
