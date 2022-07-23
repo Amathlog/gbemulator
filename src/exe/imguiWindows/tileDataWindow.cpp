@@ -58,11 +58,8 @@ void TileDataWindow::UpdateImage()
     m_image->UpdateGLTexture(true);
 }
 
-void TileDataWindow::Draw()
+void TileDataWindow::DrawInternal()
 {
-    if (!m_open)
-        return;
-
     double elapsedTime = ImGui::GetTime();
     constexpr double updateDeltaTime = 1.0;
     if (elapsedTime > m_lastUpdateTime + updateDeltaTime || m_forceUpdate)
@@ -77,26 +74,21 @@ void TileDataWindow::Draw()
 
     static std::array<bool, 3> m_checkBoxesBlocks = {true, false};
 
-    if (ImGui::Begin("TileData#12", &m_open))
+    ImGui::Text("%s", "Select a block: ");
+    ImGui::SameLine();
+    ImGui::Checkbox("Start address 0x8000", &m_checkBoxesBlocks[0]);
+    ImGui::SameLine();
+    ImGui::Checkbox("Start address 0x8800", &m_checkBoxesBlocks[1]);
+
+    for (auto i = 0; i < 3; i++)
     {
-        ImGui::Text("%s", "Select a block: ");
-        ImGui::SameLine();
-        ImGui::Checkbox("Start address 0x8000", &m_checkBoxesBlocks[0]);
-        ImGui::SameLine();
-        ImGui::Checkbox("Start address 0x8800", &m_checkBoxesBlocks[1]);
-
-        for (auto i = 0; i < 3; i++)
+        if (m_checkBoxesBlocks[i] && i != m_currentBlock)
         {
-            if (m_checkBoxesBlocks[i] && i != m_currentBlock)
-            {
-                m_checkBoxesBlocks[m_currentBlock] = false;
-                m_currentBlock = i;
-                break;
-            }
+            m_checkBoxesBlocks[m_currentBlock] = false;
+            m_currentBlock = i;
+            break;
         }
-
-        ImGui::Image((void*)(intptr_t)m_image->GetTextureId(), ImVec2(16*8*5, 16*8*5));
-
     }
-    ImGui::End();
+
+    ImGui::Image((void*)(intptr_t)m_image->GetTextureId(), ImVec2(16*8*5, 16*8*5));
 }

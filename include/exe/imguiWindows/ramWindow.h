@@ -13,12 +13,13 @@ namespace GBEmulatorExe
     {
     public:
         RamWindow();
-        void Draw() override;
 
         WINDOW_ID_IMPL(AllWindowsId::RamWindowId);
 
-
     protected:
+        void DrawInternal() override;
+        const char* GetWindowName() const override { return "Ram##12"; }
+
         double m_lastUpdateTime;
         bool m_forceUpdate = false;
 

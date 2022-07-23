@@ -14,13 +14,14 @@ namespace GBEmulatorExe
     {
     public:
         TileDataWindow();
-        void Draw() override;
 
         WINDOW_ID_IMPL(AllWindowsId::TileDataWindowId);
 
 
     protected:
         void UpdateImage();
+        void DrawInternal() override;
+        const char* GetWindowName() const override { return "TileData##12"; }
 
         double m_lastUpdateTime;
         bool m_forceUpdate = false;

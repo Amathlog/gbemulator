@@ -11,6 +11,7 @@ namespace GBEmulatorExe
         DebugWindowId,
         RamWindowId,
         TileDataWindowId,
+        FindRomsWindowId,
 
         Undefined = 0xFFFFFFFF
     };
@@ -20,9 +21,17 @@ namespace GBEmulatorExe
     public:
         virtual ~ImGuiWindow() = default;
 
-        virtual void Draw() = 0;
+        void Draw();
         virtual int GetWindowId() const { return AllWindowsId::Undefined; }
-
+        
         bool m_open = false;
+
+    protected:
+        // Will be within an ImGui window context
+        virtual void DrawInternal() = 0;
+        virtual const char* GetWindowName() const = 0;
+
+        float m_width;
+        float m_height;
     };
 }

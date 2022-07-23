@@ -4,6 +4,7 @@
 #include <core/cartridge.h>
 #include <core/utils/fileVisitor.h>
 #include <exe/mainWindow.h>
+#include <exe/utils.h>
 #include <exe/messageService/coreMessageService.h>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
@@ -24,12 +25,7 @@ static unsigned windowScalingFactor = 5;
 
 int main(int argc, char** argv) {
     // Load a rom from a file
-    auto dir = fs::weakly_canonical(fs::path(argv[0])).parent_path();
-    auto root = dir / ".." / ".." / "..";
-
-#ifdef WIN32
-    root /= "..";
-#endif // WIN32
+    auto root = GBEmulatorExe::GetRootPath();
 
     // Mapper 000 also
     auto path = root / "tests" / "bgbtest.gb";
@@ -48,7 +44,7 @@ int main(int argc, char** argv) {
     if (breakOnStart)
         bus.BreakContinue();
 
-    GBEmulatorExe::CoreMessageService coreMessageService(bus, dir.string());
+    GBEmulatorExe::CoreMessageService coreMessageService(bus, GBEmulatorExe::GetExePath().string());
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(
         &coreMessageService);
 

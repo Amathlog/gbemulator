@@ -2,6 +2,7 @@
 #include <exe/imguiWindows/imguiWindow.h>
 #include <exe/imguiWindows/ramWindow.h>
 #include <exe/imguiWindows/tileDataWindow.h>
+#include <exe/imguiWindows/findRomsWindow.h>
 #include <exe/window.h>
 #include <cstddef>
 #include <exe/imguiManager.h>
@@ -58,6 +59,7 @@ ImguiManager::ImguiManager(Window* window)
     m_childWidgets.emplace(DebugWindow::GetStaticWindowId(), std::make_unique<DebugWindow>());
     m_childWidgets.emplace(RamWindow::GetStaticWindowId(), std::make_unique<RamWindow>());
     m_childWidgets.emplace(TileDataWindow::GetStaticWindowId(), std::make_unique<TileDataWindow>());
+    m_childWidgets.emplace(FindRomsWindow::GetStaticWindowId(), std::make_unique<FindRomsWindow>());
 }
 
 ImguiManager::~ImguiManager()
@@ -113,6 +115,7 @@ void ImguiManager::Update()
         if (ImGui::BeginMenu("File"))
         {
             ImGui::MenuItem("Open File", nullptr, &m_showFileExplorer);
+            ImGui::MenuItem("Find Roms", nullptr, &m_childWidgets[FindRomsWindow::GetStaticWindowId()]->m_open);
             ImGui::Separator();
 
             if (ImGui::BeginMenu("State states"))
