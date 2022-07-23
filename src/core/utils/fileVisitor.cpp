@@ -19,7 +19,7 @@ void Close(T& stream)
     stream.close();
 }
 
-FileReadVisitor::FileReadVisitor(const std::string& file)
+FileReadVisitor::FileReadVisitor(const std::string& file, bool withVersioning)
     : m_ptr(0)
 {
     Open(m_file, file);
@@ -38,6 +38,11 @@ FileReadVisitor::FileReadVisitor(const std::string& file)
     {
         std::cerr << "Failed to open file " << file << std::endl;
     }
+    
+    if (withVersioning)
+        ReadValue(m_version);
+    else
+        m_version = FileVersion::NoVersion;
 }
 
 FileReadVisitor::~FileReadVisitor()
@@ -72,10 +77,16 @@ size_t FileReadVisitor::Remaining() const
     return m_size - m_ptr;
 }
 
-FileWriteVisitor::FileWriteVisitor(const std::string& file)
+FileWriteVisitor::FileWriteVisitor(const std::string& file, bool withVersioning)
     : m_ptr(0)
 {
     Open(m_file, file);
+    m_version = FileVersion::CurrentVersion;
+
+    if (withVersioning)
+        WriteValue(m_version);
+    else
+        m_version = FileVersion::NoVersion;
 }
 
 FileWriteVisitor::~FileWriteVisitor()

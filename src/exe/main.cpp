@@ -19,16 +19,16 @@ using namespace GBEmulatorExe;
 
 static bool enableAudioByDefault = false;
 static bool syncWithAudio = false;
-static bool breakOnStart = true;
 
 static unsigned windowScalingFactor = 5;
 
 int main(int argc, char** argv) {
     // Load a rom from a file
     auto root = GBEmulatorExe::GetRootPath();
+    auto path = std::filesystem::path();
 
     // Mapper 000 also
-    auto path = root / "tests" / "bgbtest.gb";
+    //auto path = root / "tests" / "bgbtest.gb";
 
     //path = root / "roms" / "SuperMarioLand.gb";
 
@@ -41,15 +41,15 @@ int main(int argc, char** argv) {
 
     GBEmulator::Bus bus;
 
-    if (breakOnStart)
-        bus.BreakContinue();
-
     GBEmulatorExe::CoreMessageService coreMessageService(bus, GBEmulatorExe::GetExePath().string());
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(
         &coreMessageService);
 
-    LoadNewGameMessage msg(path.string());
-    GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(msg);
+    if (!path.empty())
+    {
+        LoadNewGameMessage msg(path.string());
+        GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(msg);
+    }
 
     auto previous_point = std::chrono::high_resolution_clock::now();
     constexpr bool showRealFPS = false;

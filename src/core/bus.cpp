@@ -384,6 +384,8 @@ void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
     m_mode = Mode::GB;
 
     Reset();
+
+    m_isInBreakMode = m_shouldBreakOnStart;
 }
 
 void Bus::SetRunToAddress(uint16_t address)

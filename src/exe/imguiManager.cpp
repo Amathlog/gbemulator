@@ -1,3 +1,6 @@
+#include <exe/imguiManager.h>
+
+#include <core/utils/fileVisitor.h>
 #include <exe/imguiWindows/debugWindow.h>
 #include <exe/imguiWindows/imguiWindow.h>
 #include <exe/imguiWindows/ramWindow.h>
@@ -5,7 +8,6 @@
 #include <exe/imguiWindows/findRomsWindow.h>
 #include <exe/window.h>
 #include <cstddef>
-#include <exe/imguiManager.h>
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -18,8 +20,10 @@
 #include <chrono>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
+#include <exe/messageService/messages/debugMessage.h>
 #include <exe/messageService/messages/screenMessage.h>
 #include <exe/messageService/messages/screenPayload.h>
+#include <exe/utils.h>
 
 
 using GBEmulatorExe::ImguiManager;
@@ -60,6 +64,8 @@ ImguiManager::ImguiManager(Window* window)
     m_childWidgets.emplace(RamWindow::GetStaticWindowId(), std::make_unique<RamWindow>());
     m_childWidgets.emplace(TileDataWindow::GetStaticWindowId(), std::make_unique<TileDataWindow>());
     m_childWidgets.emplace(FindRomsWindow::GetStaticWindowId(), std::make_unique<FindRomsWindow>());
+    
+    Deserialize();
 }
 
 ImguiManager::~ImguiManager()
@@ -69,6 +75,8 @@ ImguiManager::~ImguiManager()
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext(m_context);
+
+    Serialize();
 }
 
 void DemoWindow()
@@ -155,7 +163,7 @@ void ImguiManager::Update()
                 ImGui::EndMenu();
             }
 
-            // ImGui::MenuItem("Enable Audio", nullptr, &m_isSoundEnabled);
+            // ImGui::MenuItem("Enable Audio", nullptr, &m_isSoundEnabled.value);
 
             ImGui::EndMenu();
         }
@@ -166,6 +174,7 @@ void ImguiManager::Update()
             ImGui::MenuItem("Ram visualizer", nullptr, &m_childWidgets[RamWindow::GetStaticWindowId()]->m_open);
             ImGui::MenuItem("Disassembly", nullptr, &m_childWidgets[DebugWindow::GetStaticWindowId()]->m_open);
             ImGui::MenuItem("Tile data", nullptr, &m_childWidgets[TileDataWindow::GetStaticWindowId()]->m_open);
+            ImGui::MenuItem("Break on start", nullptr, &m_breakOnStart.value);
             ImGui::EndMenu();
         }
 
@@ -213,6 +222,9 @@ void ImguiManager::Update()
         reset = false;
     }
 
+    // Check break
+    HandleBreakOnStart();
+
 
     for (auto& childWidget : m_childWidgets)
     {
@@ -230,6 +242,16 @@ void ImguiManager::Update()
        ImGui::RenderPlatformWindowsDefault();
     }
 }
+
+void ImguiManager::HandleBreakOnStart()
+{
+    if (m_breakOnStart.value != m_breakOnStart.previous)
+    {
+        m_breakOnStart.previous = m_breakOnStart.value;
+        DispatchMessageServiceSingleton::GetInstance().Push(SetBreakOnStartMessage(m_breakOnStart.value));
+    }
+}
+
 
 void ImguiManager::HandleFileExplorer()
 {
@@ -292,4 +314,60 @@ void ImguiManager::HandlePerf(bool showFPS)
         // }
     }
     ImGui::End();
+}
+
+std::string ImguiCachePath()
+{
+    return (GBEmulatorExe::GetExePath() / "imgui.cache").string();
+}
+
+void ImguiManager::Serialize()
+{
+    GBEmulator::Utils::FileWriteVisitor visitor(ImguiCachePath(), true);
+
+    // Write window open status
+    visitor.WriteValue(m_childWidgets.size());
+    for (const auto& widget : m_childWidgets)
+    {
+        visitor.WriteValue(widget.first);
+        visitor.WriteValue(widget.second->m_open);
+    }
+
+    visitor.WriteValue(m_isSoundEnabled.value);
+    visitor.WriteValue(m_currentFormat);
+    visitor.WriteValue(m_breakOnStart.value);
+}
+
+void ImguiManager::Deserialize()
+{
+    GBEmulator::Utils::FileReadVisitor visitor(ImguiCachePath(), true);
+
+    if (!visitor.IsValid() || visitor.GetVersion() != GBEmulator::Utils::FileVersion::CurrentVersion)
+    {
+        // Do not load if we have a mismatch
+        return;
+    }
+
+    // Version 0.0.1
+    size_t windowStatusSize = 0;
+    visitor.ReadValue(windowStatusSize);
+    
+    for (size_t i = 0; i < windowStatusSize; ++i)
+    {
+        ChildWidgetMap::key_type id = 0;
+        bool opened = false;
+        visitor.ReadValue(id);
+        visitor.ReadValue(opened);
+
+        auto it = m_childWidgets.find(id);
+        if (it != m_childWidgets.end())
+        {
+            it->second->m_open = opened;
+        }
+    }
+
+
+    visitor.ReadValue(m_isSoundEnabled.value);
+    visitor.ReadValue(m_currentFormat);
+    visitor.ReadValue(m_breakOnStart.value);
 }

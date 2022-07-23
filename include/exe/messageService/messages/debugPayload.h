@@ -19,7 +19,8 @@ namespace GBEmulatorExe
         DISASSEMBLY,
         GET_BREAK_STATUS,
         GET_CPU_REGISTERS,
-        RUN_TO
+        RUN_TO,
+        SET_BREAK_ON_START
     };
 
     struct CPURegistersInfo
@@ -45,6 +46,12 @@ namespace GBEmulatorExe
             , m_type(type)
             , m_addressStart(addressStart)
             , m_nbDisassemblyLines(nbDisassemblyLines)
+        {}
+
+        DebugPayload(DebugMessageType type, bool breakMode)
+            : GenericPayload()
+            , m_type(type)
+            , m_isInBreakMode(breakMode)
         {}
 
         DebugMessageType m_type;

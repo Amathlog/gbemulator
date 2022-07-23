@@ -26,6 +26,8 @@ namespace GBEmulatorExe {
     class GenericPayload : public Payload
     {
     public:
+        GenericPayload() = default;
+
         GenericPayload(uint8_t* data, size_t dataSize, size_t dataCapacity)
             : m_data(data)
             , m_dataSize(dataSize)
@@ -34,9 +36,9 @@ namespace GBEmulatorExe {
 
         virtual ~GenericPayload() = default;
 
-        uint8_t* m_data;
-        size_t m_dataSize;
-        size_t m_dataCapacity;
+        uint8_t* m_data = nullptr;
+        size_t m_dataSize = 0;
+        size_t m_dataCapacity = 0;
     };
 
     class Message

@@ -5,6 +5,7 @@
 #include <exe/rendering/image.h>
 #include <array>
 #include <map>
+#include <vector>
 
 
 struct ImGuiContext;
@@ -12,6 +13,14 @@ struct ImGuiContext;
 namespace GBEmulatorExe
 {
     class Window;
+
+    struct Toggle
+    {
+        Toggle(bool _value) : value(_value) {}
+
+        bool value = false;
+        bool previous = false;
+    };
     
     class ImguiManager
     {
@@ -27,6 +36,10 @@ namespace GBEmulatorExe
     private:
         void HandleFileExplorer();
         void HandlePerf(bool showFPS);
+        void HandleBreakOnStart();
+
+        void Serialize();
+        void Deserialize();
         
         Window* m_window;
         ImGuiContext* m_context;
@@ -34,8 +47,8 @@ namespace GBEmulatorExe
         bool m_showFileExplorer = false;
         bool m_closeRequested = false;
         bool m_showMainMenu = true;
-        bool m_isSoundEnabled = false;
-        bool m_previousSoundState = false;
+        Toggle m_isSoundEnabled = false;
+        Toggle m_breakOnStart = false;
 
         Format m_currentFormat = Format::ORIGINAL;
 
@@ -45,6 +58,7 @@ namespace GBEmulatorExe
         std::array<bool, MAX_SAVE_STATES> m_requestSaveState;
         std::array<bool, MAX_SAVE_STATES> m_requestLoadState;
 
-        std::map<int, std::unique_ptr<ImGuiWindow>> m_childWidgets;
+        using ChildWidgetMap = std::map<int, std::unique_ptr<ImGuiWindow>>;
+        ChildWidgetMap m_childWidgets;
     };
 }

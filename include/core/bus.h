@@ -47,6 +47,7 @@ namespace GBEmulator
         bool IsInBreak() const { return m_isInBreakMode; }
         void BreakContinue() { m_isInBreakMode = !m_isInBreakMode; }
         void SetRunToAddress(uint16_t address);
+        void SetBreakOnStart(bool value) { m_shouldBreakOnStart = value; }
 
         bool Clock();
 
@@ -97,6 +98,7 @@ namespace GBEmulator
         size_t m_nbCycles;
 
         bool m_isInBreakMode = false;
+        bool m_shouldBreakOnStart = false;
         uint32_t m_runToAddress = 0xFFFFFFFF;
     };
 }

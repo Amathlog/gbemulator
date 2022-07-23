@@ -51,4 +51,10 @@ namespace GBEmulatorExe
         RunToMessage(uint16_t address) : DebugMessage(DefaultDebugMessageType::RUN_TO, nullptr, 0, 0, address, 0)
         {}
     };
+
+    struct SetBreakOnStartMessage : DebugMessage
+    {
+        SetBreakOnStartMessage(bool value) : DebugMessage(DefaultDebugMessageType::SET_BREAK_ON_START, value)
+        {}
+    };
 }
