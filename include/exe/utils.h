@@ -45,7 +45,7 @@ namespace GBEmulatorExe
     {
         wchar_t path[MAX_PATH] = { 0 };
         GetModuleFileNameW(NULL, path, MAX_PATH);
-        return path;
+        return std::filesystem::path(path).parent_path();
     }
 #else
     inline std::filesystem::path GetExePath()

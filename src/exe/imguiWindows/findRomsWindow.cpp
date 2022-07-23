@@ -49,7 +49,7 @@ void FindRomsWindow::RefreshRoms()
             if (extension == ".gb" || extension == ".gbc")
             {
                 FileEntry fileEntry;
-                fileEntry.fullPath = file.path();
+                fileEntry.fullPath = file.path().string();
                 fileEntry.filenameWithImguiTag = file.path().filename().string() + "##" + std::to_string(index++);
                 fileEntry.selected = false;
                 m_allRoms.push_back(std::move(fileEntry));
