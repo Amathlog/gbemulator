@@ -247,7 +247,6 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteContainer(m_currentFetchedOBJPixels);
     visitor.WriteValue(m_currentStagePixelFetcher);
     visitor.WriteValue(m_XOffsetBGTile);
-    visitor.WriteValue(m_lsbXScroll);
     visitor.WriteValue(m_BGTileAddress);
 }
 
@@ -285,7 +284,6 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadContainer(m_currentFetchedOBJPixels);
     visitor.ReadValue(m_currentStagePixelFetcher);
     visitor.ReadValue(m_XOffsetBGTile);
-    visitor.ReadValue(m_lsbXScroll);
     visitor.ReadValue(m_BGTileAddress);
 }
 
@@ -322,7 +320,6 @@ void Processor2C02::Reset()
 
     m_currentStagePixelFetcher = 0;
     m_XOffsetBGTile = 0;
-    m_lsbXScroll = 0;
     m_BGTileAddress = 0;
 }
 
@@ -460,7 +457,9 @@ void Processor2C02::Clock()
     {
         if (m_lineDots == 0)
         {
-            m_lsbXScroll = m_scrollX & 0x07;
+            // The 3 lsb of the scrollX register are fixed for the scanline
+            // We offset currentBGX by this value.
+            m_currentBGX = m_scrollX & 0x07;
         }
 
         // Drawing mode
@@ -481,9 +480,12 @@ void Processor2C02::Clock()
                 {
                 // For the first 3 steps, it takes 2 dots for each,
                 // so sleep for this ones.
+                // The fourth step is also sleep, for 2 dots (case 6 and 7)
                 case 1: // Fall-through
                 case 3: // Fall-through
-                case 5:
+                case 5: // Fall-through
+                case 6: // Fall-through
+                case 7: // Fall-through
                     m_currentStagePixelFetcher++;
                     break;
                 // Get Tile
@@ -491,10 +493,10 @@ void Processor2C02::Clock()
                 {
                     // To get the tile, we need first to know our vertical/horizontal scrolling
                     // For horizontal scrolling, we only update the 5 msb bits of the scroll X register.
-                    // the 3 lsb one are fixed during the whole scanline.
+                    // the 3 lsb one are fixed during the whole scanline (offset already set in m_currentBGX).
                     // If we exceed 256, it wraps around.
                     uint8_t currentY = m_scrollY + m_scanlines;
-                    uint8_t scrollX = (m_scrollX & 0xF8) | m_lsbXScroll;
+                    uint8_t scrollX = (m_scrollX & 0xF8);
                     uint8_t currentX = scrollX + m_currentBGX;
 
                     // We can then compute the coordinate of the tile to fetch
@@ -645,6 +647,7 @@ void Processor2C02::Clock()
         m_lineDots = 0;
         m_currentBGX = 0;
         m_lY = (uint8_t)m_scanlines;
+        m_currentStagePixelFetcher = 0;
     }
     else if (m_lineDots == 80)
     {

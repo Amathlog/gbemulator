@@ -143,7 +143,6 @@ namespace GBEmulator
 
         uint8_t m_currentStagePixelFetcher = 0x00;
         uint8_t m_XOffsetBGTile = 0x00;
-        uint8_t m_lsbXScroll = 0x00;
         uint16_t m_BGTileAddress = 0x0000;
 
         // Counters

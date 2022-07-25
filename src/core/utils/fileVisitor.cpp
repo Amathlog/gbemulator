@@ -27,17 +27,16 @@ FileReadVisitor::FileReadVisitor(const std::string& file, bool withVersioning)
     m_size = 0;
 
     // Gets its size
-    if (m_file.is_open())
-    {
-        m_file.ignore( std::numeric_limits<std::streamsize>::max() );
-        m_size = (size_t)m_file.gcount();
-        m_file.clear();   //  Since ignore will have set eof.
-        m_file.seekg( 0, std::ios_base::beg );
-    }
-    else
+    if (!m_file.is_open())
     {
         std::cerr << "Failed to open file " << file << std::endl;
+        return;
     }
+
+    m_file.ignore( std::numeric_limits<std::streamsize>::max() );
+    m_size = (size_t)m_file.gcount();
+    m_file.clear();   //  Since ignore will have set eof.
+    m_file.seekg( 0, std::ios_base::beg );
     
     if (withVersioning)
         ReadValue(m_version);
