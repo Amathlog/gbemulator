@@ -5,6 +5,7 @@
 #include <core/z80Processor.h>
 #include <core/2C02Processor.h>
 #include <core/cartridge.h>
+#include <core/controller.h>
 #include <vector>
 #include <array>
 #include <cstdint>
@@ -58,6 +59,7 @@ namespace GBEmulator
         void WriteByte(uint16_t addr, uint8_t data);
 
         void InsertCartridge(const std::shared_ptr<Cartridge>& cartridge);
+        void ConnectController(const std::shared_ptr<Controller>& controller);
 
         const Cartridge* GetCartridge() const { return m_cartridge.get(); }
         const Z80Processor& GetCPU() const { return m_cpu; }
@@ -95,6 +97,7 @@ namespace GBEmulator
         std::array<uint8_t, 256> m_ROM;
 
         std::shared_ptr<Cartridge> m_cartridge;
+        std::shared_ptr<Controller> m_controller;
         size_t m_nbCycles;
 
         bool m_isInBreakMode = false;

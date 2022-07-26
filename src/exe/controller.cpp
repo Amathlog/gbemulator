@@ -3,9 +3,8 @@
 
 using GBEmulatorExe::Controller;
 
-Controller::Controller(GLFWwindow* window, uint8_t controllerIndex)
+Controller::Controller(GLFWwindow* window)
     : m_window(window)
-    , m_controllerIndex(controllerIndex)
 {
     
 }

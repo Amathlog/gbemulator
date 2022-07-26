@@ -71,7 +71,7 @@ uint8_t Bus::ReadByte(uint16_t addr)
     else if (addr == 0xFF00)
     {
         // Controller
-        // TODO
+        data = m_controller ? m_controller->ReadData() : 0xFF;
     }
     else if (addr == 0xFF01 || addr == 0xFF02)
     {
@@ -186,7 +186,8 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr == 0xFF00)
     {
         // Controller
-        // TODO
+        if (m_controller)
+            m_controller->WriteData(data);
     }
     else if (addr == 0xFF01 || addr == 0xFF02)
     {
@@ -386,6 +387,11 @@ void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
     Reset();
 
     m_isInBreakMode = m_shouldBreakOnStart;
+}
+
+void Bus::ConnectController(const std::shared_ptr<Controller>& controller)
+{
+    m_controller = controller;
 }
 
 void Bus::SetRunToAddress(uint16_t address)

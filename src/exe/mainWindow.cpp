@@ -34,7 +34,7 @@ MainWindow::MainWindow(const char* name, unsigned width, unsigned height, unsign
         // Something went wrong
         return;
 
-    m_controller = std::make_shared<GBEmulatorExe::Controller>(m_window, 0);
+    m_controller = std::make_shared<GBEmulatorExe::Controller>(m_window);
 
     m_screen = std::make_unique<Screen>(internalResWidth, internalResHeight);
     m_screen->OnScreenResized(width, height);
@@ -86,8 +86,8 @@ void MainWindow::ConnectController()
         // No user data, something is wrong
         return;
 
-    // GBEmulator::Bus* bus = reinterpret_cast<GBEmulator::Bus*>(m_userData);
-    // bus->ConnectController(m_controller, 0);
+    GBEmulator::Bus* bus = reinterpret_cast<GBEmulator::Bus*>(m_userData);
+    bus->ConnectController(m_controller);
 }
 
 void MainWindow::OnScreenResized(int width, int height)

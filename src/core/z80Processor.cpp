@@ -490,7 +490,7 @@ uint8_t Z80Processor::LD(uint8_t opcode)
     }
 
     // Final case: Register to register (or memory pointed by HL)
-    uint8_t writeIndex = (((opcode & 0x70) >> 5) << 1) | ((opcode & 0x08) > 0);
+    uint8_t writeIndex = (opcode >> 3) & 0x07;
     uint8_t readIndex = (opcode & 0x07);
     uint8_t nbCycles = 1;
     uint8_t data = 0;
