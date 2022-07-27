@@ -87,7 +87,7 @@ namespace GBEmulator
     public:
         Processor2C02();
 
-        uint8_t ReadByte(uint16_t addr);
+        uint8_t ReadByte(uint16_t addr, bool readOnly = false);
         void WriteByte(uint16_t addr, uint8_t data);
 
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;

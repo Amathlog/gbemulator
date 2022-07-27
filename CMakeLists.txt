@@ -48,7 +48,7 @@ if(WIN32)
 endif(WIN32)
 set_target_properties(Tonic PROPERTIES FOLDER ${EXTERNAL_FOLDER})
 
-# option(BUILD_TESTS "Build the tests" OFF)
+option(BUILD_TESTS "Build the tests" ON)
 
 add_subdirectory("src")
 
@@ -57,5 +57,5 @@ if(UNIX)
 endif(UNIX)
 
 # if (BUILD_TESTS)
-#     add_subdirectory("tests")
+    add_subdirectory("tests")
 # endif(BUILD_TESTS)

@@ -100,7 +100,7 @@ Instruction GetPrefixedInst(uint8_t opcode)
     return Instruction();
 }
 
-std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uint16_t& pc)
+std::string GetDataFromString(const GBEmulator::Bus& bus, const std::string& input, uint16_t& pc)
 {
     if (input.empty())
         return "";
@@ -164,7 +164,7 @@ std::string GetDataFromString(GBEmulator::Bus bus, const std::string& input, uin
 }
 
 
-std::vector<std::string> GBEmulator::Disassemble(GBEmulator::Bus bus, uint16_t startAddress, unsigned nbLines)
+std::vector<std::string> GBEmulator::Disassemble(const GBEmulator::Bus& bus, uint16_t startAddress, unsigned nbLines)
 {
     std::vector<std::string> res;
     res.resize(nbLines);

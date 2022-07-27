@@ -25,12 +25,17 @@ Bus::Bus()
     Reset();
 }
 
-uint8_t Bus::ReadByte(uint16_t addr)
+uint8_t Bus::ReadByte(uint16_t addr) const
+{
+    return const_cast<Bus*>(this)->ReadByte(addr, true);
+}
+
+uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
 {
     uint8_t data = 0;
 
     // First try to read from the cartridge, if it returns true, it's done
-    if (m_cartridge && m_cartridge->ReadByte(addr, data))
+    if (m_cartridge && m_cartridge->ReadByte(addr, data, readOnly))
     {
         // Nothing to do
     }
@@ -101,7 +106,7 @@ uint8_t Bus::ReadByte(uint16_t addr)
     else if (addr >= 0xFF40 && addr <= 0xFF4B)
     {
         // LCD
-        data = m_ppu.ReadByte(addr);
+        data = m_ppu.ReadByte(addr, readOnly);
     }
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
@@ -121,7 +126,7 @@ uint8_t Bus::ReadByte(uint16_t addr)
     else if (addr >= 0xFF68 && addr <= 0xFF6B && m_mode == Mode::GBC)
     {
         // BG/OBJ palettes (GBC only)
-        data = m_ppu.ReadByte(addr);
+        data = m_ppu.ReadByte(addr, readOnly);
     }
     else if (addr == 0xFF70 && m_mode == Mode::GBC)
     {

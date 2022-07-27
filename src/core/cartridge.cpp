@@ -123,7 +123,7 @@ void Cartridge::Reset()
     m_ramEnabled = false;
 }
 
-bool Cartridge::ReadByte(uint16_t addr, uint8_t& data)
+bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
 {
     // ROM zone
     if (addr < 0x8000)

@@ -67,7 +67,7 @@ Processor2C02::Processor2C02()
     m_screen.resize(GB_NB_PIXELS * 3);
 }
 
-uint8_t Processor2C02::ReadByte(uint16_t addr)
+uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
 {
     uint8_t data = 0;
     if (addr == 0xFF40)

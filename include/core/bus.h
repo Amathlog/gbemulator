@@ -39,6 +39,14 @@ namespace GBEmulator
     public:
         Bus();
 
+        // Not copyable
+        Bus(const Bus&) = delete;
+        Bus& operator=(const Bus&) = delete;
+
+        // Movable
+        Bus(Bus&& other) = default;
+        Bus& operator=(Bus&& other) = default;
+
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
@@ -53,7 +61,10 @@ namespace GBEmulator
         bool Clock();
 
         // Read a single byte of data
-        uint8_t ReadByte(uint16_t addr);
+        // Use the const version to read it or use readOnly flag to avoid alter the memory
+        // (ie. some operations can "write" data while reading)
+        uint8_t ReadByte(uint16_t addr, bool readOnly = false);
+        uint8_t ReadByte(uint16_t addr) const;
 
         // Write a single byte of data
         void WriteByte(uint16_t addr, uint8_t data);
@@ -64,6 +75,7 @@ namespace GBEmulator
         const Cartridge* GetCartridge() const { return m_cartridge.get(); }
         const Z80Processor& GetCPU() const { return m_cpu; }
         const Processor2C02& GetPPU() const { return m_ppu; }
+        void SetPC(uint16_t addr) { m_cpu.SetPC(addr); }
 
         void SaveCartridgeRAM(Utils::IWriteVisitor& visitor) const { m_cartridge->SerializeTo(visitor); }
         void LoadCartridgeRAM(Utils::IReadVisitor& visitor) { m_cartridge->DeserializeFrom(visitor); }

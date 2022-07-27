@@ -39,7 +39,7 @@ namespace GBEmulator
 
         // Read a single byte of data, passed as an out argument
         // Will return true if the cartridge has provided some data
-        bool ReadByte(uint16_t addr, uint8_t& data);
+        bool ReadByte(uint16_t addr, uint8_t& data, bool readOnly = false);
 
         // Write a single byte of data
         // Will return true if the cartridge has done a write operation

@@ -93,11 +93,11 @@ namespace GBEmulator
         RegisterHL GetHLRegister() const { return m_HL; }
 
         uint16_t GetStackPointer() const { return m_SP; }
-        uint16_t GetPrgCounter() const { return m_PC; }
+        uint16_t GetPC() const { return m_PC; }
+        void SetPC(uint16_t addr) { m_PC = addr; }
 
         void ConnectBus(Bus* bus) { m_bus = bus; }
 
-        uint16_t GetPC() const { return m_PC; }
         bool IsIMEEnabled() const { return m_IMEEnabled; }
 
     private:
