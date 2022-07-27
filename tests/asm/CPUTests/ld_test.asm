@@ -44,8 +44,6 @@ CleanUp:
     
 SECTION "BIntoRegister", ROM0[$500]
 BIntoRegister:
-    ld b, $12
-    ld b, b
     ld b, $34
     ld c, b
     ld b, $56
@@ -58,14 +56,14 @@ BIntoRegister:
     ld l, b
     ld b, $DE
     ld a, b
+    ld b, $12
+    ld b, b
     jp CIntoRegister ; Fourth check
     
 SECTION "CIntoRegister", ROM0[$600]
 CIntoRegister:
     ld c, $23
     ld b, c
-    ld c, $45
-    ld c, c
     ld c, $67
     ld d, c
     ld c, $89
@@ -76,6 +74,8 @@ CIntoRegister:
     ld l, c
     ld c, $EF
     ld a, c
+    ld c, $45
+    ld c, c
     jp DIntoRegister ; Fifth check
     
 SECTION "DIntoRegister", ROM0[$700]
@@ -84,8 +84,6 @@ DIntoRegister:
     ld b, d
     ld d, $24
     ld c, d
-    ld d, $35
-    ld d, d
     ld d, $46
     ld e, d
     ld d, $57
@@ -94,6 +92,8 @@ DIntoRegister:
     ld l, d
     ld d, $79
     ld a, d
+    ld d, $35
+    ld d, d
     jp EIntoRegister ; Sixth check
 
 SECTION "EIntoRegister", ROM0[$800]
@@ -104,14 +104,14 @@ EIntoRegister:
     ld c, e
     ld e, $36
     ld d, e
-    ld e, $47
-    ld e, e
     ld e, $58
     ld h, e
     ld e, $69
     ld l, e
     ld e, $7A
     ld a, e
+    ld e, $47
+    ld e, e
     jp HIntoRegister ; Seventh check
     
 SECTION "HIntoRegister", ROM0[$900]
@@ -124,12 +124,12 @@ HIntoRegister:
     ld d, h
     ld h, $86
     ld e, h
-    ld h, $97
-    ld h, h
     ld h, $A8
     ld l, h
     ld h, $B9
     ld a, h
+    ld h, $97
+    ld h, h
     jp LIntoRegister ; Eighth check
 
 SECTION "LIntoRegister", ROM0[$A00]
@@ -144,10 +144,10 @@ LIntoRegister:
     ld e, l
     ld l, $A7
     ld h, l
-    ld l, $B8
-    ld l, l
     ld l, $C9
     ld a, l
+    ld l, $B8
+    ld l, l
     jp AIntoRegister ; Nineth check
 
 SECTION "AIntoRegister", ROM0[$B00]

@@ -52,6 +52,7 @@ protected:
     }
 
     GBEmulator::Bus m_bus;
+    // Put it static to avoid to re-import it everytime
     inline static std::shared_ptr<GBEmulator::Cartridge> m_cartridge = nullptr;
 };
 
