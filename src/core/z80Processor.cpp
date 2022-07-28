@@ -378,6 +378,7 @@ uint8_t Z80Processor::HandleInterrupt()
     // Then we jump
     m_PC = jumpingAddress;
 
+    // This take 5 cycles to complete
     return 5;
 }
 

@@ -284,6 +284,16 @@ bool Bus::Clock()
 
     m_ppu.Clock();
 
+    // Update the controller and the interrupt
+    if (m_controller)
+    {
+        m_controller->Update();
+        if (m_controller->HasChangedFromHighToLow())
+        {
+            m_IF.joypad = 1;
+        }
+    }
+
     m_nbCycles++;
 
     return res;
@@ -358,6 +368,11 @@ void Bus::Reset()
     m_IE.flag = 0x00;
     m_IF.flag = 0x00;
 
+    if (m_controller)
+    {
+        m_controller->Reset();
+    }
+
     m_nbCycles = 0;
 }
 
@@ -397,6 +412,7 @@ void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
 void Bus::ConnectController(const std::shared_ptr<Controller>& controller)
 {
     m_controller = controller;
+    m_controller->Reset();
 }
 
 void Bus::SetRunToAddress(uint16_t address)

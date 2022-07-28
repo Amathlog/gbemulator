@@ -7,6 +7,14 @@ namespace GBEmulator
     class Controller
     {
     public:
+        enum ButtonSelection : uint8_t
+        {
+            None = 0,
+            ActionSelection = 1,
+            DirectionSelection = 2,
+            All = ActionSelection | DirectionSelection
+        };
+
         union ButtonsStatus
         {
             struct
@@ -38,10 +46,16 @@ namespace GBEmulator
         void WriteData(uint8_t data);
         uint8_t ReadData() const;
 
+        bool HasChangedFromHighToLow() const;
+        void Update();
+        void Reset();
+
         uint8_t GetButtonsStatus() const { return m_buttonsStatus.reg; }
 
     protected:
+        bool IsValidSelection() const;
         ButtonsStatus m_buttonsStatus;
-        bool m_isActionSelection = false;
+        ButtonsStatus m_previousStatus;
+        ButtonSelection m_buttonSelection = ButtonSelection::None;
     };
 }
