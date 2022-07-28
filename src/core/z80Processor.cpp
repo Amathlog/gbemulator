@@ -455,11 +455,11 @@ uint8_t Z80Processor::LD(uint8_t opcode)
         return WriteByteToRegisterIndex(index, data) ? 3 : 2;
     }
 
-    // 6th case: Accumulator to/from memory pointed by $FF00 + Carry
+    // 6th case: Accumulator to/from memory pointed by $FF00 + C register
     // 2 cycles
     if (opcode == 0xE2 || opcode == 0xF2)
     {
-        uint16_t addr = 0xFF00 + (m_AF.F.C);
+        uint16_t addr = 0xFF00 + (m_BC.C);
         if (opcode == 0xE2)
             WriteByte(addr, m_AF.A);
         else

@@ -10,6 +10,7 @@ using GBEmulator::Processor2C02;
 using GBEmulator::GBCPaletteData;
 using GBEmulator::GBPaletteData;
 using GBEmulator::GBCPaletteAccess;
+using GBEmulator::InteruptSource;
 
 namespace // annonymous
 {
@@ -447,10 +448,58 @@ inline void Processor2C02::RenderPixelFifos()
     m_currentLinePixel++;
 }
 
+void Processor2C02::SetInteruptFlag(InteruptSource is)
+{
+    bool changed = false;
+    InterruptRegister ifRegister;
+    ifRegister.flag = m_bus->ReadByte(IF_REG_ADDR); 
+
+    switch (is)
+    {
+    case InteruptSource::VBlank:
+        ifRegister.vBlank = 1;
+        if (m_lcdStatus.mode1VBlankIS)
+            ifRegister.lcdStat = 1;
+        changed = true;
+        break;
+    
+    case InteruptSource::HBlank:
+        if (m_lcdStatus.mode0HBlankIS)
+        {
+            ifRegister.lcdStat = 1;
+            changed = true;
+        }
+        break;
+
+    case InteruptSource::OAM:
+        if (m_lcdStatus.mode2OAMIS)
+        {
+            ifRegister.lcdStat = 1;
+            changed = true;
+        }
+        break;
+
+    case InteruptSource::LYC:
+        if (m_lcdStatus.lYcEqualLYIS)
+        {
+            ifRegister.lcdStat = 1;
+            changed = true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (changed)
+        m_bus->WriteByte(IF_REG_ADDR, ifRegister.flag);
+}
+
 void Processor2C02::Clock()
 {
     // Update the status
     m_lcdStatus.lYcEqualLY = m_lY == m_lYC;
+    if (m_lcdStatus.lYcEqualLY)
+        SetInteruptFlag(InteruptSource::LYC);
 
     m_isFrameComplete = false;
     if (m_scanlines <= 143)
@@ -578,6 +627,7 @@ void Processor2C02::Clock()
                 if (m_lineDots == 368)
                 {
                     m_lcdStatus.mode = 0;
+                    SetInteruptFlag(InteruptSource::HBlank);
                 }
             }
             else
@@ -632,16 +682,14 @@ void Processor2C02::Clock()
             m_lcdStatus.mode = 1;
 
             // Set the IF register bit for VBlank to 1
-            InterruptRegister ifRegister;
-            ifRegister.flag = m_bus->ReadByte(IF_REG_ADDR);
-            ifRegister.vBlank = 1;
-            m_bus->WriteByte(IF_REG_ADDR, ifRegister.flag);
+            SetInteruptFlag(InteruptSource::VBlank);
         }
         else if (m_scanlines == 154)
         {
             // Start a new frame, with OAM scan (mode 2)
             m_scanlines = 0;
             m_lcdStatus.mode = 2;
+            SetInteruptFlag(InteruptSource::OAM);
         }
 
         m_lineDots = 0;

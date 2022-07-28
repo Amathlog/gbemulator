@@ -9,6 +9,14 @@ namespace GBEmulator
 {
     class Bus;
 
+    enum class InteruptSource
+    {
+        HBlank,
+        VBlank,
+        OAM,
+        LYC
+    };
+
     union LCDRegister
     {
         struct
@@ -111,6 +119,7 @@ namespace GBEmulator
         void DebugRenderNoise();
         void DebugRenderTileIds();
         void RenderPixelFifos();
+        void SetInteruptFlag(InteruptSource is);
 
         Bus* m_bus = nullptr;
         LCDRegister m_lcdRegister;
