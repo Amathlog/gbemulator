@@ -166,7 +166,73 @@ AIntoRegister:
     ld l, a
     ld a, $D9
     ld a, a
-    jp Done ; Tenth check
+    jp AFromMemoryRegister ; Tenth check
+
+SECTION "AFromMemoryRegister", ROM0[$C00]
+AFromMemoryRegister:
+    ; Setup
+    ld hl, $FF80
+    ld [hl], $AB
+    ld hl, $FF81
+    ld [hl], $CD
+    ld bc, $C080
+    ld hl, $C080
+    ld [hl], $12
+    ld de, $C002
+    ld hl, $C002
+    ld [hl], $34
+    ld hl, $C003
+    ld [hl], $45
+    ld hl, $C004
+    ld [hl], $67
+    ld hl, $C003
+    jp AFromMemoryRegister1
+
+SECTION "AFromMemoryRegister1", ROM0[$C30]
+AFromMemoryRegister1:
+    ld a, [bc]
+    ld a, [de]
+    ld a, [hli]
+    ld a, [hld]
+    ld a, [$FF00 + c]
+    ldh a, [$FF00 + $81]
+    ld a, [$FF80]
+    jp AToMemoryRegisters
+
+SECTION "AToMemoryRegisters", ROM0[$D00]
+AToMemoryRegisters:
+    ; Setup
+    ld bc, $C080
+    ld de, $C000
+    ld hl, $C001
+    jp AToMemoryRegisters1
+
+SECTION "AToMemoryRegisters1", ROM0[$D10]
+AToMemoryRegisters1:
+    ld a, $12
+    ld [bc], a
+    ld a, $34
+    ld [de], a
+    ld a, $56
+    ld [hli], a
+    ld a, $78
+    ld [hld], a
+    ld a, $9A
+    ld [$FF00 + c], a
+    ld a, $BC
+    ldh [$FF00 + $81], a
+    ld a, $DE
+    ld [$FF82], a
+    jp SpecialLoads_SP
+
+SECTION "SpecialLoads_SP", ROM0[$E00]
+SpecialLoads_SP:
+    ld hl, $9FFF
+    ld sp, hl
+    ld [$C000], sp
+    ld hl, sp + 10
+    ld hl, sp - 10
+    jp Done
 
 SECTION "Done", ROM0[$3FF0]
 Done:
