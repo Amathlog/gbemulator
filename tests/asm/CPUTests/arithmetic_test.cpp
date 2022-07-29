@@ -66,7 +66,7 @@ TEST_F(ArithmeticTest, AddTest)
 
 TEST_F(ArithmeticTest, AdcTest)
 {
-    Run(0x0300, 0x3FF0);
+    Run(0x0300, 0x0400);
 
     uint16_t addr = sp_start;
     
@@ -140,5 +140,48 @@ TEST_F(ArithmeticTest, AdcTest)
 
     // a = 9, litteral = 10, carry = 1 => a = 20; flags = 0x20
     CheckFlagsAndA(addr, 0x20, 0x14, "adc a, 10 - carry");
+    addr -= 2;
+}
+
+TEST_F(ArithmeticTest, SubTest)
+{
+    Run(0x0400, 0x3FF0);
+
+    uint16_t addr = sp_start;
+    
+    // a = 0, b = 1 => a = 0xFF; flags = 0x70
+    CheckFlagsAndA(addr, 0x70, 0xff, "sub a, b"); 
+    addr -= 2;
+
+    // a = 0xFF, c = 2 => a = 0xFD; flags = 0x40
+    CheckFlagsAndA(addr, 0x40, 0xFD, "sub a, c");
+    addr -= 2;
+
+    // a = 0xFD, d = 3 => a = 0xFA; flags = 0x40
+    CheckFlagsAndA(addr, 0x40, 0xFA, "sub a, d");
+    addr -= 2;
+
+    // a = 0xFA, e = 4 => a = 0xF6; flags = 0x40
+    CheckFlagsAndA(addr, 0x40, 0xF6,  "sub a, e");
+    addr -= 2;
+
+    // a = 0xF6, h = 0xC0 => a = 0x36; flags = 0x40
+    CheckFlagsAndA(addr, 0x40, 0x36, "sub a, h");
+    addr -= 2;
+
+    // a = 0x36, l = 5 => a = 0x31; flags = 0x40
+    CheckFlagsAndA(addr, 0x40, 0x31, "sub a, l");
+    addr -= 2;
+
+    // a = 0x31, [hl] = 0xFF => a = 0x32; flags = 0x70
+    CheckFlagsAndA(addr, 0x70, 0x32, "sub a, [hl]");
+    addr -= 2;
+
+    // a = 0x32, a = 0x32 => a = 0x00; flags = 0xC0
+    CheckFlagsAndA(addr, 0xC0, 0x00, "sub a, a");
+    addr -= 2;
+
+    // a = 0x0, litteral = 10 => a = 0xF7; flags = 0x70
+    CheckFlagsAndA(addr, 0x70, 0xF6, "sub a, 10");
     addr -= 2;
 }

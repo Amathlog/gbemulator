@@ -656,7 +656,7 @@ uint8_t Z80Processor::SBC(uint8_t opcode)
             nbCycles++;
     }
 
-    m_AF.F.H = (data > 0 || m_AF.F.C) && (m_AF.A & 0x0F) == 0x00;
+    m_AF.F.H = ((data & 0x0F) + m_AF.F.C) > (m_AF.A & 0x0F);
     uint8_t oldCarry = m_AF.F.C;
     m_AF.F.C = (data + m_AF.F.C) > m_AF.A;
 

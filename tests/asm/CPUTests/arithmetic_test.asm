@@ -110,6 +110,41 @@ AdcTest:
 
     jp Done
 
+SECTION "SubTest", ROM0[$400]
+SubTest:
+        ; Setup
+        ld a, 0
+        ld b, 1
+        ld c, 2
+        ld d, 3
+        ld e, 4
+        ld hl, $C005
+        ld [hl], $FF
+    
+        ; Will store all the results in the stack
+        ld sp, $D000
+    
+        sub a, b
+        push af
+        sub a, c
+        push af
+        sub a, d
+        push af
+        sub a, e
+        push af
+        sub a, h
+        push af
+        sub a, l
+        push af
+        sub a, [hl]
+        push af
+        sub a, a
+        push af
+        sub a, 10
+        push af
+    
+        jp Done
+
 SECTION "Done", ROM0[$3FF0]
 Done:
     jp Done
