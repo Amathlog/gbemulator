@@ -1,3 +1,5 @@
+#pragma once
+
 #include <core/utils/visitor.h>
 #include <string>
 #include <fstream>

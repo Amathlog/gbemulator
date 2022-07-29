@@ -598,7 +598,8 @@ uint8_t Z80Processor::ADC(uint8_t opcode)
             nbCycles++;
     }
 
-    m_AF.F.H = (data > 0 || m_AF.F.C) && (m_AF.A & 0x0F) == 0x0F;
+    // Half carry if the addition of the 4 lsb of each operand overflow
+    m_AF.F.H = ((data & 0x0F) + (m_AF.A & 0x0F) + m_AF.F.C) > 0x0F;
 
     uint16_t temp = (uint16_t)m_AF.A + (uint16_t)data + (uint16_t)m_AF.F.C;
 

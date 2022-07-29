@@ -4,33 +4,12 @@
 #include <core/utils/fileVisitor.h>
 #include <common.h>
 
-class LDTest : public ::testing::Test
+class LDTest : public GBEmulatorTests::DefaultTest
 {
 public:
-    void SetUp()
+    LDTest() : GBEmulatorTests::DefaultTest() 
     {
-        if (!m_cartridge)
-        {
-            std::string romPath = GBEmulatorTests::FindTestRom("ld_test.gb");
-            EXPECT_FALSE(romPath.empty()) << "Failed to find the rom";
-
-            if (romPath.empty())
-                return;
-
-            GBEmulator::Utils::FileReadVisitor visitor(romPath);
-            EXPECT_TRUE(visitor.IsValid()) << "Failed to open the rom";
-
-            if (!visitor.IsValid())
-                return;
-
-            m_cartridge = std::make_shared<GBEmulator::Cartridge>(visitor);
-            EXPECT_TRUE(m_cartridge) << "Failed to load the rom";
-        }
-
-        if (!m_cartridge)
-            return;
-
-        m_bus.InsertCartridge(m_cartridge);
+        m_testRomName = "ld_test.gb";
     }
 
 protected:
@@ -45,16 +24,6 @@ protected:
         EXPECT_EQ(m_bus.GetCPU().GetAFRegister().A, data[6]);
         EXPECT_EQ(m_bus.GetCPU().GetAFRegister().F.flags, data[7]);
     }
-
-    void Run(uint16_t startAddress, uint16_t endAddress)
-    {
-        m_bus.SetPC(startAddress);
-        GBEmulatorTests::RunTo(m_bus, endAddress);
-    }
-
-    GBEmulator::Bus m_bus;
-    // Put it static to avoid to re-import it everytime
-    inline static std::shared_ptr<GBEmulator::Cartridge> m_cartridge = nullptr;
 };
 
 TEST_F(LDTest, LitteralLoadIn8BitsRegisters)

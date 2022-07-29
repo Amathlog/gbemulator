@@ -8,6 +8,9 @@
 #include <core/bus.h>
 #include <exe/utils.h>
 #include <gtest/gtest.h>
+#include <core/utils/fileVisitor.h>
+#include <core/cartridge.h>
+#include <memory>
 
 namespace GBEmulatorTests
 {
@@ -86,4 +89,51 @@ namespace GBEmulatorTests
 
         return "";
     }
+
+    class DefaultTest : public ::testing::Test
+    {
+    public:
+        void SetUp() override
+        {
+            if (!m_cartridge || m_loadedCartridgeName != m_testRomName)
+            {
+                EXPECT_FALSE(m_testRomName.empty());
+                std::string romPath = GBEmulatorTests::FindTestRom(m_testRomName.c_str());
+                EXPECT_FALSE(romPath.empty()) << "Failed to find the rom";
+
+                if (romPath.empty())
+                    return;
+
+                GBEmulator::Utils::FileReadVisitor visitor(romPath);
+                EXPECT_TRUE(visitor.IsValid()) << "Failed to open the rom";
+
+                if (!visitor.IsValid())
+                    return;
+
+                m_cartridge = std::make_shared<GBEmulator::Cartridge>(visitor);
+                EXPECT_TRUE(m_cartridge) << "Failed to load the rom";
+
+                m_loadedCartridgeName = m_testRomName;
+            }
+
+            if (!m_cartridge)
+                return;
+
+            m_bus.InsertCartridge(m_cartridge);
+        }
+
+    protected:
+        void Run(uint16_t startAddress, uint16_t endAddress)
+        {
+            m_bus.SetPC(startAddress);
+            GBEmulatorTests::RunTo(m_bus, endAddress);
+        }
+
+        GBEmulator::Bus m_bus;
+        // Put it static to avoid to re-import it everytime
+        inline static std::shared_ptr<GBEmulator::Cartridge> m_cartridge = nullptr;
+        inline static std::string m_loadedCartridgeName = "";
+
+        std::string m_testRomName;
+    };
 }
