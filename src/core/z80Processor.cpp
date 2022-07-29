@@ -535,8 +535,9 @@ uint8_t Z80Processor::ADD(uint8_t opcode)
     if (opcode == 0xE8)
     {
         int8_t data = (int8_t)(FetchByte());
-        m_AF.F.H = ((data > 0) && ((m_SP & 0x000F) == 0x0F));
-        m_AF.F.C = ((data > 0) && ((m_SP & 0x0080) > 0));
+        uint16_t newSP = m_SP + data;
+        m_AF.F.C = (newSP & 0xFF00) > (m_SP & 0xFF00);
+        m_AF.F.H = (newSP & 0xFFF0) > (m_SP & 0xFFF0);
 
         m_SP += data;
         m_AF.F.Z = 0;
@@ -551,10 +552,9 @@ uint8_t Z80Processor::ADD(uint8_t opcode)
         uint16_t data = 0;
         ReadWordFromRegisterIndex(index, data);
 
-        m_AF.F.H = (data > 0) && (m_HL.HL & 0x0FFF) == 0x0FFF;
-
         uint32_t temp = (uint32_t)data + (uint32_t)m_HL.HL;
 
+        m_AF.F.H = (uint16_t)(temp & 0x0000FFF0) > (m_HL.HL & 0xFFF0);
         m_AF.F.C = (temp & 0xFFFF0000) > 0;
         m_HL.HL = (uint16_t)(temp & 0x0000FFFF);
         m_AF.F.N = 0;
@@ -862,10 +862,7 @@ uint8_t Z80Processor::DEC(uint8_t opcode)
     if(ReadByteFromRegisterIndex(index, data))
         nbCycles++;
 
-    // TODO: Check this one
-    // In some docs, it's written: Set if borrow from bit 4.
-    // Not exactly sure if that's the right thing here.
-    m_AF.F.H = ((data & 0xF0) > 0) & ((data & 0x0F) == 0);
+    m_AF.F.H = (data & 0x0F) == 0;
 
     data--;
 
