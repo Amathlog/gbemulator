@@ -6,6 +6,7 @@
 #include <core/2C02Processor.h>
 #include <core/cartridge.h>
 #include <core/controller.h>
+#include <core/timer.h>
 #include <vector>
 #include <array>
 #include <cstdint>
@@ -90,6 +91,7 @@ namespace GBEmulator
     private:        
         Z80Processor m_cpu;
         Processor2C02 m_ppu;
+        Timer m_timer;
 
         Mode m_mode = Mode::GB;
 

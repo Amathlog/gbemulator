@@ -3,6 +3,11 @@
 
 using GBEmulator::Timer;
 
+Timer::Timer()
+{
+    Reset();
+}
+
 uint8_t Timer::ReadByte(uint16_t addr, bool /*readOnly*/)
 {
     uint8_t data = 0x00;
@@ -92,6 +97,17 @@ bool Timer::Clock()
     }
 
     return hasOverflow;
+}
+
+void Timer::Reset()
+{
+    m_divider = 0x00;
+    m_timerCounter = 0x00;
+    m_timerModulo = 0x00;
+    m_timerControl = 0x00;
+    m_enabled = false;
+    m_timerControlValue = 4096; // value at 0
+    m_nbClocks = 0;
 }
 
 void Timer::SerializeTo(Utils::IWriteVisitor& visitor) const

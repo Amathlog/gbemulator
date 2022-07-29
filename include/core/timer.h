@@ -8,10 +8,11 @@ namespace GBEmulator
     class Timer : public ISerializable
     {
     public:
-        Timer() = default;
+        Timer();
 
         uint8_t ReadByte(uint16_t addr, bool readOnly = false);
         void WriteByte(uint16_t addr, uint8_t data);
+        void Reset();
 
         // Returns true if the timer counter overflows (needs to fire an interrupt)
         bool Clock();
@@ -24,7 +25,7 @@ namespace GBEmulator
         uint8_t m_timerCounter;
         uint8_t m_timerModulo;
         uint8_t m_timerControl;
-        uint16_t m_timerControlValue;
+        size_t m_timerControlValue;
         bool m_enabled;
 
         size_t m_nbClocks;

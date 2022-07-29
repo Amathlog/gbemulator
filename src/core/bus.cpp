@@ -86,7 +86,7 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     else if (addr >= 0xFF04 && addr <= 0xFF07)
     {
         // Divider and timer
-        // TODO
+        data = m_timer.ReadByte(addr, readOnly);
     }
     else if (addr == IF_REG_ADDR)
     {
@@ -202,7 +202,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xFF04 && addr <= 0xFF07)
     {
         // Divider and timer
-        // TODO
+        m_timer.WriteByte(addr, data);
     }
     else if (addr == IF_REG_ADDR)
     {
@@ -294,6 +294,11 @@ bool Bus::Clock()
         }
     }
 
+    if (m_timer.Clock())
+    {
+        m_IF.timer = 1;
+    }
+
     m_nbCycles++;
 
     return res;
@@ -318,6 +323,8 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteContainer(m_HRAM);
     visitor.WriteValue(m_IE.flag);
     visitor.WriteValue(m_IF.flag);
+
+    m_timer.SerializeTo(visitor);
 }
 
 void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -339,6 +346,8 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadContainer(m_HRAM);
     visitor.ReadValue(m_IE.flag);
     visitor.ReadValue(m_IF.flag);
+
+    m_timer.DeserializeFrom(visitor);
 }
 
 void Bus::Reset()
@@ -374,6 +383,8 @@ void Bus::Reset()
     }
 
     m_nbCycles = 0;
+
+    m_timer.Reset();
 }
 
 void Bus::ChangeMode(Mode newMode)
