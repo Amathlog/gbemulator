@@ -3,6 +3,12 @@ INCLUDE "hardware.inc"
 SECTION "VBlankInterrupt", ROM0[$40]
     jp hl
 
+SECTION "TimerInterrupt", ROM0[$50]
+    jp HandleTimer
+
+SECTION "JoypadInterrupt", ROM0[$60]
+    jp HandleJoypad
+
 SECTION "Header", ROM0[$100]
 
 	jp EntryPoint
@@ -64,16 +70,64 @@ CopyTilemap:
 	ld a, %11100100
 	ld [rBGP], a
 
-	ld hl, IgnoreVBlankInterrupt
-	ei
-	jp Done
+    ; Setup the register
+    ld b, $10
 
-IgnoreVBlankInterrupt:
+    ; Setup the timer modulo and enable the timer and reset its counter
+    ld a, $D0
+    ldh [$ff00+$05], a ; Reset counter
+    ldh [$ff00+$06], a ; Set modulo to $D0
+    ld a, TACF_START
+    ldh [$ff00+$07], a ; Enable timer
+
+    ld hl, rP1
+    ld [hl], P1F_GET_BTN ; Indicate we want to get buttons
+	ld hl, HandleVBlank ; Save the VBlank handle address
+    ld a, IEF_VBLANK | IEF_TIMER | IEF_HILO ; Enable Timer/VBlank/Joypad interrupt
+    ld [rIE], a      ; Write it to the IE register
+	ei
+	jp Waiting
+
+HandleVBlank:
+    ; Set the scroll to the value of register B
+    ld a, b
+	ld [rSCX], a
 	reti
 
-Done:
-	jp Done
+HandleTimer:
+    ; When the timer is interrupted, invert B
+    ld a, b
+    cpl
+    inc a
+    ld b, a
+    reti
 
+HandleJoypad:
+    ld a, [rP1]
+	and P1F_0 ; A Button
+	jp nz, ReturnHandleJoypad
+	; A is pressed so circle between timers and reset them
+    ; First stop the timer
+    ldh a, [$ff00+$07]
+    res 2, a
+    ldh [$ff00+$07], a
+    ld e, a
+    ; Reset the timer
+    ld a, [$ff00+$06]
+    ldh [$ff00+$05], a
+    ; Then circle it
+    inc e
+    ; Re-enable it
+    set 2, e
+    ld a, e
+    ldh [$ff00+$07], a
+
+ReturnHandleJoypad:
+    reti
+
+Waiting:
+    halt
+    jp Waiting
 
 SECTION "Tile data", ROM0
 

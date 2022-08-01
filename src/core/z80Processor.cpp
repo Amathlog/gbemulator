@@ -313,7 +313,11 @@ uint8_t Z80Processor::DecodeOpcodeAndCall(uint8_t opcode)
 uint8_t Z80Processor::HandleInterrupt()
 {
     if (!m_IMEEnabled && !m_isPaused)
+    {
+        // Clear the flags if interrupts are not enabled
+        WriteByte(IF_REG_ADDR, 0x00);
         return 0;
+    }
 
     InterruptRegister IE;
     IE.flag = ReadByte(IE_REG_ADDR);
