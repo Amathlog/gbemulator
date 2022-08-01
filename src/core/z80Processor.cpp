@@ -198,9 +198,6 @@ void Z80Processor::ReadWordFromRegisterIndex(uint8_t index, uint16_t& data)
     case 3:
         data = m_SP;
         break;
-    case 4:
-        data = m_AF.AF;
-        break;
     default:
         data = 0;
         break;
@@ -222,9 +219,6 @@ void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
         break;
     case 3:
         m_SP = data;
-        break;
-    case 4:
-        m_AF.AF = data;
         break;
     default:
         break;
@@ -1594,11 +1588,16 @@ uint8_t Z80Processor::POP(uint8_t opcode)
     uint16_t data = PopWordFromStack();
     uint8_t index = (opcode >> 4) & 0x03;
 
-    // cf. PUSH
     if (index == 3)
-        index = 4;
+    {
+        // Special behavior for AF, only pop certain bits for the flag
+        m_AF.AF = data & 0xFFF0;
+    }
+    else
+    {
+        WriteWordToRegisterIndex(index, data);
+    }
 
-    WriteWordToRegisterIndex(index, data);
 
     return 3;
 }
@@ -1614,13 +1613,15 @@ uint8_t Z80Processor::PUSH(uint8_t opcode)
     uint16_t data = 0;
     uint8_t index = (opcode >> 4) & 0x03;
 
-    // In ReadWordFromRegisterIndex, index 3 correspond to SP,
-    // beacuse in ADD, DEC, and INC the third index is SP
-    // But in PUSH, it's AF, and it is mapped to index 4 in this function.
     if (index == 3)
-        index = 4;
-
-    ReadWordFromRegisterIndex(index, data);
+    {
+        // Special behavior for AF, only push certain bits for the flag
+        data = (m_AF.AF & 0xFFF0);
+    }
+    else
+    {
+        ReadWordFromRegisterIndex(index, data);
+    }
 
     PushWordToStack(data);
 
