@@ -9,7 +9,6 @@ using GBEmulator::Bus;
 constexpr bool enableLogger = false;
 
 Bus::Bus()
-    : m_instLogger(*this)
 {
     // 16kB video ram
     // Will be limited to 8kB in GB mode
@@ -25,6 +24,8 @@ Bus::Bus()
     // Connect to the cpu and ppu
     m_cpu.ConnectBus(this);
     m_ppu.ConnectBus(this);
+
+    m_instLogger = std::make_unique<GBEmulator::InstructionLogger>(*this);
 
     Reset();
 }
@@ -281,7 +282,7 @@ bool Bus::Clock()
 
         if (res)
         {
-            m_instLogger.WriteCurrentState();
+            m_instLogger->WriteCurrentState();
         }
 
         if (m_runToAddress != 0xFFFFFFFF && (uint32_t)m_cpu.GetPC() == m_runToAddress)
@@ -396,7 +397,7 @@ void Bus::Reset()
     m_timer.Reset();
 
     if (enableLogger)
-        m_instLogger.OpenFileVisitor("dump.txt");
+        m_instLogger->OpenFileVisitor("dump.txt");
 }
 
 void Bus::ChangeMode(Mode newMode)

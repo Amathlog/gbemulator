@@ -93,7 +93,7 @@ namespace GBEmulator
         Z80Processor m_cpu;
         Processor2C02 m_ppu;
         Timer m_timer;
-        InstructionLogger m_instLogger;
+        std::unique_ptr<InstructionLogger> m_instLogger;
 
         Mode m_mode = Mode::GB;
 
