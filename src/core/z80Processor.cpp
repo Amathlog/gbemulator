@@ -224,7 +224,7 @@ void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
         m_SP = data;
         break;
     case 4:
-        data = m_AF.AF;
+        m_AF.AF = data;
         break;
     default:
         break;
@@ -1108,9 +1108,11 @@ uint8_t Z80Processor::RL(uint8_t opcode)
 // Same as RL op, but special op for the A register
 // done in 1 cycle instead of 2
 // Register A is index 7
+// Also Z flag is always 0
 uint8_t Z80Processor::RLA(uint8_t opcode)
 {
     RL(0x07);
+    m_AF.F.Z = 0;
     return 1;
 }
 
@@ -1155,9 +1157,11 @@ uint8_t Z80Processor::RLC(uint8_t opcode)
 // Same as RLC op, but special op for the A register
 // done in 1 cycle instead of 2
 // Register A is index 7
+// Also Z flag is always 0
 uint8_t Z80Processor::RLCA(uint8_t opcode)
 {
     RLC(0x07);
+    m_AF.F.Z = 0;
     return 1;
 }
 
@@ -1203,9 +1207,11 @@ uint8_t Z80Processor::RR(uint8_t opcode)
 // Same as RR op, but special op for the A register
 // done in 1 cycle instead of 2
 // Register A is index 7
+// Also, Z flag is always 0
 uint8_t Z80Processor::RRA(uint8_t /*opcode*/)
 {
     RR(0x07);
+    m_AF.F.Z = 0;
     return 1;
 }
 
@@ -1250,9 +1256,11 @@ uint8_t Z80Processor::RRC(uint8_t opcode)
 // Same as RRC op, but special op for the A register
 // done in 1 cycle instead of 2
 // Register A is index 7
+// Also Z flag is always 0
 uint8_t Z80Processor::RRCA(uint8_t /*opcode*/)
 {
     RRC(0x07);
+    m_AF.F.Z = 0;
     return 1;
 }
 

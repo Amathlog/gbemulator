@@ -6,7 +6,7 @@
 #include <stack>
 #include <iostream>
 #include <core/bus.h>
-#include <exe/utils.h>
+#include <core/utils/utils.h>
 #include <gtest/gtest.h>
 #include <core/utils/fileVisitor.h>
 #include <core/cartridge.h>
@@ -58,7 +58,7 @@ namespace GBEmulatorTests
 
     inline std::string FindTestRom(const std::string& romName)
     {
-        std::filesystem::path rootPath = GBEmulatorExe::GetRootPath();
+        std::filesystem::path rootPath = GBEmulator::Utils::GetRootPath();
 
         rootPath /= "tests";
 

@@ -23,7 +23,7 @@
 #include <exe/messageService/messages/debugMessage.h>
 #include <exe/messageService/messages/screenMessage.h>
 #include <exe/messageService/messages/screenPayload.h>
-#include <exe/utils.h>
+#include <core/utils/utils.h>
 
 
 using GBEmulatorExe::ImguiManager;
@@ -318,7 +318,7 @@ void ImguiManager::HandlePerf(bool showFPS)
 
 std::string ImguiCachePath()
 {
-    return (GBEmulatorExe::GetExePath() / "imgui.cache").string();
+    return (GBEmulator::Utils::GetExePath() / "imgui.cache").string();
 }
 
 void ImguiManager::Serialize()

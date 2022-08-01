@@ -7,6 +7,7 @@
 #include <core/cartridge.h>
 #include <core/controller.h>
 #include <core/timer.h>
+#include <core/utils/instLogger.h>
 #include <vector>
 #include <array>
 #include <cstdint>
@@ -86,12 +87,13 @@ namespace GBEmulator
         void ChangeMode(Mode newMode);
         Mode GetMode() const { return m_mode; }
 
-        double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? 8338608.0 : 4194304.0; }
+        double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? CPU_DOUBLE_SPEED_FREQ_D : CPU_SINGLE_SPEED_FREQ_D; }
 
     private:        
         Z80Processor m_cpu;
         Processor2C02 m_ppu;
         Timer m_timer;
+        InstructionLogger m_instLogger;
 
         Mode m_mode = Mode::GB;
 

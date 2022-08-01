@@ -11,7 +11,7 @@
 #include <core/cartridge.h>
 #include <filesystem>
 #include <iostream>
-#include <exe/utils.h>
+#include <core/utils/utils.h>
 
 namespace fs = std::filesystem;
 
@@ -191,7 +191,7 @@ bool CoreMessageService::SaveState(const std::string& file, int number)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GetSaveStateFile(m_exePath, number, GetCartridgeUniqueID(m_bus.GetCartridge())).string();
+        finalFile = GBEmulator::Utils::GetSaveStateFile(m_exePath, number, GBEmulator::Utils::GetCartridgeUniqueID(m_bus.GetCartridge())).string();
     }
 
     if (finalFile.empty())
@@ -216,7 +216,7 @@ bool CoreMessageService::LoadState(const std::string& file, int number)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GetSaveStateFile(m_exePath, number, GetCartridgeUniqueID(m_bus.GetCartridge())).string();
+        finalFile = GBEmulator::Utils::GetSaveStateFile(m_exePath, number, GBEmulator::Utils::GetCartridgeUniqueID(m_bus.GetCartridge())).string();
     }
 
     if (finalFile.empty())
@@ -252,7 +252,7 @@ bool CoreMessageService::SaveGame(const std::string& file)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GetSaveFile(m_exePath, GetCartridgeUniqueID(cartridge)).string();
+        finalFile = GBEmulator::Utils::GetSaveFile(m_exePath, GBEmulator::Utils::GetCartridgeUniqueID(cartridge)).string();
     }
 
     // Nothing to do
@@ -281,7 +281,7 @@ bool CoreMessageService::LoadSaveGame(const std::string& file)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GetSaveFile(m_exePath, GetCartridgeUniqueID(cartridge)).string();
+        finalFile = GBEmulator::Utils::GetSaveFile(m_exePath, GBEmulator::Utils::GetCartridgeUniqueID(cartridge)).string();
     }
 
     if (finalFile.empty())

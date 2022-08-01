@@ -4,7 +4,7 @@
 #include <core/cartridge.h>
 #include <core/utils/fileVisitor.h>
 #include <exe/mainWindow.h>
-#include <exe/utils.h>
+#include <core/utils/utils.h>
 #include <exe/messageService/coreMessageService.h>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
@@ -24,7 +24,7 @@ static unsigned windowScalingFactor = 5;
 
 int main(int argc, char** argv) {
     // Load a rom from a file
-    auto root = GBEmulatorExe::GetRootPath();
+    auto root = GBEmulator::Utils::GetRootPath();
     auto path = std::filesystem::path();
 
     // Mapper 000 also
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
 
     GBEmulator::Bus bus;
 
-    GBEmulatorExe::CoreMessageService coreMessageService(bus, GBEmulatorExe::GetExePath().string());
+    GBEmulatorExe::CoreMessageService coreMessageService(bus, GBEmulator::Utils::GetExePath().string());
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(
         &coreMessageService);
 

@@ -1,7 +1,7 @@
 #include <exe/imguiWindows/findRomsWindow.h>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
-#include <exe/utils.h>
+#include <core/utils/utils.h>
 #include <imgui.h>
 #include <iostream>
 
@@ -33,7 +33,7 @@ void FindRomsWindow::RefreshRoms()
     m_allRoms.clear();
     int index = 0;
 
-    std::filesystem::path root = GBEmulatorExe::GetRootPath();
+    std::filesystem::path root = GBEmulator::Utils::GetRootPath();
 
     auto findRoms = [this, &index](const std::filesystem::path& path)
     {

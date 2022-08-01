@@ -8,9 +8,13 @@ using GBEmulator::Utils::FileReadVisitor;
 using GBEmulator::Utils::FileWriteVisitor;
 
 template <typename T>
-void Open(T& stream, const std::string& filename)
+void Open(T& stream, const std::string& filename, bool open, bool binary)
 {
-    stream.open(filename, std::ios::binary);
+    std::ios_base::openmode mode = open ? std::ios_base::in : std::ios_base::out;
+    if (binary)
+        mode |= std::ios_base::binary;
+
+    stream.open(filename, mode);
 }
 
 template <typename T>
@@ -19,10 +23,10 @@ void Close(T& stream)
     stream.close();
 }
 
-FileReadVisitor::FileReadVisitor(const std::string& file, bool withVersioning)
+FileReadVisitor::FileReadVisitor(const std::string& file, bool withVersioning, bool binary)
     : m_ptr(0)
 {
-    Open(m_file, file);
+    Open(m_file, file, true, binary);
 
     m_size = 0;
 
@@ -76,10 +80,10 @@ size_t FileReadVisitor::Remaining() const
     return m_size - m_ptr;
 }
 
-FileWriteVisitor::FileWriteVisitor(const std::string& file, bool withVersioning)
+FileWriteVisitor::FileWriteVisitor(const std::string& file, bool withVersioning, bool binary)
     : m_ptr(0)
 {
-    Open(m_file, file);
+    Open(m_file, file, false, binary);
     m_version = FileVersion::CurrentVersion;
 
     if (withVersioning)

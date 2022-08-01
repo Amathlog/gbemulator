@@ -1,11 +1,15 @@
-#include "core/z80Processor.h"
+#include <core/z80Processor.h>
 #include <core/bus.h>
+#include <core/utils/utils.h>
 #include <algorithm>
 #include <cstdint>
 
 using GBEmulator::Bus;
 
+constexpr bool enableLogger = false;
+
 Bus::Bus()
+    : m_instLogger(*this)
 {
     // 16kB video ram
     // Will be limited to 8kB in GB mode
@@ -275,6 +279,11 @@ bool Bus::Clock()
     {
         res = m_cpu.Clock();
 
+        if (res)
+        {
+            m_instLogger.WriteCurrentState();
+        }
+
         if (m_runToAddress != 0xFFFFFFFF && (uint32_t)m_cpu.GetPC() == m_runToAddress)
         {
             m_runToAddress = 0xFFFFFFFF;
@@ -385,6 +394,9 @@ void Bus::Reset()
     m_nbCycles = 0;
 
     m_timer.Reset();
+
+    if (enableLogger)
+        m_instLogger.OpenFileVisitor("dump.txt");
 }
 
 void Bus::ChangeMode(Mode newMode)

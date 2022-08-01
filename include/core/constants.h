@@ -34,5 +34,8 @@ namespace GBEmulator
 
     // CPU data
     constexpr size_t CPU_SINGLE_SPEED_FREQ = 4194304; // 4.194304 MHz
+    constexpr double CPU_SINGLE_SPEED_FREQ_D = (double)(CPU_SINGLE_SPEED_FREQ);
     constexpr size_t CPU_DOUBLE_SPEED_FREQ = 8388608; // 8.388608 MHz
+    constexpr double CPU_DOUBLE_SPEED_FREQ_D = (double)(CPU_DOUBLE_SPEED_FREQ);
+
 }

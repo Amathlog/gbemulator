@@ -22,7 +22,7 @@ enum class FileVersion : int32_t
 class FileReadVisitor : public IReadVisitor
 {
 public:
-    FileReadVisitor(const std::string& file, bool withVersioning = false);
+    FileReadVisitor(const std::string& file, bool withVersioning = false, bool binary = true);
     ~FileReadVisitor();
 
     void Read(uint8_t* data, size_t size) override;
@@ -44,7 +44,7 @@ private:
 class FileWriteVisitor : public IWriteVisitor
 {
 public:
-    FileWriteVisitor(const std::string& file, bool withVersioning = false);
+    FileWriteVisitor(const std::string& file, bool withVersioning = false, bool binary = true);
     ~FileWriteVisitor();
 
     void Write(const uint8_t* data, size_t size) override;
