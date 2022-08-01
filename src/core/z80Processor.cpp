@@ -372,6 +372,9 @@ uint8_t Z80Processor::HandleInterrupt()
         jumpingAddress = 0x0060;
     }
 
+    // Write the flag back
+    WriteByte(IF_REG_ADDR, IF.flag);
+
     // Next instruction is push on the stack
     PushWordToStack(m_PC);
 
@@ -1533,14 +1536,14 @@ uint8_t Z80Processor::RET(uint8_t opcode)
 }
 
 // RETI op
-// Equivalent of EI + RET, but the IME is set immediately
-// (instead of after next instruction)
+// Equivalent of EI + RET
 // Nb cycles: 4
 // Flags: Untouched
-uint8_t Z80Processor::RETI(uint8_t opcode)
+uint8_t Z80Processor::RETI(uint8_t /*opcode*/)
 {
-    m_PC = PopWordFromStack();
-    m_IMEEnabled = true;
+    constexpr uint8_t unconditionalRetOpcode = 0xC9;
+    RET(unconditionalRetOpcode);
+    EI(unconditionalRetOpcode);
     return 4;
 }
 

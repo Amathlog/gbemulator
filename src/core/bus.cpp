@@ -287,11 +287,11 @@ bool Bus::Clock()
     // Update the controller and the interrupt
     if (m_controller)
     {
-        m_controller->Update();
         if (m_controller->HasChangedFromHighToLow())
         {
             m_IF.joypad = 1;
         }
+        m_controller->Update();
     }
 
     if (m_timer.Clock())

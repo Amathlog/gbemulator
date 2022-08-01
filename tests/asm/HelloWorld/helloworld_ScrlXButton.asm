@@ -1,5 +1,8 @@
 INCLUDE "hardware.inc"
 
+SECTION "JoypadInterrupt", ROM0[$60]
+	jp CheckAB
+
 SECTION "Header", ROM0[$100]
 
 	jp EntryPoint
@@ -32,6 +35,10 @@ Init:
 	; Turn the LCD off
 	ld a, 0
 	ld [rLCDC], a
+
+	ld a, IEF_HILO 	 ; Enable Joypad interrupt
+    ld [rIE], a      ; Write it to the IE register
+	ei               ; Enable interruptions
 
 	; Copy the tile data
 	ld de, Tiles
@@ -85,8 +92,12 @@ UpdateScroll:
 	ld a, [rP1]
 	and $0F
 	ld b, a
+	jp CheckDir
 
 	; Then use A to accelerate the scrolling and B to decelerate
+CheckAB:
+	ld a, [hl]
+	push af
 	ld [hl], P1F_GET_BTN
 CheckA:
 	ld a, [rP1]
@@ -101,12 +112,16 @@ CheckA:
 CheckB:
 	ld a, [rP1]
 	and P1F_1
-	jp nz, CheckDir
+	jp nz, RetAB
 	ld a, c
 	rra ; Div 2 on the speed
 	ld c, a ; Store result in C
-	jp nz, CheckDir
+	jp nz, RetAB
 	ld c, $01 ; Min speed = 1
+RetAB:
+	pop af
+	ld [hl], a
+	reti
 
 CheckDir:
 CheckDirHorizontal:
