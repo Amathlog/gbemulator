@@ -617,8 +617,8 @@ uint8_t Z80Processor::ADC(uint8_t opcode)
 // SUB op
 // General subtraction
 // There are a less cases than addition:
-// SUB A,r8: 0x80 -> 0x87: Subtract the value from a given register to A (1 or 2 cycles)
-// SUB A,d8: 0xC6: Subtract the litteral value to A (2 cycles)
+// SUB A,r8: 0x90 -> 0x97: Subtract the value from a given register to A (1 or 2 cycles)
+// SUB A,d8: 0xD6: Subtract the litteral value to A (2 cycles)
 uint8_t Z80Processor::SUB(uint8_t opcode)
 {
     // In all cases, it's exactly the same than SBC
@@ -801,26 +801,12 @@ uint8_t Z80Processor::XOR(uint8_t opcode)
 // C: If borrow (data > A)
 uint8_t Z80Processor::CP(uint8_t opcode)
 {
-    uint8_t data = 0;
-    uint8_t nbCycles = 1;
-    if (opcode == 0xFE)
-    {
-        // Literal value
-        data = FetchByte();
-        nbCycles++;
-    }
-    else
-    {
-        uint8_t index = opcode & 0x07;
-        if (ReadByteFromRegisterIndex(index, data))
-            nbCycles++;
-    }
-
-    m_AF.F.H = (data > 0) && (m_AF.A & 0x0F) == 0x00;
-    m_AF.F.C = data > m_AF.A;
-    m_AF.F.N = 1;
-    m_AF.F.Z = m_AF.A == data;
-
+    // Same than sub but without storing the result.
+    // Reuse the SUB op
+    uint8_t oldA = m_AF.A;
+    // Litteral CP => 0xFE. Litteral SUB => 0xD6
+    uint8_t nbCycles = SUB(opcode == 0xFE ? 0xD6 : opcode);
+    m_AF.A = oldA;
     return nbCycles;
 }
 
