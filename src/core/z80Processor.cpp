@@ -536,9 +536,8 @@ uint8_t Z80Processor::ADD(uint8_t opcode)
     if (opcode == 0xE8)
     {
         int8_t data = (int8_t)(FetchByte());
-        uint16_t newSP = m_SP + data;
-        m_AF.F.C = (newSP & 0xFF00) > (m_SP & 0xFF00);
-        m_AF.F.H = (newSP & 0xFFF0) > (m_SP & 0xFFF0);
+        m_AF.F.C = (m_SP & 0xFF) + (data & 0xFF) > 0xFF;
+        m_AF.F.H = (m_SP & 0x0F) + (data & 0x0F) > 0x0F;
 
         m_SP += data;
         m_AF.F.Z = 0;
@@ -1625,13 +1624,12 @@ uint8_t Z80Processor::PUSH(uint8_t opcode)
 // H: If overflow bit 3
 uint8_t Z80Processor::LDSP(uint8_t opcode)
 {
-    int8_t offset = (int8_t)FetchByte();
-    m_AF.F.N = 0;
-    m_AF.F.Z = 0;
-    uint16_t newSP = m_SP + offset;
-    m_AF.F.C = (newSP & 0xFF00) > (m_SP & 0xFF00);
-    m_AF.F.H = (newSP & 0xFFF0) > (m_SP & 0xFFF0);
-    m_HL.HL = newSP;
+    // Same operation than ADD SP, r8 (0xE8) without storing the result in SP.
+    // Reuse it
+    uint16_t oldSP = m_SP;
+    ADD(0xE8);
+    m_HL.HL = m_SP;
+    m_SP = oldSP;
     return 3;
 }
 
