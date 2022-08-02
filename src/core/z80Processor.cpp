@@ -555,7 +555,8 @@ uint8_t Z80Processor::ADD(uint8_t opcode)
 
         uint32_t temp = (uint32_t)data + (uint32_t)m_HL.HL;
 
-        m_AF.F.H = (uint16_t)(temp & 0x0000FFF0) > (m_HL.HL & 0xFFF0);
+        // Half carry if the sum of the 12 lsb of each operand overflow
+        m_AF.F.H =((m_HL.HL & 0xFFF) + (data & 0xFFF)) > 0xFFF;
         m_AF.F.C = (temp & 0xFFFF0000) > 0;
         m_HL.HL = (uint16_t)(temp & 0x0000FFFF);
         m_AF.F.N = 0;
