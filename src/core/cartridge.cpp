@@ -87,15 +87,17 @@ Cartridge::Cartridge(Utils::IReadVisitor& visitor)
     // From this, extract the header
     m_header.FillFromData(m_prgData.data());
 
+    // Create the mapper
+    m_mapper = CreateMapper(m_header);
+    if (!m_mapper)
+        return;
+
     // Resize everything
     m_prgData.resize(0x4000 * m_header.nbRomBanks);
-    m_externalRAM.resize(0x2000 * m_header.nbRamBanks);
+    m_externalRAM.resize(m_mapper->GetRAMSize());
 
     // Read the rest of data
     visitor.Read(m_prgData.data() + 0x4000, 0x4000 * (m_header.nbRomBanks - 1));
-
-    // Create the mapper
-    m_mapper = CreateMapper(m_header);
 
     // When all is done, compute the SHA1 of the ROM
     Utils::SHA1 sha1;
@@ -151,8 +153,15 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
     // RAM zone
     else if (addr >= 0xA000 && addr < 0xC000 && m_mapper->IsRamEnabled())
     {
-        // RAM banks are 8kB in size
-        data = m_externalRAM[m_mapper->GetRAMBank() * 0x2000 + (addr & 0x1FFF)];
+        // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
+        if (m_externalRAM.size() >= 0x2000)
+        {
+            data = m_externalRAM[m_mapper->GetRAMBank() * 0x2000 + (addr & 0x1FFF)];
+        }
+        else
+        {
+            data = m_externalRAM[addr & (uint16_t)(m_externalRAM.size())];
+        }
         return true;
     }
 
@@ -168,9 +177,15 @@ bool Cartridge::WriteByte(uint16_t addr, uint8_t data)
     // Try to write to the RAM
     if (addr >= 0xA000 && addr < 0xC000 && m_mapper->IsRamEnabled())
     {
-        // RAM banks are 8kB in size
-        m_externalRAM[m_mapper->GetRAMBank() * 0x2000 + (addr & 0x1FFF)] = data;
-        return true;
+        // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
+        if (m_externalRAM.size() >= 0x2000)
+        {
+            m_externalRAM[m_mapper->GetRAMBank() * 0x2000 + (addr & 0x1FFF)] = data;
+        }
+        else
+        {
+            m_externalRAM[addr & (uint16_t)(m_externalRAM.size())] = data;
+        }
     }
 
     // Otherwise, send the data to the mapper

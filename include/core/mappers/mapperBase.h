@@ -46,6 +46,9 @@ namespace GBEmulator
         inline uint8_t GetSecondROMBank() const { return m_secondRomBank; }
         inline uint8_t GetRAMBank() const { return m_ramBank; }
 
+        // Specific for MBC2 
+        virtual size_t GetRAMSize() const { return m_header.nbRamBanks * 0x2000; }
+
     protected:
         const Header& m_header; 
         bool m_ramEnabled = false;

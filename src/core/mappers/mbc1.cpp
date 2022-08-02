@@ -7,8 +7,8 @@ MBC1::MBC1(const Header& header)
     : MapperBase(header)
 {
     // Do some assertions
-    assert(header.nbRomBanks <= 0x80 && "There are too many rom banks, exceeding MBC limitation");
-    assert(header.nbRamBanks <= 0x04 && "There are too many ram banks, exceeding MBC limitation");
+    assert(header.nbRomBanks <= 0x80 && "There are too many rom banks, exceeding MBC1 limitation");
+    assert(header.nbRamBanks <= 0x04 && "There are too many ram banks, exceeding MBC1 limitation");
 }
 
 void MBC1::SerializeTo(Utils::IWriteVisitor& visitor) const
