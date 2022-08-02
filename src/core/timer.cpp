@@ -53,17 +53,17 @@ void Timer::WriteByte(uint16_t addr, uint8_t data)
         switch(m_timerControl & 0x03)
         {
         case 0:
-            m_timerControlValue = 4096; // CPU Clock / 1024
+            m_timerControlValue = 1024; // CPU Clock / 1024
             break;
         case 1:
-            m_timerControlValue = 262144; // CPU Clock / 16
+            m_timerControlValue = 16; // CPU Clock / 16
             break;
         case 2:
-            m_timerControlValue = 65536; // CPU Clock / 64
+            m_timerControlValue = 64; // CPU Clock / 64
             break;
         case 3:
         default:
-            m_timerControlValue = 16384; // CPU Clock / 256
+            m_timerControlValue = 256; // CPU Clock / 256
             break;
         }
 
@@ -77,8 +77,8 @@ bool Timer::Clock()
 {
     m_nbClocks = (m_nbClocks + 1) % GBEmulator::CPU_SINGLE_SPEED_FREQ;
 
-    // Divider is always incremented at a speed of 16384Hz (double in double speed mode)
-    if (m_nbClocks % 16384 == 0)
+    // Divider is always incremented at a speed of 16384Hz => CPU Clock / 256 (double in double speed mode)
+    if (m_nbClocks % 256 == 0)
         m_divider++;
 
     // If the timer is not enabled exit there

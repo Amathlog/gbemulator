@@ -70,13 +70,15 @@ CopyTilemap:
 	ld a, %11100100
 	ld [rBGP], a
 
-    ; Setup the register
+    ; Setup the register. B Will contain the next value of scroll and 
+	; C will count the overflow of timer
     ld b, $10
+	ld c, $00
 
     ; Setup the timer modulo and enable the timer and reset its counter
-    ld a, $D0
+    ld a, $00
     ldh [$ff00+$05], a ; Reset counter
-    ldh [$ff00+$06], a ; Set modulo to $D0
+    ldh [$ff00+$06], a ; Set modulo to $00
     ld a, TACF_START
     ldh [$ff00+$07], a ; Enable timer
 
@@ -95,11 +97,17 @@ HandleVBlank:
 	reti
 
 HandleTimer:
-    ; When the timer is interrupted, invert B
+    ; When the timer is interrupted, increment C. If C == 4, c <- 0 and invert B
+	inc c
+	ld a, c
+	and $04
+	jr z, HandleTimerReti
+	ld c, $00
     ld a, b
     cpl
     inc a
     ld b, a
+HandleTimerReti:
     reti
 
 HandleJoypad:
