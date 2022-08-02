@@ -119,6 +119,7 @@ namespace GBEmulator
         void DebugRenderNoise();
         void DebugRenderTileIds();
         void RenderPixelFifos();
+        void RenderDisabledLCD();
         void SetInteruptFlag(InteruptSource is);
 
         Bus* m_bus = nullptr;
@@ -163,5 +164,6 @@ namespace GBEmulator
         // Screen
         std::vector<uint8_t> m_screen;
         bool m_isFrameComplete = false;
+        bool m_isDisabled = false;
     };
 }

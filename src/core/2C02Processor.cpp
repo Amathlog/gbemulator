@@ -144,6 +144,8 @@ void Processor2C02::WriteByte(uint16_t addr, uint8_t data)
     if (addr == 0xFF40)
     {
         m_lcdRegister.flags = data;
+        if (m_lcdRegister.enable == 0)
+            m_isDisabled = true;
     }
     else if (addr == 0xFF41)
     {
@@ -249,6 +251,7 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_currentStagePixelFetcher);
     visitor.WriteValue(m_XOffsetBGTile);
     visitor.WriteValue(m_BGTileAddress);
+    visitor.WriteValue(m_isDisabled);
 }
 
 void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -286,6 +289,7 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_currentStagePixelFetcher);
     visitor.ReadValue(m_XOffsetBGTile);
     visitor.ReadValue(m_BGTileAddress);
+    visitor.ReadValue(m_isDisabled);
 }
 
 void Processor2C02::Reset()
@@ -424,7 +428,7 @@ inline void Processor2C02::RenderPixelFifos()
         // Draw BG pixel
         if (m_bus->GetMode() == Mode::GB)
         {
-            pixelColor = &DEFAULT_PALETTE[GetColorIndexFromGBPalette(m_gbBGPalette, bgPixel.color)];
+            pixelColor = &GB_DEFAULT_PALETTE[GetColorIndexFromGBPalette(m_gbBGPalette, bgPixel.color)];
         }
         else
         {
@@ -436,7 +440,7 @@ inline void Processor2C02::RenderPixelFifos()
         // Draw OBJ pixel
         if (m_bus->GetMode() == Mode::GB)
         {
-            pixelColor = &DEFAULT_PALETTE[GetColorIndexFromGBPalette(objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
+            pixelColor = &GB_DEFAULT_PALETTE[GetColorIndexFromGBPalette(objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
         }
         else
         {
@@ -446,6 +450,12 @@ inline void Processor2C02::RenderPixelFifos()
 
     Utils::RGB555ToRGB888(*pixelColor, m_screen[screenIndex], m_screen[screenIndex + 1], m_screen[screenIndex + 2]);
     m_currentLinePixel++;
+}
+
+inline void Processor2C02::RenderDisabledLCD()
+{
+    // White screen
+    std::memset(m_screen.data(), 0xFF, m_screen.size());
 }
 
 void Processor2C02::SetInteruptFlag(InteruptSource is)
@@ -647,10 +657,11 @@ void Processor2C02::Clock()
     {
         DEBUG_RANDOM_NOISE,
         DEBUG_TILE_ID,
-        NORMAL
+        NORMAL,
+        DISABLED
     };
 
-    constexpr RenderMode currentMode = RenderMode::NORMAL;
+    RenderMode currentMode = m_isDisabled ? RenderMode::DISABLED : RenderMode::NORMAL;
 
     if (m_currentLinePixel < 160 && m_scanlines < 144)
     {
@@ -668,6 +679,10 @@ void Processor2C02::Clock()
             // m_currentLinePixel will be incremented if a pixel was emitted from the FIFO
             // Therefore let this method handle the increment, if needed.
             RenderPixelFifos();
+            break;
+        case RenderMode::DISABLED:
+            RenderDisabledLCD();
+            m_currentLinePixel++;
             break;
         }
     }
@@ -690,6 +705,9 @@ void Processor2C02::Clock()
             m_scanlines = 0;
             m_lcdStatus.mode = 2;
             SetInteruptFlag(InteruptSource::OAM);
+
+            // Re-enable the LCD at a start of a new frame, if it is enabled.
+            m_isDisabled = m_lcdRegister.enable == 0;
         }
 
         m_lineDots = 0;

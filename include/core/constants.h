@@ -22,7 +22,7 @@ namespace GBEmulator
     constexpr RGB555 DARK_GREY_COLOR = { 0x0A, 0x0A, 0x0A, 0 };
     constexpr RGB555 BLACK_COLOR = { 0x00, 0x00, 0x00, 0 };
 
-    constexpr std::array<RGB555, 4> DEFAULT_PALETTE = { WHITE_COLOR, LIGHT_GREY_COLOR, DARK_GREY_COLOR, BLACK_COLOR };
+    constexpr std::array<RGB555, 4> GB_DEFAULT_PALETTE = { WHITE_COLOR, LIGHT_GREY_COLOR, DARK_GREY_COLOR, BLACK_COLOR };
 
     constexpr unsigned GB_INTERNAL_HEIGHT = 144;
     constexpr unsigned GB_INTERNAL_WIDTH = 160;
