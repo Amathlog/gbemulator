@@ -9,6 +9,8 @@
 
 namespace GBEmulator
 {
+    class MapperBase;
+
     struct Header
     {
         std::array<uint8_t, 0x30> nintendoLogo;
@@ -19,7 +21,7 @@ namespace GBEmulator
         uint16_t licenseeCode;
         uint8_t sgbFlag;
         uint8_t cartridgeType;
-        uint8_t nbRomBanks;
+        uint16_t nbRomBanks;
         uint8_t nbRamBanks;
         bool isJapaneseGame;
         uint8_t maskRomVersionNumber;
@@ -33,6 +35,7 @@ namespace GBEmulator
     {
     public:
         Cartridge(Utils::IReadVisitor& visitor);
+        ~Cartridge();
 
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
@@ -55,12 +58,9 @@ namespace GBEmulator
 
         std::string m_sha1;
 
-        bool m_ramEnabled = false;
-
         std::vector<uint8_t> m_externalRAM;
-        uint8_t m_currentExternalRAMBank = 0;
-
         std::vector<uint8_t> m_prgData;
-        uint8_t m_currentPrgDataBank;
+
+        MapperBase* m_mapper = nullptr;
     };
 }
