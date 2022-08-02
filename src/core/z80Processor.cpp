@@ -1646,6 +1646,8 @@ uint8_t Z80Processor::LDSP(uint8_t opcode)
 uint8_t Z80Processor::CCF(uint8_t /*opcode*/)
 {
     m_AF.F.C = ~m_AF.F.C;
+    m_AF.F.N = 0;
+    m_AF.F.H = 0;
     return 1;
 }
 
