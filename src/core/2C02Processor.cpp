@@ -423,6 +423,8 @@ inline void Processor2C02::RenderPixelFifos()
 
     unsigned screenIndex = 3 * (m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel);
 
+    const auto& gbPalette = GB_ORIGINAL_PALETTE;
+
     // We can render either the BG pixel, or the OBJ pixel
     // BG: If the OBJ color is 0 (transparent) or BG over OBJ flag is on
     const RGB555* pixelColor = nullptr;
@@ -431,7 +433,7 @@ inline void Processor2C02::RenderPixelFifos()
         // Draw BG pixel
         if (m_bus->GetMode() == Mode::GB)
         {
-            pixelColor = &GB_DEFAULT_PALETTE[GetColorIndexFromGBPalette(m_gbBGPalette, bgPixel.color)];
+            pixelColor = &gbPalette[GetColorIndexFromGBPalette(m_gbBGPalette, bgPixel.color)];
         }
         else
         {
@@ -443,7 +445,7 @@ inline void Processor2C02::RenderPixelFifos()
         // Draw OBJ pixel
         if (m_bus->GetMode() == Mode::GB)
         {
-            pixelColor = &GB_DEFAULT_PALETTE[GetColorIndexFromGBPalette(objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
+            pixelColor = &gbPalette[GetColorIndexFromGBPalette(objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
         }
         else
         {
