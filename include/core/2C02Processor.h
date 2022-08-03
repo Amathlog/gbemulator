@@ -153,13 +153,16 @@ namespace GBEmulator
 
         uint8_t m_currentStagePixelFetcher = 0x00;
         uint8_t m_XOffsetBGTile = 0x00;
-        uint16_t m_BGTileAddress = 0x0000;
+        uint16_t m_BGWindowTileAddress = 0x0000;
+        uint8_t m_initialBGXScroll = 0x00;
+        bool m_isWindowRendering = false;
 
         // Counters
         unsigned m_lineDots = 0x00;
         unsigned m_scanlines = 0x00;
         unsigned m_currentLinePixel = 0x00;
-        unsigned m_currentBGX = 0x00;
+        uint8_t m_currentX = 0x00;
+        uint8_t m_currentNbPixelsToRender = 0x00;
 
         // Screen
         std::vector<uint8_t> m_screen;

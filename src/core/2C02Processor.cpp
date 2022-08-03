@@ -244,14 +244,15 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_lineDots);
     visitor.WriteValue(m_scanlines);
     visitor.WriteValue(m_currentLinePixel);
-    visitor.WriteValue(m_currentBGX);
+    visitor.WriteValue(m_initialBGXScroll);
+    visitor.WriteValue(m_currentX);
 
     visitor.WriteContainer(m_currentFetchedBGPixels);
     visitor.WriteContainer(m_currentFetchedOBJPixels);
     visitor.WriteValue(m_currentStagePixelFetcher);
-    visitor.WriteValue(m_XOffsetBGTile);
-    visitor.WriteValue(m_BGTileAddress);
+    visitor.WriteValue(m_BGWindowTileAddress);
     visitor.WriteValue(m_isDisabled);
+    visitor.WriteValue(m_currentNbPixelsToRender);
 }
 
 void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -282,14 +283,15 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_lineDots);
     visitor.ReadValue(m_scanlines);
     visitor.ReadValue(m_currentLinePixel);
-    visitor.ReadValue(m_currentBGX);
+    visitor.ReadValue(m_initialBGXScroll);
+    visitor.ReadValue(m_currentX);
 
     visitor.ReadContainer(m_currentFetchedBGPixels);
     visitor.ReadContainer(m_currentFetchedOBJPixels);
     visitor.ReadValue(m_currentStagePixelFetcher);
-    visitor.ReadValue(m_XOffsetBGTile);
-    visitor.ReadValue(m_BGTileAddress);
+    visitor.ReadValue(m_BGWindowTileAddress);
     visitor.ReadValue(m_isDisabled);
+    visitor.ReadValue(m_currentNbPixelsToRender);
 }
 
 void Processor2C02::Reset()
@@ -319,13 +321,14 @@ void Processor2C02::Reset()
     m_lineDots = 0;
     m_scanlines = 0;
     m_currentLinePixel = 0;
-    m_currentBGX = 0;
+    m_currentX = 0;
     std::memset(m_screen.data(), 0, m_screen.size());
     m_isFrameComplete = false;
 
     m_currentStagePixelFetcher = 0;
-    m_XOffsetBGTile = 0;
-    m_BGTileAddress = 0;
+    m_BGWindowTileAddress = 0;
+    m_initialBGXScroll = 0;
+    m_currentNbPixelsToRender = 0;
 }
 
 inline void Processor2C02::DebugRenderNoise()
@@ -517,8 +520,7 @@ void Processor2C02::Clock()
         if (m_lineDots == 0)
         {
             // The 3 lsb of the scrollX register are fixed for the scanline
-            // We offset currentBGX by this value.
-            m_currentBGX = m_scrollX & 0x07;
+            m_initialBGXScroll = m_scrollX & 0x07;
         }
 
         // Drawing mode
@@ -550,43 +552,105 @@ void Processor2C02::Clock()
                 // Get Tile
                 case 0:
                 {
-                    // To get the tile, we need first to know our vertical/horizontal scrolling
-                    // For horizontal scrolling, we only update the 5 msb bits of the scroll X register.
-                    // the 3 lsb one are fixed during the whole scanline (offset already set in m_currentBGX).
-                    // If we exceed 256, it wraps around.
-                    uint8_t currentY = m_scrollY + m_scanlines;
-                    uint8_t scrollX = (m_scrollX & 0xF8);
-                    uint8_t currentX = scrollX + m_currentBGX;
+                    // For the tile, we need to know if we have to render a BG tile or a Window tile.
+                    // We need to render a window tile, if the current pixel X and Y are greater than the 
+                    // window scroll X and Y register and window is enabled.
+                    // From this moment we only render window tiles, for the rest of the line.
+                    // But before that we need to render BG tiles. We render BG tiles until we reach the
+                    // window tile. It could mean that we have to render not a complete BG tile.
+                    // For example, if WX is 10, we will have a first BG tile complete (8 pixels) and a second
+                    // BG tile with 2 pixels (so 25% of the tile). And then the window.
 
-                    // We can then compute the coordinate of the tile to fetch
-                    uint16_t tileCoordinate = (currentY / 8) * 32 + (currentX / 8);
-                    // If we are in a middle of a tile, because of X scroll, take it into account
-                    m_XOffsetBGTile = currentX % 8;
+                    // So first, check if we have to render a window tile
+                    // By default, we will try to render 8 pixels.
+                    m_currentNbPixelsToRender = 0;
+                    uint8_t maxNbBGPixels = 8;
+                    m_isWindowRendering = false;
 
-                    // Then fetch the tile ID in the tile map
-                    uint16_t address = m_lcdRegister.bgTileMapArea == 0 ? 0x9800 : 0x9C00;
-                    address += tileCoordinate;
-                    uint8_t tileId = m_bus->ReadByte(address);
+                    // We need to take into account that wX range is [0, 166], therefore
+                    // values of wX between 0 and 7 means that the full screen will be covered by the window
+                    uint8_t realWX = m_wX < 7 ? 0 : m_wX - 7;
 
-                    // Finally, compute the address of the tile data to read from in the next stage
-                    // If tileAreaData is 0, the starting address is 0x9000 and the tileId is a signed integer
-                    // Otherwise, the starting address is 0x8000 and the tileId is an unsigned integer
-                    m_BGTileAddress = m_lcdRegister.BGAndWindowTileAreaData == 0 ? 0x9000 : 0x8000;
-                    int16_t realTileId = 0x0000;
-                    if (m_lcdRegister.BGAndWindowTileAreaData == 0)
+                    if (m_lcdRegister.windowEnable)
                     {
-                        int8_t temp = (int8_t)(tileId);
-                        realTileId = temp;
+                        // Check Y
+                        if (m_scanlines > m_wY)
+                        {
+                            // Check X
+                            if (m_currentX >= realWX)
+                            {
+                                // In this case we are totally into the window, no BG to draw
+                                maxNbBGPixels = 0;
+                                m_isWindowRendering = true;
+                            }
+                            else
+                            {
+                                if (m_currentX + 8 > realWX)
+                                {
+                                    // In this case, we have an overlap, so we need to reduce the number of BG pixels to draw
+                                    maxNbBGPixels = realWX - m_currentX;
+                                }
+                            }
+                        }
+                    }
+
+                    auto fetchTileAddress = [this](uint8_t X, uint8_t Y, uint8_t maxPixelsToRender)
+                    {
+                        // Compute the address of the BG tile using the lcd control register to
+                        // know where the tile map is in memory.
+                        uint16_t tileCoordinate = (Y / 8) * 32 + (X / 8);
+                        uint8_t tileMapAreaRegister = m_isWindowRendering ? m_lcdRegister.windowTileMapArea : m_lcdRegister.bgTileMapArea;
+                        uint16_t tileAddress = tileMapAreaRegister == 0 ? 0x9800 : 0x9C00;
+                        tileAddress += tileCoordinate;
+
+                        // If we are in a middle of a tile, because of X scroll, take it into account
+                        // We also cannot draw more than the specified number of pixels to draw.
+                        m_currentNbPixelsToRender = std::min<uint8_t>(maxPixelsToRender, 8 - (X % 8));
+
+                        uint8_t tileId = m_bus->ReadByte(tileAddress);
+
+                        // Finally, compute the address of the tile data to read from in the next stage
+                        // If tileAreaData is 0, the starting address is 0x9000 and the tileId is a signed integer
+                        // Otherwise, the starting address is 0x8000 and the tileId is an unsigned integer
+                        m_BGWindowTileAddress = m_lcdRegister.BGAndWindowTileAreaData == 0 ? 0x9000 : 0x8000;
+                        int16_t realTileId = 0x0000;
+                        if (m_lcdRegister.BGAndWindowTileAreaData == 0)
+                        {
+                            int8_t temp = (int8_t)(tileId);
+                            realTileId = temp;
+                        }
+                        else
+                        {
+                            realTileId = tileId;
+                        }
+
+                        m_BGWindowTileAddress += realTileId * 16; // Each tile is 16 bytes
+                        // And offset the address given the current line
+                        uint8_t YOffset = Y % 8;
+                        m_BGWindowTileAddress += YOffset * 2;
+                    };
+
+                    // From there, we either try to render window or BG
+                    if (m_isWindowRendering)
+                    {
+                        uint8_t Y = m_scanlines - m_wY;
+                        // For X, we need to be a bit more careful, because m_wX range is [0, 166]
+                        // so we need to offset it.
+                        uint8_t X = m_currentX - realWX;
+                        fetchTileAddress(X, Y, 8);
                     }
                     else
                     {
-                        realTileId = tileId;
-                    }
+                        // To get the tile, we need first to know our vertical/horizontal scrolling
+                        // For horizontal scrolling, we only update the 5 msb bits of the scroll X register.
+                        // the 3 lsb one are fixed during the whole scanline.
+                        // If we exceed 256, it wraps around.
+                        uint8_t currentBGY = m_scrollY + m_scanlines;
+                        uint8_t scrollBGX = (m_scrollX & 0xF8) + m_initialBGXScroll;
+                        uint8_t currentBGX = scrollBGX + m_currentX;
 
-                    m_BGTileAddress += realTileId * 16; // Each tile is 16 bytes
-                    // And offset the address given the current line
-                    uint8_t YOffset = currentY % 8;
-                    m_BGTileAddress += YOffset * 2;
+                        fetchTileAddress(currentBGX, currentBGY, maxNbBGPixels);
+                    }
 
                     m_currentStagePixelFetcher++;
                     break;
@@ -594,9 +658,9 @@ void Processor2C02::Clock()
                 // Get Tile data low
                 case 2:
                 {
-                    uint8_t tileLsb = m_bus->ReadByte(m_BGTileAddress);
-                    tileLsb <<= m_XOffsetBGTile;
-                    for (auto i = 0; i < 8 - m_XOffsetBGTile; ++i)
+                    uint8_t tileLsb = m_bus->ReadByte(m_BGWindowTileAddress);
+                    tileLsb <<= (8 - m_currentNbPixelsToRender);
+                    for (auto i = 0; i < m_currentNbPixelsToRender; ++i)
                     {
                         m_currentFetchedBGPixels[i].color = (tileLsb & 0x80) >> 7;
                         tileLsb <<= 1;
@@ -608,9 +672,9 @@ void Processor2C02::Clock()
                 // Get Tile data high
                 case 4:
                 {
-                    uint8_t tileMsb = m_bus->ReadByte(m_BGTileAddress + 1);
-                    tileMsb <<= m_XOffsetBGTile;
-                    for (auto i = 0; i < 8 - m_XOffsetBGTile; ++i)
+                    uint8_t tileMsb = m_bus->ReadByte(m_BGWindowTileAddress + 1);
+                    tileMsb <<= (8 - m_currentNbPixelsToRender);
+                    for (auto i = 0; i < m_currentNbPixelsToRender; ++i)
                     {
                         m_currentFetchedBGPixels[i].color |= (tileMsb & 0x80) >> 6;
                         tileMsb <<= 1;
@@ -623,12 +687,12 @@ void Processor2C02::Clock()
                 default:
                     if (m_bgFifo.empty())
                     {
-                        for (auto i = 0; i < 8 - m_XOffsetBGTile; ++i)
+                        for (auto i = 0; i < m_currentNbPixelsToRender; ++i)
                         {
                             m_bgFifo.push(m_currentFetchedBGPixels[i]);
                         }
                         m_currentStagePixelFetcher = 0;
-                        m_currentBGX += 8 - m_XOffsetBGTile;
+                        m_currentX += m_currentNbPixelsToRender;
                     }
                     break;
                 }
@@ -711,7 +775,7 @@ void Processor2C02::Clock()
         }
 
         m_lineDots = 0;
-        m_currentBGX = 0;
+        m_currentX = 0;
         m_lY = (uint8_t)m_scanlines;
         m_currentStagePixelFetcher = 0;
     }
