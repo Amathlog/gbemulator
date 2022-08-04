@@ -177,11 +177,11 @@ bool CoreMessageService::LoadNewGame(const std::string& file)
     // Insert a new cartridge also reset the bus
     m_bus.InsertCartridge(cartridge);
 
+    // Restart the game
+    m_bus.Reset();
+
     // Try to load an existing save
     LoadSaveGame("");
-
-    // When all is done, restart the game
-    m_bus.Reset();
 
     return true;
 }

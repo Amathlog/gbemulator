@@ -4,6 +4,7 @@
 #include <core/mappers/nullMapper.h>
 #include <core/mappers/mbc1.h>
 #include <core/mappers/mbc2.h>
+#include <core/mappers/mbc3.h>
 #include <core/cartridge.h>
 #include <cassert>
 
@@ -28,6 +29,12 @@ namespace GBEmulator
         case 0x06:
             // MBC2
             return new MBC2(header);
+        case 0x0F:
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            return new MBC3(header);
         default:
             assert(false && "Unknown mapper");
             break;

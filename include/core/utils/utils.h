@@ -65,7 +65,7 @@ namespace Utils
         if (uniqueID.empty())
             return std::filesystem::path();
 
-        return GetSaveFolder(exeDir, uniqueID) / (std::to_string(number) + ".nesSaveState");
+        return GetSaveFolder(exeDir, uniqueID) / (std::to_string(number) + ".gbSaveState");
     }
 
     inline std::filesystem::path GetSaveFile(std::filesystem::path exeDir, std::string uniqueID)
@@ -73,7 +73,7 @@ namespace Utils
         if (uniqueID.empty())
             return std::filesystem::path();
 
-        return GetSaveFolder(exeDir, uniqueID) / "save.nesSave";
+        return GetSaveFolder(exeDir, uniqueID) / "save.gbSave";
     }
 
 #ifdef _WIN32

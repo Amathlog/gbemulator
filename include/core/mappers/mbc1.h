@@ -12,6 +12,8 @@ namespace GBEmulator
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
+        void Reset() override;
+
         bool WriteByte(uint16_t addr, uint8_t data) override;
 
     private:

@@ -40,6 +40,9 @@ namespace GBEmulator
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
+        void SerializeRam(Utils::IWriteVisitor& visitor) const;
+        void DeserializeRam(Utils::IReadVisitor& visitor);
+
         // Read a single byte of data, passed as an out argument
         // Will return true if the cartridge has provided some data
         bool ReadByte(uint16_t addr, uint8_t& data, bool readOnly = false);

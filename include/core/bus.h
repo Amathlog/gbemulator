@@ -79,8 +79,8 @@ namespace GBEmulator
         const Processor2C02& GetPPU() const { return m_ppu; }
         void SetPC(uint16_t addr) { m_cpu.SetPC(addr); }
 
-        void SaveCartridgeRAM(Utils::IWriteVisitor& visitor) const { m_cartridge->SerializeTo(visitor); }
-        void LoadCartridgeRAM(Utils::IReadVisitor& visitor) { m_cartridge->DeserializeFrom(visitor); }
+        void SaveCartridgeRAM(Utils::IWriteVisitor& visitor) const { m_cartridge->SerializeRam(visitor); }
+        void LoadCartridgeRAM(Utils::IReadVisitor& visitor) { m_cartridge->DeserializeRam(visitor); }
 
         // Change mode if possible.
         // Will reset the game

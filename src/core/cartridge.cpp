@@ -110,17 +110,27 @@ Cartridge::~Cartridge()
     delete m_mapper;
 }
 
-void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const
+void Cartridge::SerializeRam(Utils::IWriteVisitor& visitor) const
 {
     visitor.WriteContainer(m_externalRAM);
+}
+
+void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const
+{
+    SerializeRam(visitor);
 
     if (m_mapper)
         m_mapper->SerializeTo(visitor);
 }
 
-void Cartridge::DeserializeFrom(Utils::IReadVisitor& visitor)
+void Cartridge::DeserializeRam(Utils::IReadVisitor& visitor)
 {
     visitor.ReadContainer(m_externalRAM);
+}
+
+void Cartridge::DeserializeFrom(Utils::IReadVisitor& visitor)
+{
+    DeserializeRam(visitor);
 
     if (m_mapper)
         m_mapper->DeserializeFrom(visitor);
@@ -139,6 +149,12 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
     // No mapper, nothing to do
     if (m_mapper == nullptr)
         return false;
+
+    // If we have a custom read
+    if (m_mapper->HasCustomReadWrite(addr) && m_mapper->ReadByte(addr, data))
+    {
+        return true;
+    }
 
     // ROM zone
     if (addr < 0x8000)
@@ -173,6 +189,12 @@ bool Cartridge::WriteByte(uint16_t addr, uint8_t data)
     // No mapper, nothing to do
     if (m_mapper == nullptr)
         return false;
+
+    // If we have a custom write
+    if (m_mapper->HasCustomReadWrite(addr) && m_mapper->WriteByte(addr, data))
+    {
+        return true;
+    }
 
     // Try to write to the RAM
     if (addr >= 0xA000 && addr < 0xC000 && m_mapper->IsRamEnabled())

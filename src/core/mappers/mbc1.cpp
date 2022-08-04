@@ -22,6 +22,12 @@ void MBC1::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_advancedBankingMode);
 }
 
+void MBC1::Reset()
+{
+    MapperBase::Reset();
+    m_advancedBankingMode = false;
+}
+
 bool MBC1::WriteByte(uint16_t addr, uint8_t data)
 {
     if (addr <= 0x1FFF)

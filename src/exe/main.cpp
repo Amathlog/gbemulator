@@ -97,5 +97,7 @@ int main(int argc, char** argv) {
         }
     }
 
+    GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(SaveGameMessage());
+
     return 0;
 }
