@@ -86,7 +86,6 @@ namespace GBEmulator
     {
         uint8_t color = 0x00;
         uint8_t palette = 0x00;
-        uint8_t spritePriority = 0x00;
         uint8_t bgPriority = 0x00;
     };
 

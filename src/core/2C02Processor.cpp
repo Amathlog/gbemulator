@@ -85,10 +85,10 @@ uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
         switch(addr & 0x0003)
         {
         case 0:
-            data = entry.xPosition;
+            data = entry.yPosition;
             break;
         case 1:
-            data = entry.yPosition;
+            data = entry.xPosition;
             break;
         case 2:
             data = entry.tileIndex;
@@ -176,10 +176,10 @@ void Processor2C02::WriteByte(uint16_t addr, uint8_t data)
         switch(addr & 0x0003)
         {
         case 0:
-            entry.xPosition = data;
+            entry.yPosition = data;
             break;
         case 1:
-            entry.yPosition = data;
+            entry.xPosition = data;
             break;
         case 2:
             entry.tileIndex = data;
@@ -481,7 +481,7 @@ inline void Processor2C02::RenderPixelFifos()
     // We can render either the BG pixel, or the OBJ pixel
     // BG: If the OBJ color is 0 (transparent) or BG over OBJ flag is on
     const RGB555* pixelColor = nullptr;
-    if (objPixel.color == 0 || objPixel.bgPriority == 1)
+    if (objPixel.color == 0 || (objPixel.bgPriority == 1 && bgPixel.color != 0))
     {
         // Draw BG pixel
         if (m_bus->GetMode() == Mode::GB)
@@ -765,19 +765,46 @@ void Processor2C02::SimplifiedPixelFetcher()
         return addr;
     };
 
-    auto pixelFetch = [this](uint16_t addr, auto& pixelArray, uint8_t startIndex, uint8_t endIndex)
+    const bool isGB = m_bus->GetMode() == Mode::GB;
+
+    auto pixelFetch = [this, isGB](uint16_t addr, auto& pixelArray, uint8_t startIndex, 
+                                    uint8_t endIndex, bool xFlip, const OAMEntry* oamEntry = nullptr)
     {
         uint8_t tileLsb = m_bus->ReadByte(addr);
         uint8_t tileMsb = m_bus->ReadByte(addr + 1);
+
+        auto reverseByte = [](uint8_t b) -> uint8_t
+        {
+            b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+            b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+            b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+            return b;
+        };
+
+        // In case of xFilp, reverse the bits
+        if (xFlip)
+        {
+            tileLsb = reverseByte(tileLsb);
+            tileMsb = reverseByte(tileMsb);
+        }
+
         uint8_t nbPixelsToRender = endIndex - startIndex;
         tileLsb <<= (8 - nbPixelsToRender);
         tileMsb <<= (8 - nbPixelsToRender);
         for (auto i = 0; i < nbPixelsToRender; ++i)
         {
             uint8_t color = ((tileMsb & 0x80) >> 6) | ((tileLsb & 0x80) >> 7);
-            pixelArray[startIndex + i].color = color;
+            if (color != 0)
+                pixelArray[startIndex + i].color = color;
+
             tileMsb <<= 1;
             tileLsb <<= 1;
+
+            if (oamEntry != nullptr && color != 0)
+            {
+                pixelArray[startIndex + i].bgPriority = oamEntry->attributes.bgAndWindowOverObj;
+                pixelArray[startIndex + i].palette = isGB ? oamEntry->attributes.paletteNumberGB : oamEntry->attributes.paletteNumberGBC;
+            }
         }
     };
     
@@ -800,7 +827,7 @@ void Processor2C02::SimplifiedPixelFetcher()
         }
 
         uint16_t tileAddr = fetchTileAddress(realX, yBG, false);
-        pixelFetch(tileAddr, bgPixels, startX, x);
+        pixelFetch(tileAddr, bgPixels, startX, x, false);
     }
 
     // Do the same for the window, only if it is enabled
@@ -810,14 +837,15 @@ void Processor2C02::SimplifiedPixelFetcher()
     bool shouldDrawWindow = m_lcdRegister.windowEnable && (m_scanlines >= m_wY);
     if (shouldDrawWindow)
     {
+        uint8_t xWindow = 0;
         for (uint8_t i = 0; i < nbWindowTiles; ++i)
         {
-            uint8_t xWindow = i * 8;
             uint16_t tileAddr = fetchTileAddress(xWindow, yWindow, true);
 
             uint8_t endX = (i == 0 && m_wX < 7) ? 7 - m_wX : xWindow + 8;
 
-            pixelFetch(tileAddr, windowPixels, xWindow, endX);
+            pixelFetch(tileAddr, windowPixels, xWindow, endX, false);
+            xWindow = endX;
         }
     }
 
@@ -834,6 +862,61 @@ void Processor2C02::SimplifiedPixelFetcher()
             // BG pixels
             m_bgFifo.push(bgPixels[i]);
         }
+    }
+
+    // Then redo the same thing for the sprites
+    // Do it in reverse, for the highest priority sprite to override the lowest one
+    std::array<PixelFIFO, 167> spritePixels;
+    bool shouldDrawObj = m_lcdRegister.objEnable && !m_selectedOAM.empty();
+    if (shouldDrawObj)
+    {
+        for (auto it = m_selectedOAM.rbegin(); it != m_selectedOAM.rend(); ++it)
+        {
+            const OAMEntry& entry = m_OAM[*it];
+
+            // A position of 0 or more than 168 is hidden
+            if (entry.xPosition == 0 || entry.xPosition >= 168)
+                continue;
+
+            uint16_t tileAddress = 0x8000;
+            uint8_t objSize = m_lcdRegister.objSize == 0 ? 8 : 16;
+            uint8_t yOffset = m_scanlines + 16 - entry.yPosition;
+            if (entry.attributes.yFlip)
+            {
+                // In case of yFlip, we need to reverse the offset
+                yOffset = objSize - yOffset;
+            }
+
+            if (m_lcdRegister.objSize == 0)
+            {
+                // 8x8 sprites
+                tileAddress += (entry.tileIndex * 16) + yOffset * 2;
+            }
+            else
+            {
+                // 8x16 sprites
+                tileAddress += ((entry.tileIndex & 0xFE) * 16);
+                if (yOffset >= 8)
+                {
+                    tileAddress += 16 + (yOffset - 8) * 2;
+                }
+                else
+                {
+                    tileAddress += yOffset * 2;
+                }
+            }
+
+            uint8_t startX = entry.xPosition < 8 ? 0 : entry.xPosition - 8;
+            uint8_t endX = entry.xPosition;
+            pixelFetch(tileAddress, spritePixels, startX, endX, entry.attributes.xFlip, &entry);
+        }
+    }
+
+    // And push all to the pixel FIFO
+    if (shouldDrawObj)
+    {
+        for (uint8_t i = 0; i < 160; ++i)
+            m_objFifo.push(spritePixels[i]);
     }
 }
 
@@ -865,7 +948,7 @@ void Processor2C02::Clock()
                 const OAMEntry& entry = m_OAM[index];
 
                 uint8_t objSize = m_lcdRegister.objSize == 0 ? 8 : 16;
-                
+
                 // A sprite is selected if the current scanline (+ 16) is between the y position and the y position + its size (8 or 16)
                 if (m_scanlines + 16 >= entry.yPosition && m_scanlines + 16 < entry.yPosition + objSize)
                 {
@@ -970,16 +1053,22 @@ void Processor2C02::Clock()
         {
             // Start a new frame, with OAM scan (mode 2)
             m_scanlines = 0;
-            m_lcdStatus.mode = 2;
-            m_selectedOAM.clear();
-            SetInteruptFlag(InteruptSource::OAM);
 
             // Re-enable the LCD at a start of a new frame, if it is enabled.
             m_isDisabled = m_lcdRegister.enable == 0;
         }
 
+        if (m_scanlines >= 0 && m_scanlines < 144)
+        {
+            // OAM scan
+            m_lcdStatus.mode = 2;
+            SetInteruptFlag(InteruptSource::OAM);
+            m_selectedOAM.clear();
+        }
+
         m_lineDots = 0;
         m_currentX = 0;
+
         m_lY = (uint8_t)m_scanlines;
         m_currentStagePixelFetcher = 0;
     }
