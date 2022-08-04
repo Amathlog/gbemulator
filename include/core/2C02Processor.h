@@ -144,6 +144,9 @@ namespace GBEmulator
         void RenderDisabledLCD();
         void SetInteruptFlag(InteruptSource is);
 
+        void OriginalPixelFetcher();
+        void SimplifiedPixelFetcher();
+
         Bus* m_bus = nullptr;
         LCDRegister m_lcdRegister;
         LCDStatus m_lcdStatus;
