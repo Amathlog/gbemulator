@@ -119,5 +119,9 @@ namespace GBEmulator
         bool m_isInBreakMode = false;
         bool m_shouldBreakOnStart = false;
         uint32_t m_runToAddress = 0xFFFFFFFF;
+
+        // DMA
+        bool m_isInDMA = false;
+        uint16_t m_currentDMAAddress = 0x0000;
     };
 }

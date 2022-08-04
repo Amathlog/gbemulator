@@ -70,7 +70,7 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     // Sprite attribute table (OAM)
     else if (addr >= 0xFE00 && addr <= 0xFE9F)
     {
-        // TODO
+        data = m_ppu.ReadByte(addr);
     }
     // Special RAM space
     else if (addr >= 0xFEA0 && addr <= 0xFEFF)
@@ -107,6 +107,11 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     {
         // Waveform RAM
         // TODO
+    }
+    else if (addr == 0xFF46)
+    {
+        // DMA
+        // Write only
     }
     else if (addr >= 0xFF40 && addr <= 0xFF4B)
     {
@@ -185,7 +190,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     // Sprite attribute table (OAM)
     else if (addr >= 0xFE00 && addr <= 0xFE9F)
     {
-        // TODO
+        m_ppu.WriteByte(addr, data);
     }
     // Special RAM space
     else if (addr >= 0xFEA0 && addr <= 0xFEFF)
@@ -223,6 +228,13 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     {
         // Waveform RAM
         // TODO
+    }
+    else if (addr == 0xFF46)
+    {
+        // DMA
+        m_isInDMA = true;
+        // Address can't be higher than 0xE000, so force it there (even if it shouldn't happen)
+        m_currentDMAAddress = (uint16_t)(data % 0xE0) << 8;
     }
     else if (addr >= 0xFF40 && addr <= 0xFF4B)
     {
@@ -278,6 +290,17 @@ bool Bus::Clock()
     // CPU is clocked every 4 ticks
     if (m_nbCycles % 4 == 0)
     {
+        // If we are in DMA, copy data. CPU is still clocked
+        if (m_isInDMA)
+        {
+            uint16_t destAddress = 0xFE00 | (m_currentDMAAddress & 0x00FF);
+            WriteByte(destAddress, ReadByte(m_currentDMAAddress));
+            m_currentDMAAddress++;
+            if ((m_currentDMAAddress & 0x00FF) == 0xE0)
+            {
+                m_isInDMA = false;
+            }
+        }
         res = m_cpu.Clock();
 
         if (res)
@@ -335,6 +358,9 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_IF.flag);
 
     m_timer.SerializeTo(visitor);
+
+    visitor.WriteValue(m_isInDMA);
+    visitor.WriteValue(m_currentDMAAddress);
 }
 
 void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -358,6 +384,9 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_IF.flag);
 
     m_timer.DeserializeFrom(visitor);
+
+    visitor.ReadValue(m_isInDMA);
+    visitor.ReadValue(m_currentDMAAddress);
 }
 
 void Bus::Reset()
@@ -398,6 +427,9 @@ void Bus::Reset()
 
     if (enableLogger)
         m_instLogger->OpenFileVisitor("dump.txt");
+
+    m_isInDMA = false;
+    m_currentDMAAddress = 0x0000;
 }
 
 void Bus::ChangeMode(Mode newMode)

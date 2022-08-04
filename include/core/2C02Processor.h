@@ -116,6 +116,28 @@ namespace GBEmulator
 
     private:
 
+        struct OAMEntry
+        {
+            uint8_t xPosition = 0x00;
+            uint8_t yPosition = 0x00;
+            uint8_t tileIndex = 0x00;
+        
+            union Attributes
+            {
+                struct
+                {
+                    uint8_t paletteNumberGBC : 3;
+                    uint8_t tileVRAMBank : 1;
+                    uint8_t paletteNumberGB : 1;
+                    uint8_t xFlip : 1;
+                    uint8_t yFlip : 1;
+                    uint8_t bgAndWindowOverObj : 1;
+                };
+
+                uint8_t flags = 0x00;
+            } attributes;
+        };
+
         void DebugRenderNoise();
         void DebugRenderTileIds();
         void RenderPixelFifos();
@@ -150,6 +172,11 @@ namespace GBEmulator
 
         std::array<PixelFIFO, 8> m_currentFetchedBGPixels;
         std::array<PixelFIFO, 8> m_currentFetchedOBJPixels;
+
+        // OAM
+        // 4 bytes per entry, 40 entries
+        std::array<OAMEntry, 40> m_OAM;
+        std::vector<uint8_t> m_selectedOAM;
 
         uint8_t m_currentStagePixelFetcher = 0x00;
         uint8_t m_XOffsetBGTile = 0x00;

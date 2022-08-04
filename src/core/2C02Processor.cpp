@@ -66,12 +66,39 @@ inline void GBCPaletteData::DeserializeFrom(Utils::IReadVisitor& visitor)
 Processor2C02::Processor2C02()
 {
     m_screen.resize(GB_NB_PIXELS * 3);
+    m_selectedOAM.reserve(10); // Max of 10 sprites selected on a single line
 }
 
 uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
 {
     uint8_t data = 0;
-    if (addr == 0xFF40)
+    if (addr >= 0xFE00 && addr <= 0xFE9F)
+    {
+        // OAM
+        // Index is selected using the 6 msb of the address lower nibble.
+        // It will be between 0 and 39 (40 entry in total)
+        uint8_t index = (addr & 0x00FF) >> 2;
+        OAMEntry& entry = m_OAM[index];
+
+        // Then for each entry, there are 4 bytes, determined by the 2 lsb of the address.
+        switch(addr & 0x0003)
+        {
+        case 0:
+            data = entry.xPosition;
+            break;
+        case 1:
+            data = entry.yPosition;
+            break;
+        case 2:
+            data = entry.tileIndex;
+            break;
+        case 3:
+        default:
+            data = entry.attributes.flags;
+            break;
+        }
+    }
+    else if (addr == 0xFF40)
     {
         data = m_lcdRegister.flags;
     }
@@ -94,11 +121,6 @@ uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
     else if (addr == 0xFF45)
     {
         data = m_lYC;
-    }
-    else if (addr == 0xFF46)
-    {
-        // DMA transfer
-        // TODO
     }
     else if (addr == 0xFF47)
     {
@@ -141,7 +163,33 @@ uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
 
 void Processor2C02::WriteByte(uint16_t addr, uint8_t data)
 {
-    if (addr == 0xFF40)
+    if (addr >= 0xFE00 && addr <= 0xFE9F)
+    {
+        // OAM
+        // Index is selected using the 6 msb of the address lower nibble.
+        // It will be between 0 and 39 (40 entry in total)
+        uint8_t index = (addr & 0x00FF) >> 2;
+        OAMEntry& entry = m_OAM[index];
+
+        // Then for each entry, there are 4 bytes, determined by the 2 lsb of the address.
+        switch(addr & 0x0003)
+        {
+        case 0:
+            entry.xPosition = data;
+            break;
+        case 1:
+            entry.yPosition = data;
+            break;
+        case 2:
+            entry.tileIndex = data;
+            break;
+        case 3:
+        default:
+            entry.attributes.flags = data;
+            break;
+        }
+    }
+    else if (addr == 0xFF40)
     {
         m_lcdRegister.flags = data;
         if (m_lcdRegister.enable == 0)
@@ -166,11 +214,6 @@ void Processor2C02::WriteByte(uint16_t addr, uint8_t data)
     else if (addr == 0xFF45)
     {
         m_lYC = data;
-    }
-    else if (addr == 0xFF46)
-    {
-        // DMA transfer
-        // TODO
     }
     else if (addr == 0xFF47)
     {
@@ -253,6 +296,9 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_BGWindowTileAddress);
     visitor.WriteValue(m_isDisabled);
     visitor.WriteValue(m_currentNbPixelsToRender);
+
+    visitor.WriteContainer(m_OAM);
+    visitor.WriteContainer(m_selectedOAM);
 }
 
 void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -292,6 +338,9 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_BGWindowTileAddress);
     visitor.ReadValue(m_isDisabled);
     visitor.ReadValue(m_currentNbPixelsToRender);
+
+    visitor.ReadContainer(m_OAM);
+    visitor.ReadContainer(m_selectedOAM);
 }
 
 void Processor2C02::Reset()
@@ -329,6 +378,9 @@ void Processor2C02::Reset()
     m_BGWindowTileAddress = 0;
     m_initialBGXScroll = 0;
     m_currentNbPixelsToRender = 0;
+
+    m_OAM.fill(OAMEntry());
+    m_selectedOAM.clear();
 }
 
 inline void Processor2C02::DebugRenderNoise()
