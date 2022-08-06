@@ -226,6 +226,6 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
 
 void PulseChannel::UpdateFreq()
 {
-    m_frequency = 131072.0 / (2048.0 - m_combinedFreq);
+    m_frequency = m_combinedFreq < 2038 ? 131072.0 / (2048.0 - m_combinedFreq) : 0.0;
     m_frequencyChanged = true;
 }
