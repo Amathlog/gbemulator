@@ -3,6 +3,7 @@
 #include <core/constants.h>
 #include <core/cartridge.h>
 #include <core/utils/fileVisitor.h>
+#include <exe/audio/gbAudioSystem.h>
 #include <exe/mainWindow.h>
 #include <core/utils/utils.h>
 #include <exe/messageService/coreMessageService.h>
@@ -17,7 +18,7 @@
 namespace fs = std::filesystem;
 using namespace GBEmulatorExe;
 
-static bool enableAudioByDefault = false;
+static bool enableAudioByDefault = true;
 static bool syncWithAudio = false;
 
 static unsigned windowScalingFactor = 5;
@@ -40,6 +41,9 @@ int main(int argc, char** argv) {
     }
 
     GBEmulator::Bus bus;
+
+    GBAudioSystem audioSystem(bus, syncWithAudio, 2, 44100, 256);
+    audioSystem.Enable(enableAudioByDefault);
 
     GBEmulatorExe::CoreMessageService coreMessageService(bus, GBEmulator::Utils::GetExePath().string());
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(
@@ -67,7 +71,7 @@ int main(int argc, char** argv) {
         mainWindow.SetUserData(&bus);
         mainWindow.ConnectController();
 
-        // if (audioSystem.Initialize() || !enableAudioByDefault)
+        if (audioSystem.Initialize() || !enableAudioByDefault)
         {
             previous_point = std::chrono::high_resolution_clock::now();
             while (!mainWindow.RequestedClose()) {

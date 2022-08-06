@@ -7,6 +7,7 @@
 #include <core/cartridge.h>
 #include <core/controller.h>
 #include <core/timer.h>
+#include <core/apu.h>
 #include <core/utils/instLogger.h>
 #include <vector>
 #include <array>
@@ -77,6 +78,7 @@ namespace GBEmulator
         const Cartridge* GetCartridge() const { return m_cartridge.get(); }
         const Z80Processor& GetCPU() const { return m_cpu; }
         const Processor2C02& GetPPU() const { return m_ppu; }
+        APU& GetAPU() { return m_apu; }
         void SetPC(uint16_t addr) { m_cpu.SetPC(addr); }
 
         void SaveCartridgeRAM(Utils::IWriteVisitor& visitor) const { m_cartridge->SerializeRam(visitor); }
@@ -92,6 +94,7 @@ namespace GBEmulator
     private:        
         Z80Processor m_cpu;
         Processor2C02 m_ppu;
+        APU m_apu;
         Timer m_timer;
         std::unique_ptr<InstructionLogger> m_instLogger;
 

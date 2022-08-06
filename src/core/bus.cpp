@@ -101,7 +101,7 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     else if (addr >= 0xFF10 && addr <= 0xFF26)
     {
         // Sound
-        // TODO
+        data = m_apu.ReadByte(addr);
     }
     else if (addr >= 0xFF30 && addr <= 0xFF3F)
     {
@@ -222,7 +222,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xFF10 && addr <= 0xFF26)
     {
         // Sound
-        // TODO
+        m_apu.WriteByte(addr, data);
     }
     else if (addr >= 0xFF30 && addr <= 0xFF3F)
     {
@@ -315,6 +315,12 @@ bool Bus::Clock()
         }
     }
 
+    // APU is clocked every 2 ticks
+    if (m_nbCycles % 2 == 0)
+    {
+        m_apu.Clock();
+    }
+
     m_ppu.Clock();
 
     // Update the controller and the interrupt
@@ -345,6 +351,7 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
         
     m_cpu.SerializeTo(visitor);
     m_ppu.SerializeTo(visitor);
+    m_apu.SerializeTo(visitor);
     m_cartridge->SerializeTo(visitor);
 
     visitor.WriteContainer(m_VRAM);
@@ -371,6 +378,7 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
 
     m_cpu.DeserializeFrom(visitor);
     m_ppu.DeserializeFrom(visitor);
+    m_apu.DeserializeFrom(visitor);
     m_cartridge->DeserializeFrom(visitor);
 
     visitor.ReadContainer(m_VRAM);
@@ -393,6 +401,7 @@ void Bus::Reset()
 {
     m_cpu.Reset();
     m_ppu.Reset();
+    m_apu.Reset();
 
     if (m_cartridge)
         m_cartridge->Reset();
