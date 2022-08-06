@@ -41,6 +41,7 @@ void PulseChannel::Update(Tonic::Synth& synth)
         if (m_freqMsbReg.counterConsecutiveSelection)
         {
             m_enabled = false;
+            m_enabledChanged = true;
         }
         else
         {
@@ -65,15 +66,17 @@ void PulseChannel::Update(Tonic::Synth& synth)
     // Enveloppe updated every n / 64 seconds
     if (m_volumeReg.nbEnveloppeSweep != 0 && (m_nbUpdateCalls % ((uint8_t) m_volumeReg.nbEnveloppeSweep * 4)) == 0)
     {
-        if (m_volumeReg.enveloppeDirection == 0)
+        if (m_volumeReg.enveloppeDirection == 0 && m_volumeReg.initialVolume > 0)
         {
             // Decrease
-            m_volumeReg.initialVolume = m_volumeReg.initialVolume == 0 ? 0 : (m_volumeReg.initialVolume - 1);
+            --m_volumeReg.initialVolume;
+            m_volumeChanged = true;
         }
-        else
+        else if (m_volumeReg.enveloppeDirection == 1 && m_volumeReg.initialVolume < 0x0F)
         {
             // Increase
-            m_volumeReg.initialVolume = m_volumeReg.initialVolume == 0x0F ? 0x0F : (m_volumeReg.initialVolume + 1);
+            ++m_volumeReg.initialVolume;
+            m_volumeChanged = true;
         }
     }
 
@@ -100,10 +103,21 @@ void PulseChannel::Update(Tonic::Synth& synth)
         }
 
         synth.setParameter(GetDutyCycleParameterName(), newDuty);
+        m_dutyChanged = false;
     }
 
-    synth.setParameter(GetOutputParameterName(), m_enabled ? 1.0f : 0.0f);
-    synth.setParameter(GetEnveloppeOutputParameterName(), (float)m_volumeReg.initialVolume / 0x0F);
+    if (m_enabledChanged)
+    {
+        synth.setParameter(GetOutputParameterName(), m_enabled ? 1.0f : 0.0f);
+        m_enabledChanged = false;
+    }
+
+    if (m_volumeChanged)
+    {
+        synth.setParameter(GetEnveloppeOutputParameterName(), (float)m_volumeReg.initialVolume / 0x0F);
+        m_volumeChanged = false;
+    }
+
     m_nbUpdateCalls++;
 }
 
@@ -121,6 +135,8 @@ void PulseChannel::Reset()
 
     m_frequencyChanged = false;
     m_dutyChanged = false;
+    m_volumeChanged = false;
+    m_enabledChanged = false;
     m_nbUpdateCalls = 0;
 }
 
@@ -141,6 +157,7 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0x02:
         // Enveloppe
         m_volumeReg.reg = data;
+        m_volumeChanged = true;
         break;
     case 0x3:
         // Freq lsb
@@ -152,6 +169,7 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
         // Freq Msb
         m_freqMsbReg.reg = data;
         m_combinedFreq = ((uint16_t)m_freqMsbReg.freqMsb << 8) | m_freqLsb;
+        m_enabledChanged = (m_freqMsbReg.initial > 0) != m_enabled;
         m_enabled = m_freqMsbReg.initial > 0;
         UpdateFreq();
         break;
@@ -204,6 +222,8 @@ void PulseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_combinedFreq);
     visitor.WriteValue(m_frequencyChanged);
     visitor.WriteValue(m_dutyChanged);
+    visitor.WriteValue(m_enabledChanged);
+    visitor.WriteValue(m_volumeChanged);
     visitor.WriteValue(m_nbUpdateCalls);
 }
 
@@ -221,6 +241,8 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_combinedFreq);
     visitor.ReadValue(m_frequencyChanged);
     visitor.ReadValue(m_dutyChanged);
+    visitor.ReadValue(m_enabledChanged);
+    visitor.ReadValue(m_volumeChanged);
     visitor.ReadValue(m_nbUpdateCalls);
 }
 

@@ -50,6 +50,8 @@ namespace GBEmulator
         bool m_enabled = false;
         bool m_frequencyChanged = false;
         bool m_dutyChanged = false;
+        bool m_enabledChanged = false;
+        bool m_volumeChanged = false;
 
         size_t m_nbUpdateCalls = 0;
     };
