@@ -19,15 +19,22 @@ class MyNoise_ : public Tonic::Tonic_::Generator_
 
         void setFreq(float value)
         {
-            nbSamplesPerRandomValue = 0;
             if (value != 0.0f)
             {
                 double sampleDuration = 1.0 / Tonic::sampleRate();
                 double signalPeriod = 1.0 / value;
-                nbSamplesPerRandomValue = (unsigned)(floor(signalPeriod / sampleDuration));
+                unsigned newValue = (unsigned)(floor(signalPeriod / sampleDuration));
+                if (newValue != 0)
+                {
+                    nbSamplesPerRandomValue = newValue;
+                }
+                else
+                {
+                    nbSamplesPerRandomValue = 1;
+                    volume = 0.0f;
+                }
             }
-
-            if (nbSamplesPerRandomValue == 0)
+            else
             {
                 nbSamplesPerRandomValue = 1;
                 volume = 0.0f;
