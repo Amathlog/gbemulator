@@ -14,8 +14,8 @@
 #endif
 
 #include <Tonic.h>
-#include "nesFilter.h"
-#include "nesNoise.h"
+#include "gbNoise.h"
+#include "gbWave.h"
 
 #if defined(__clang__) && (__clang_major__ >= 10)
 #pragma clang diagnostic pop

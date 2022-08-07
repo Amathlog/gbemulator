@@ -46,10 +46,22 @@ namespace GBEmulator
         {
             uint8_t freqMsb : 3;
             uint8_t unused : 3;
-            uint8_t counterConsecutiveSelection : 1;
+            uint8_t lengthEnable : 1;
             uint8_t initial : 1;
         };
         
+        uint8_t reg = 0x00;
+    };
+
+    union PolynomialCounterRegister
+    {
+        struct
+        {
+            uint8_t ratio : 3;
+            uint8_t width : 1;
+            uint8_t freq : 4;
+        };
+
         uint8_t reg = 0x00;
     };
 }

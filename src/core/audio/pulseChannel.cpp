@@ -35,13 +35,17 @@ PulseChannel::PulseChannel(Tonic::Synth& synth, int number)
 
 void PulseChannel::Update(Tonic::Synth& synth)
 {
-    // Should be called every 1/256 seconds
-    if (m_lengthCounter != 0 && --m_lengthCounter == 0)
+    // Should be called every 1/512 seconds
+    bool clock256Hz = m_nbUpdateCalls % 2 == 0;
+    bool clock128Hz = m_nbUpdateCalls % 4 == 2;
+    bool clock64Hz = m_nbUpdateCalls % 8 == 7;
+
+    // Update every n / 256 seconds
+    if (m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
-        if (m_freqMsbReg.counterConsecutiveSelection)
+        if (m_freqMsbReg.lengthEnable)
         {
-            m_enabled = false;
-            m_enabledChanged = true;
+            SetEnable(false);
         }
         else
         {
@@ -49,22 +53,14 @@ void PulseChannel::Update(Tonic::Synth& synth)
         }
     }
 
-    if (m_sweepReg.time != 0 && m_nbUpdateCalls % ((uint8_t)m_sweepReg.time * 2) == 0)
+    // Update every n / 128 seconds
+    if (m_sweepReg.time != 0 && clock128Hz && --m_sweepCounter == 0)
     {
-        uint16_t frqChange = m_combinedFreq >> m_sweepReg.shift;
-        if (m_sweepReg.decrease)
-        {
-            m_combinedFreq = m_combinedFreq == 0 ? m_combinedFreq : m_combinedFreq - frqChange;
-        }
-        else
-        {
-            m_combinedFreq = m_combinedFreq == 0x07FF ? m_combinedFreq : m_combinedFreq + frqChange;
-        }
-        UpdateFreq();
+        Sweep();
     }
 
     // Enveloppe updated every n / 64 seconds
-    if (m_volumeReg.nbEnveloppeSweep != 0 && (m_nbUpdateCalls % ((uint8_t) m_volumeReg.nbEnveloppeSweep * 4)) == 0)
+    if (m_volumeReg.nbEnveloppeSweep != 0 && clock64Hz && --m_volumeCounter == 0)
     {
         if (m_volumeReg.enveloppeDirection == 0 && m_volumeReg.initialVolume > 0)
         {
@@ -78,6 +74,8 @@ void PulseChannel::Update(Tonic::Synth& synth)
             ++m_volumeReg.initialVolume;
             m_volumeChanged = true;
         }
+
+        m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
     }
 
     if (m_frequencyChanged)
@@ -129,6 +127,8 @@ void PulseChannel::Reset()
     m_freqLsb = 0x00;
     m_freqMsbReg.reg = 0x00;
     m_lengthCounter = 0;
+    m_sweepCounter = 0;
+    m_volumeCounter = 0;
     m_enabled = false;
     m_frequency = 0.0;
     m_combinedFreq = 0x0000;
@@ -147,6 +147,7 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0x00:
         // Sweep
         m_sweepReg.reg = data;
+        Sweep();
         break;
     case 0x01:
         // Wave
@@ -157,6 +158,7 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0x02:
         // Enveloppe
         m_volumeReg.reg = data;
+        m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
         m_volumeChanged = true;
         break;
     case 0x3:
@@ -169,8 +171,8 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
         // Freq Msb
         m_freqMsbReg.reg = data;
         m_combinedFreq = ((uint16_t)m_freqMsbReg.freqMsb << 8) | m_freqLsb;
-        m_enabledChanged = (m_freqMsbReg.initial > 0) != m_enabled;
-        m_enabled = m_freqMsbReg.initial > 0;
+        if (m_freqMsbReg.initial > 0)
+            Restart();
         UpdateFreq();
         break;
     default:
@@ -216,6 +218,8 @@ void PulseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_freqLsb);
     visitor.WriteValue(m_freqMsbReg);
     visitor.WriteValue(m_lengthCounter);
+    visitor.WriteValue(m_sweepCounter);
+    visitor.WriteValue(m_volumeCounter);
     visitor.WriteValue(m_enabled);
 
     visitor.WriteValue(m_frequency);
@@ -235,6 +239,8 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_freqLsb);
     visitor.ReadValue(m_freqMsbReg);
     visitor.ReadValue(m_lengthCounter);
+    visitor.ReadValue(m_sweepCounter);
+    visitor.ReadValue(m_volumeCounter);
     visitor.ReadValue(m_enabled);
 
     visitor.ReadValue(m_frequency);
@@ -248,6 +254,36 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
 
 void PulseChannel::UpdateFreq()
 {
-    m_frequency = m_combinedFreq < 2038 ? 131072.0 / (2048.0 - m_combinedFreq) : 0.0;
-    m_frequencyChanged = true;
+    if (m_combinedFreq >= 2047)
+    {
+        SetEnable(false);
+        m_combinedFreq = 0;
+        m_sweepReg.time = 0;
+    }
+    else
+    {
+        m_frequency = 131072.0 / (2048.0 - m_combinedFreq);
+        m_frequencyChanged = true;
+    }
+
+    m_freqLsb = m_combinedFreq & 0x00FF;
+    m_freqMsbReg.freqMsb = (m_combinedFreq & 0x0700) >> 8;
+}
+
+void PulseChannel::Restart()
+{
+    SetEnable(true);
+    m_lengthCounter = 64;
+    m_nbUpdateCalls = 0;
+}
+
+void PulseChannel::Sweep()
+{
+    if (m_sweepReg.time == 0)
+        return;
+
+    uint16_t frqChange = m_combinedFreq >> m_sweepReg.shift;
+    m_combinedFreq += m_sweepReg.decrease ? -frqChange : frqChange;
+    m_sweepCounter = m_sweepReg.time;
+    UpdateFreq();
 }

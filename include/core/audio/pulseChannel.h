@@ -20,7 +20,7 @@ namespace GBEmulator
         void Reset();
 
         bool IsEnabled() const { return m_enabled; }
-        void SetEnable(bool enabled) { m_enabled = enabled; }
+        void SetEnable(bool enabled) { m_enabledChanged = enabled != m_enabled; m_enabled = enabled; }
 
         void WriteByte(uint16_t addr, uint8_t data);
         uint8_t ReadByte(uint16_t addr) const;
@@ -30,6 +30,8 @@ namespace GBEmulator
 
     private:
         void UpdateFreq();
+        void Restart();
+        void Sweep();
 
         std::string GetDutyCycleParameterName();
         std::string GetFrequencyParameterName();
@@ -47,6 +49,9 @@ namespace GBEmulator
         uint16_t m_combinedFreq = 0x0000;
         double m_frequency = 0.0;
         uint8_t m_lengthCounter = 0;
+        uint8_t m_sweepCounter = 0;
+        uint8_t m_volumeCounter = 0;
+
         bool m_enabled = false;
         bool m_frequencyChanged = false;
         bool m_dutyChanged = false;

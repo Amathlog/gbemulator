@@ -3,6 +3,7 @@
 #include <core/serializable.h>
 #include <MyTonic.h>
 #include <core/audio/pulseChannel.h>
+#include <core/audio/noiseChannel.h>
 
 namespace GBEmulator
 {
@@ -27,6 +28,7 @@ namespace GBEmulator
         Tonic::Synth m_synth;
         PulseChannel m_channel1;
         PulseChannel m_channel2;
+        NoiseChannel m_channel4;
 
         size_t m_nbCycles = 0;
     };
