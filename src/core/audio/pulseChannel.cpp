@@ -41,7 +41,7 @@ void PulseChannel::Update(Tonic::Synth& synth)
     bool clock64Hz = m_nbUpdateCalls % 8 == 7;
 
     // Update every n / 256 seconds
-    if (m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
+    if (m_enabled && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
         if (m_freqMsbReg.lengthEnable)
         {
@@ -54,13 +54,13 @@ void PulseChannel::Update(Tonic::Synth& synth)
     }
 
     // Update every n / 128 seconds
-    if (m_sweepReg.time != 0 && clock128Hz && --m_sweepCounter == 0)
+    if (m_enabled && m_sweepReg.time != 0 && clock128Hz && --m_sweepCounter == 0)
     {
-        Sweep();
+        Sweep(false);
     }
 
     // Enveloppe updated every n / 64 seconds
-    if (m_volumeReg.nbEnveloppeSweep != 0 && clock64Hz && --m_volumeCounter == 0)
+    if (m_enabled && m_volumeReg.nbEnveloppeSweep != 0 && clock64Hz && --m_volumeCounter == 0)
     {
         if (m_volumeReg.enveloppeDirection == 0 && m_volumeReg.initialVolume > 0)
         {
@@ -147,7 +147,7 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0x00:
         // Sweep
         m_sweepReg.reg = data;
-        Sweep();
+        Sweep(true);
         break;
     case 0x01:
         // Wave
@@ -254,17 +254,13 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
 
 void PulseChannel::UpdateFreq()
 {
-    if (m_combinedFreq >= 2047)
-    {
-        SetEnable(false);
-        m_combinedFreq = 0;
-        m_sweepReg.time = 0;
-    }
-    else
-    {
-        m_frequency = 131072.0 / (2048.0 - m_combinedFreq);
-        m_frequencyChanged = true;
-    }
+    CheckOverflow(m_combinedFreq);
+
+    if (m_combinedFreq == 0)
+        return;
+
+    m_frequency = 131072.0 / (2048.0 - m_combinedFreq);
+    m_frequencyChanged = true;
 
     m_freqLsb = m_combinedFreq & 0x00FF;
     m_freqMsbReg.freqMsb = (m_combinedFreq & 0x0700) >> 8;
@@ -277,13 +273,33 @@ void PulseChannel::Restart()
     m_nbUpdateCalls = 0;
 }
 
-void PulseChannel::Sweep()
+void PulseChannel::CheckOverflow(uint16_t newFreq)
+{
+    if (newFreq >= 2047)
+    {
+        SetEnable(false);
+        m_combinedFreq = 0;
+        m_sweepReg.time = 0;
+    }
+}
+
+void PulseChannel::Sweep(bool checkOnly)
 {
     if (m_sweepReg.time == 0)
         return;
 
-    uint16_t frqChange = m_combinedFreq >> m_sweepReg.shift;
-    m_combinedFreq += m_sweepReg.decrease ? -frqChange : frqChange;
-    m_sweepCounter = m_sweepReg.time;
-    UpdateFreq();
+    int16_t frqChange = 0x0000;
+
+    if (!checkOnly)
+    {
+        frqChange = m_combinedFreq >> m_sweepReg.shift;
+        m_combinedFreq += m_sweepReg.decrease ? -frqChange : frqChange;
+        m_sweepCounter = m_sweepReg.time;
+        UpdateFreq();
+    }
+
+    // Then re-do it once and check overflow only
+    frqChange = m_combinedFreq >> m_sweepReg.shift;
+    uint16_t newFreq = m_combinedFreq + (m_sweepReg.decrease ? -frqChange : frqChange);
+    CheckOverflow(newFreq);
 }

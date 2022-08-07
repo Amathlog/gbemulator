@@ -8,6 +8,9 @@ NoiseChannel::NoiseChannel(Tonic::Synth& synth)
 
 void NoiseChannel::Update(Tonic::Synth& synth)
 {
+    if (!m_enabled)
+        return;
+
     // Should be called every 1/512 seconds
     bool clock256Hz = m_nbUpdateCalls % 2 == 0;
     bool clock64Hz = m_nbUpdateCalls % 8 == 7;

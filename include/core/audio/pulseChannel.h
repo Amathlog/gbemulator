@@ -30,8 +30,9 @@ namespace GBEmulator
 
     private:
         void UpdateFreq();
+        void CheckOverflow(uint16_t newFreq);
         void Restart();
-        void Sweep();
+        void Sweep(bool checkOnly);
 
         std::string GetDutyCycleParameterName();
         std::string GetFrequencyParameterName();
