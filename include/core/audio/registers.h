@@ -64,4 +64,16 @@ namespace GBEmulator
 
         uint8_t reg = 0x00;
     };
+
+    union WaveVolumeRegister
+    {
+        struct
+        {
+            uint8_t unused : 5;
+            uint8_t volume : 2;
+            uint8_t unused2 : 1;
+        };
+
+        uint8_t reg = 0x00;
+    };
 }

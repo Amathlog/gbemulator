@@ -2,16 +2,17 @@
 
 #include <Tonic/TonicCore.h>
 #include <Tonic/Generator.h>
+#include <atomic>
 
 
 class MyNoise_ : public Tonic::Tonic_::Generator_
 {
     protected:
         void computeSynthesisBlock( const Tonic::Tonic_::SynthesisContext_ & context );
-        unsigned nbSamplesPerRandomValue = 1;
-        float volume = 0.0f;
-        uint16_t m_shiftRegister = 1;
-        uint8_t m_shiftRegLength = 15;
+        std::atomic<unsigned> nbSamplesPerRandomValue = 1;
+        std::atomic<float> volume = 0.0f;
+        std::atomic<uint16_t> m_shiftRegister = 1;
+        std::atomic<uint8_t> m_shiftRegLength = 15;
 
     public:
         void reset() { m_shiftRegister = 1; volume = 0.0f; nbSamplesPerRandomValue = 1;}
@@ -55,7 +56,7 @@ inline void MyNoise_::computeSynthesisBlock( const Tonic::Tonic_::SynthesisConte
             uint16_t otherFeedback = (m_shiftRegister >> 1) & 0x0001;
             uint16_t feedback = (m_shiftRegister ^ otherFeedback) & 0x0001;
             m_shiftRegister = (feedback << (m_shiftRegLength - 1)) | (m_shiftRegister >> 1);
-            value = m_shiftRegister & 0x0001 ? volume : 0.0f;
+            value = m_shiftRegister & 0x0001 ? (float)volume : 0.0f;
         }
         *fdata++ = value;
     }

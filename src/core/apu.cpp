@@ -7,15 +7,17 @@ APU::APU()
     : m_synth()
     , m_channel1(m_synth, 1)
     , m_channel2(m_synth, 2)
+    , m_channel3(m_synth)
     , m_channel4(m_synth)
 {
-    m_synth.setOutputGen((m_channel1.GetWave() + m_channel2.GetWave() + m_channel4.GetWave()) / 3.0f);
+    m_synth.setOutputGen((m_channel1.GetWave() + m_channel2.GetWave() + m_channel3.GetWave() + m_channel4.GetWave()) / 4.0f);
 }
 
 void APU::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
     m_channel1.SerializeTo(visitor);
     m_channel2.SerializeTo(visitor);
+    m_channel3.SerializeTo(visitor);
     m_channel4.SerializeTo(visitor);
     visitor.WriteValue(m_nbCycles);
 }
@@ -24,6 +26,7 @@ void APU::DeserializeFrom(Utils::IReadVisitor& visitor)
 {
     m_channel1.DeserializeFrom(visitor);
     m_channel2.DeserializeFrom(visitor);
+    m_channel3.DeserializeFrom(visitor);
     m_channel4.DeserializeFrom(visitor);
     visitor.ReadValue(m_nbCycles);
 }
@@ -32,6 +35,7 @@ void APU::Reset()
 {
     m_channel1.Reset();
     m_channel2.Reset();
+    m_channel3.Reset();
     m_channel4.Reset();
 }
 
@@ -43,6 +47,7 @@ void APU::Clock()
     {
         m_channel1.Update(m_synth);
         m_channel2.Update(m_synth);
+        m_channel3.Update(m_synth);
         m_channel4.Update(m_synth);
     }
 }
@@ -57,6 +62,10 @@ void APU::WriteByte(uint16_t addr, uint8_t data)
     {
         m_channel2.WriteByte(addr - 0xFF15, data);
     }
+    else if ((addr >= 0xFF1A && addr <= 0xFF1E) || (addr >= 0xFF30 && addr <= 0xFF3F))
+    {
+        m_channel3.WriteByte(addr, data);
+    }
     else if (addr >= 0xFF20 && addr <= 0xFF23)
     {
         m_channel4.WriteByte(addr, data);
@@ -66,6 +75,7 @@ void APU::WriteByte(uint16_t addr, uint8_t data)
         bool enable = (data & 0x80) > 0;
         m_channel1.SetEnable(enable);
         m_channel2.SetEnable(enable);
+        m_channel3.SetEnable(enable);
         m_channel4.SetEnable(enable);
     }
 }
@@ -80,6 +90,10 @@ uint8_t APU::ReadByte(uint16_t addr) const
     {
         return m_channel2.ReadByte(addr - 0xFF15);
     }
+    else if ((addr >= 0xFF0A && addr <= 0xFF0E) || (addr >= 0xFF30 && addr <= 0xFF3F))
+    {
+        return m_channel3.ReadByte(addr);
+    }
     else if (addr >= 0xFF20 && addr <= 0xFF23)
     {
         return m_channel4.ReadByte(addr);
@@ -91,6 +105,8 @@ uint8_t APU::ReadByte(uint16_t addr) const
             res |= 0x01;
         if (m_channel2.IsEnabled())
             res |= 0x02;
+        if (m_channel3.IsEnabled())
+            res |= 0x04;
         if (m_channel4.IsEnabled())
             res |= 0x08;
 

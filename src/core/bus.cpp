@@ -106,7 +106,7 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     else if (addr >= 0xFF30 && addr <= 0xFF3F)
     {
         // Waveform RAM
-        // TODO
+        data = m_apu.ReadByte(addr);
     }
     else if (addr == 0xFF46)
     {
@@ -227,7 +227,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xFF30 && addr <= 0xFF3F)
     {
         // Waveform RAM
-        // TODO
+        m_apu.WriteByte(addr, data);
     }
     else if (addr == 0xFF46)
     {

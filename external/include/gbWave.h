@@ -2,33 +2,40 @@
 
 #include <Tonic/TonicCore.h>
 #include <Tonic/Generator.h>
+#include <array>
+#include <cstring>
 
 
 class MyWave_ : public Tonic::Tonic_::Generator_
 {
     protected:
         void computeSynthesisBlock( const Tonic::Tonic_::SynthesisContext_ & context );
-        unsigned nbSamplesPerRandomValue = 1;
-        float volume = 0.0f;
-        uint16_t m_shiftRegister = 1;
-        uint8_t m_shiftRegLength = 15;
+        std::atomic<unsigned> nbSamplesPerValue = 1;
+        std::atomic<float> volume = 0.0f;
+        std::atomic<uint8_t> ptr = 0x00;
+        std::array<uint8_t, 32> data;
+        std::array<uint8_t, 32> newData;
+        std::atomic<bool> hasNewData = false;
+        double oneSampleDuration;
+        std::atomic<double> newSampleDuration;
+        std::atomic<bool> hasNewSampleDuration = false;
+        double elapsedTime = 0.0;
 
     public:
-        void reset() { m_shiftRegister = 1; volume = 0.0f; nbSamplesPerRandomValue = 1;}
+        void reset() { data.fill(0); volume = 0.0f; nbSamplesPerValue = 1; resetPosition(); elapsedTime = 0.0; ptr = 0; }
 
         void setFreq(float value)
         {
-            nbSamplesPerRandomValue = 0;
             if (value != 0.0f)
             {
-                double sampleDuration = 1.0 / Tonic::sampleRate();
                 double signalPeriod = 1.0 / value;
-                nbSamplesPerRandomValue = (unsigned)(floor(signalPeriod / sampleDuration));
-            }
 
-            if (nbSamplesPerRandomValue == 0)
+                newSampleDuration = (signalPeriod / 32.0);
+                hasNewSampleDuration = true;
+            }
+            else
             {
-                nbSamplesPerRandomValue = 1;
+                oneSampleDuration = 0.0;
                 volume = 0.0f;
             }
         }
@@ -38,9 +45,22 @@ class MyWave_ : public Tonic::Tonic_::Generator_
             volume = value;
         }
 
-        void setLengthCounter(bool isLong)
+        void setSample(uint8_t sample, uint8_t position)
         {
-            m_shiftRegLength = isLong ? 15 : 7;
+            position = std::min<uint8_t>(position, 31);
+            newData[position] = sample;
+            hasNewData = true;
+        }
+
+        uint8_t getSample(uint8_t position) const
+        {
+            position = std::min<uint8_t>(position, 31);
+            return data[position];
+        }
+
+        void resetPosition()
+        {
+            ptr = 0;
         }
 };
 
@@ -48,14 +68,34 @@ inline void MyWave_::computeSynthesisBlock( const Tonic::Tonic_::SynthesisContex
 {
     TonicFloat* fdata = &outputFrames_[0];
     float value = 0.0f;
+    double realSampleDuration = 1.0 / Tonic::sampleRate();
     for (unsigned int i=0; i<outputFrames_.size(); i++)
     {
-        if (i % nbSamplesPerRandomValue == 0)
+        value = volume * (float)(data[ptr]) / 0x0F;
+
+        if (volume > 0.0f)
         {
-            uint16_t otherFeedback = (m_shiftRegister >> 1) & 0x0001;
-            uint16_t feedback = (m_shiftRegister ^ otherFeedback) & 0x0001;
-            m_shiftRegister = (feedback << (m_shiftRegLength - 1)) | (m_shiftRegister >> 1);
-            value = m_shiftRegister & 0x0001 ? volume : 0.0f;
+            elapsedTime += realSampleDuration;
+            if (elapsedTime >= oneSampleDuration)
+            {
+                ptr = (ptr + 1) % (uint8_t)(data.size());
+                elapsedTime -= oneSampleDuration;
+
+                if (ptr == 0)
+                {
+                    if (hasNewData)
+                    {
+                        data = newData;
+                        hasNewData = false;
+                    }
+
+                    if (hasNewSampleDuration)
+                    {
+                        oneSampleDuration = newSampleDuration;
+                        hasNewSampleDuration = false;
+                    }
+                }
+            }
         }
         *fdata++ = value;
     }
@@ -66,6 +106,8 @@ class MyWave : public Tonic::TemplatedGenerator<MyWave_>
 public:
     void setFreq(float value) { gen()->setFreq(value); }
     void setVolume(float value) { gen()->setVolume(value); }
-    void setLengthCounter(bool isLong) { gen()->setLengthCounter(isLong); }
+    void setSample(uint8_t sample, uint8_t position) { gen()->setSample(sample, position); }
     void reset() { gen()->reset(); }
+    void resetPosition() { gen()->resetPosition(); }
+    uint8_t getSample(uint8_t position) const { return const_cast<MyWave*>(this)->gen()->getSample(position); }
 };

@@ -57,6 +57,7 @@ void NoiseChannel::Reset()
     m_enabled = false;
 
     m_nbUpdateCalls = 0;
+    m_noise.reset();
 }
 
 void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
@@ -142,7 +143,7 @@ void NoiseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
 void NoiseChannel::SetFrequency()
 {
     unsigned freq = 524288;
-    double ratio = m_polyReg.ratio == 0 ? 0.5 : double(m_polyReg.ratio);
+    float ratio = m_polyReg.ratio == 0 ? 0.5f : float(m_polyReg.ratio);
 
     freq >>= (m_polyReg.freq + 1);
     m_noise.setFreq(freq / ratio);
