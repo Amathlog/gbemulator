@@ -10,7 +10,7 @@ APU::APU()
     , m_channel3(m_synth)
     , m_channel4(m_synth)
 {
-    m_synth.setOutputGen((m_channel1.GetWave() + m_channel2.GetWave() + m_channel3.GetWave() + m_channel4.GetWave()) / 4.0f);
+    m_synth.setOutputGen(((m_channel1.GetWave() + m_channel2.GetWave()) * 0.75f + m_channel3.GetWave() + m_channel4.GetWave()) / 4.0f);
 }
 
 void APU::SerializeTo(Utils::IWriteVisitor& visitor) const

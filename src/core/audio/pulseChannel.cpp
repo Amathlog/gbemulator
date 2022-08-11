@@ -56,7 +56,7 @@ void PulseChannel::Update(Tonic::Synth& synth)
     // Update every n / 128 seconds
     if (m_enabled && m_sweepReg.time != 0 && clock128Hz && --m_sweepCounter == 0)
     {
-        Sweep(false);
+        Sweep();
     }
 
     // Enveloppe updated every n / 64 seconds
@@ -147,7 +147,7 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0x00:
         // Sweep
         m_sweepReg.reg = data;
-        Sweep(true);
+        Sweep();
         break;
     case 0x01:
         // Wave
@@ -283,20 +283,15 @@ void PulseChannel::CheckOverflow(uint16_t newFreq)
     }
 }
 
-void PulseChannel::Sweep(bool checkOnly)
+void PulseChannel::Sweep()
 {
     if (m_sweepReg.time == 0)
         return;
 
-    int16_t frqChange = 0x0000;
-
-    if (!checkOnly)
-    {
-        frqChange = m_combinedFreq >> m_sweepReg.shift;
-        m_combinedFreq += m_sweepReg.decrease ? -frqChange : frqChange;
-        m_sweepCounter = m_sweepReg.time;
-        UpdateFreq();
-    }
+    int16_t frqChange = m_combinedFreq >> m_sweepReg.shift;
+    m_combinedFreq += m_sweepReg.decrease ? -frqChange : frqChange;
+    m_sweepCounter = m_sweepReg.time;
+    UpdateFreq();
 
     // Then re-do it once and check overflow only
     frqChange = m_combinedFreq >> m_sweepReg.shift;

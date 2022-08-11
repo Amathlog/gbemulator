@@ -63,7 +63,7 @@ inline void MyNoise_::computeSynthesisBlock( const Tonic::Tonic_::SynthesisConte
             uint16_t otherFeedback = (m_shiftRegister >> 1) & 0x0001;
             uint16_t feedback = (m_shiftRegister ^ otherFeedback) & 0x0001;
             m_shiftRegister = (feedback << (m_shiftRegLength - 1)) | (m_shiftRegister >> 1);
-            value = m_shiftRegister & 0x0001 ? (float)volume : 0.0f;
+            value = m_shiftRegister & 0x0001 ? (float)volume : (float)(-volume);
         }
         *fdata++ = value;
     }
