@@ -44,13 +44,13 @@ bool MBC1::WriteByte(uint16_t addr, uint8_t data)
         if (data == 0x00)
         {
             // Data = 0, means we want to select bank 0. But MBC1 will change it to 0x01
-            m_secondRomBank = 0x01;
+            m_secondRomBank = 0x0001;
         }
         else
         {
             // Otherwise, mask the data by the number of available rom banks
             // Keep the 2 highest bits of the bank. Will need to be set elsewhere (see below)
-            m_secondRomBank = (m_secondRomBank & 0x60) + (data & (uint8_t)(m_header.nbRomBanks - 1));
+            m_secondRomBank = (m_secondRomBank & 0x0060) + (data & (uint8_t)(m_header.nbRomBanks - 1));
 
             // Note that in advanced mode, the 5th bit is ignored
             if (m_advancedBankingMode)

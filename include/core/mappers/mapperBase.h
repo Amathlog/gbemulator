@@ -48,8 +48,8 @@ namespace GBEmulator
         virtual void Reset()
         {
             m_ramEnabled = false;
-            m_firstRomBank = 0x00;
-            m_secondRomBank = 0x01;
+            m_firstRomBank = 0x0000;
+            m_secondRomBank = 0x0001;
             m_ramBank = 0x00;
             m_startAddrCustomRead = 0x0000;
             m_endAddrCustomRead = 0x0000;
@@ -66,8 +66,8 @@ namespace GBEmulator
     protected:
         const Header& m_header; 
         bool m_ramEnabled = false;
-        uint8_t m_firstRomBank = 0x00;
-        uint8_t m_secondRomBank = 0x01;
+        uint16_t m_firstRomBank = 0x0000;
+        uint16_t m_secondRomBank = 0x0001;
         uint8_t m_ramBank = 0x00;
 
         uint16_t m_startAddrCustomRead = 0x0000;
