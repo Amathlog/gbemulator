@@ -56,8 +56,8 @@ namespace GBEmulator
         }
 
         inline bool IsRamEnabled() const { return m_ramEnabled; }
-        inline uint8_t GetFirstROMBank() const { return m_firstRomBank; }
-        inline uint8_t GetSecondROMBank() const { return m_secondRomBank; }
+        inline uint16_t GetFirstROMBank() const { return m_firstRomBank; }
+        inline uint16_t GetSecondROMBank() const { return m_secondRomBank; }
         inline uint8_t GetRAMBank() const { return m_ramBank; }
 
         // Specific for MBC2 
