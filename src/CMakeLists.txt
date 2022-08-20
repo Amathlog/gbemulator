@@ -1,4 +1,5 @@
 add_subdirectory(core)
+add_subdirectory(audio)
 
 option(GBEMULATOR_ONLY_CORE "Build only the core lib" OFF)
 

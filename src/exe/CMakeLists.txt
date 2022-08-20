@@ -6,23 +6,6 @@ endif(UNIX)
 find_package(OpenGL REQUIRED)
 include_directories(${OPENGL_INCLUDE_DIRS})
 
-# Include RTAudio
-if(UNIX)
-    set(RTAUDIO_API_PULSE ON)
-    set(RTAUDIO_API_WASAPI OFF)
-endif(UNIX)
-if(WIN32)
-   set(RTAUDIO_API_WASAPI ON)
-   set(RTAUDIO_API_PULSE OFF)
-endif(WIN32)
-set(RTAUDIO_BUILD_TESTING OFF)
-add_subdirectory("${GBEmulator_SOURCE_DIR}/external/rtaudio" rtaudio)
-include_directories("${GBEmulator_SOURCE_DIR}/external/rtaudio")
-set_target_properties(rtaudio PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-if(WIN32)
-  target_compile_options(rtaudio PRIVATE /wd4251 /wd4996 /wd4267)
-endif(WIN32)
-
 # Include GLFW and GLAD
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
