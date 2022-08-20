@@ -161,7 +161,7 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
     {
         // Compute the bank we need. Between 0x0000 and 0x3FFF it the first bank (usually fixed at 0)
         // between 0x4000 and 0x7FFF it is the switchable one.
-        uint8_t prgDataBank = (addr & 0x4000) ? m_mapper->GetSecondROMBank() : m_mapper->GetFirstROMBank();
+        uint32_t prgDataBank = (addr & 0x4000) ? m_mapper->GetSecondROMBank() : m_mapper->GetFirstROMBank();
         // ROM Banks are 16kB in size.
         data = m_prgData[prgDataBank * 0x4000 + (addr & 0x3FFF)];
         return true;
