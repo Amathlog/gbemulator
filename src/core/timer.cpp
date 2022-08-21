@@ -75,10 +75,13 @@ void Timer::WriteByte(uint16_t addr, uint8_t data)
 
 bool Timer::Clock()
 {
-    m_nbClocks = (m_nbClocks + 1) % GBEmulator::CPU_SINGLE_SPEED_FREQ;
+    if (++m_nbClocks == GBEmulator::CPU_SINGLE_SPEED_FREQ)
+    {
+        m_nbClocks = 0;
+    }
 
     // Divider is always incremented at a speed of 16384Hz => CPU Clock / 256 (double in double speed mode)
-    if (m_nbClocks % 256 == 0)
+    if ((m_nbClocks & (size_t)0xFF) == 0)
         m_divider++;
 
     // If the timer is not enabled exit there

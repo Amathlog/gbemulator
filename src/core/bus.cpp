@@ -288,7 +288,7 @@ bool Bus::Clock()
     bool res = false;
 
     // CPU is clocked every 4 ticks
-    if (m_nbCycles % 4 == 0)
+    if ((m_nbCycles & (size_t)(0x3)) == 0)
     {
         // If we are in DMA, copy data. CPU is still clocked
         if (m_isInDMA)
@@ -315,12 +315,7 @@ bool Bus::Clock()
         }
     }
 
-    // APU is clocked every 2 ticks
-    if (m_nbCycles % 2 == 0)
-    {
-        m_apu.Clock();
-    }
-
+    m_apu.Clock();
     m_ppu.Clock();
 
     // Update the controller and the interrupt

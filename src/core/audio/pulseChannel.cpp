@@ -1,6 +1,29 @@
 #include <core/audio/pulseChannel.h>
 
 using GBEmulator::PulseChannel;
+using GBEmulator::PulseOscillator;
+
+PulseOscillator::PulseOscillator(double sampleRate)
+    : m_sampleRate(sampleRate)
+{
+    
+}
+
+double PulseOscillator::Tick()
+{
+    if (m_duty == 0.0 || m_freq == 0.0)
+        return 0.0;
+
+    m_phase += m_freq / m_sampleRate;
+
+    while (m_phase > 1.0)
+        m_phase -= 1.0f;
+
+    while (m_phase < 0.0)
+        m_phase += 1.0;
+
+    return m_phase <= m_duty ? -1.0 : 1.0;
+}
 
 std::string PulseChannel::GetDutyCycleParameterName()
 {
@@ -24,6 +47,7 @@ std::string PulseChannel::GetEnveloppeOutputParameterName()
 
 PulseChannel::PulseChannel(Tonic::Synth& synth, int number)
     : m_number(number)
+    , m_oscillator(Tonic::sampleRate())
 {
     Tonic::ControlGenerator controlDutyPulse = synth.addParameter(GetDutyCycleParameterName(), 0.5f);
     Tonic::ControlGenerator controlFreqPulse = synth.addParameter(GetFrequencyParameterName(), 440.0f);
@@ -81,6 +105,7 @@ void PulseChannel::Update(Tonic::Synth& synth)
     if (m_frequencyChanged)
     {
         synth.setParameter(GetFrequencyParameterName(), (float)m_frequency);
+        m_oscillator.SetFrequency(m_frequency);
         m_frequencyChanged = false;
     }
 
@@ -101,6 +126,7 @@ void PulseChannel::Update(Tonic::Synth& synth)
         }
 
         synth.setParameter(GetDutyCycleParameterName(), newDuty);
+        m_oscillator.SetDuty(newDuty);
         m_dutyChanged = false;
     }
 
@@ -138,6 +164,8 @@ void PulseChannel::Reset()
     m_volumeChanged = false;
     m_enabledChanged = false;
     m_nbUpdateCalls = 0;
+    
+    m_oscillator.Reset();
 }
 
 void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
@@ -210,6 +238,12 @@ uint8_t PulseChannel::ReadByte(uint16_t addr) const
     return 0x00;
 }
 
+double PulseChannel::GetSample()
+{
+    double currentVolume = (double)m_volumeReg.initialVolume / 0x0F;
+    return m_enabled ? currentVolume * m_oscillator.Tick() : 0.0;
+}
+
 void PulseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
     visitor.WriteValue(m_sweepReg);
@@ -271,6 +305,7 @@ void PulseChannel::Restart()
     SetEnable(true);
     m_lengthCounter = 64;
     m_nbUpdateCalls = 0;
+    m_oscillator.Reset();
 }
 
 void PulseChannel::CheckOverflow(uint16_t newFreq)

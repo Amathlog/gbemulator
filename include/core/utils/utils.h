@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <cstdio>
 #include <core/cartridge.h>
+#include <core/utils/visitor.h>
 #include <filesystem>
 
 #ifdef _WIN32
@@ -120,5 +121,73 @@ namespace Utils
 
         return found ? curr : exePath;
     }
+
+    template<typename T, size_t N>
+    class MyStaticQueue
+    {
+    public:
+        bool Empty() const
+        {
+            return m_empty;
+        }
+
+        void Push(const T& item)
+        {
+            assert(m_empty || m_lastIndex != m_firstIndex && "Queue overflow");
+
+            m_buffer[m_lastIndex++] = item;
+
+            if (m_lastIndex == N)
+            {
+                m_lastIndex = 0;
+            }
+
+            m_empty = false;
+        }
+
+        T Pop()
+        {
+            assert(!m_empty && "Queue empty");
+            T item = std::move(m_buffer[m_firstIndex++]);
+
+            if (m_firstIndex == N)
+            {
+                m_firstIndex = 0;
+            }
+
+            m_empty = m_firstIndex == m_lastIndex;
+
+            return item;
+        }
+
+        void SerializeTo(IWriteVisitor& visitor) const
+        {
+            visitor.WriteContainer(m_buffer);
+            visitor.WriteValue(m_firstIndex);
+            visitor.WriteValue(m_lastIndex);
+            visitor.WriteValue(m_empty);
+        }
+
+        void DeserializeFrom(IReadVisitor& visitor)
+        {
+            visitor.ReadContainer(m_buffer);
+            visitor.ReadValue(m_firstIndex);
+            visitor.ReadValue(m_lastIndex);
+            visitor.ReadValue(m_empty);
+        }
+        
+        void Clear()
+        {
+            m_firstIndex = 0;
+            m_lastIndex = 0;
+            m_empty = true;
+        }
+
+    private:
+        std::array<T, N> m_buffer;
+        size_t m_firstIndex = 0;
+        size_t m_lastIndex = 0;
+        bool m_empty = true;
+    };
 }
 }

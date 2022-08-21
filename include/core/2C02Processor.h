@@ -2,6 +2,7 @@
 
 #include <core/serializable.h>
 #include <core/constants.h>
+#include <core/utils/utils.h>
 #include <array>
 #include <queue>
 
@@ -169,8 +170,8 @@ namespace GBEmulator
         GBCPaletteAccess m_gbcOBJPaletteAccess;
 
         // FIFOs
-        std::queue<PixelFIFO> m_bgFifo;
-        std::queue<PixelFIFO> m_objFifo;
+        Utils::MyStaticQueue<PixelFIFO, 160> m_bgFifo;
+        Utils::MyStaticQueue<PixelFIFO, 160> m_objFifo;
 
         std::array<PixelFIFO, 8> m_currentFetchedBGPixels;
         std::array<PixelFIFO, 8> m_currentFetchedOBJPixels;

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <core/bus.h>
+#include <core/apu.h>
 #include <core/constants.h>
 #include <core/cartridge.h>
 #include <core/utils/fileVisitor.h>
@@ -80,6 +81,10 @@ int main(int argc, char** argv) {
                     start_point - previous_point)
                     .count();
                 previous_point = std::chrono::high_resolution_clock::now();
+                if (timeSpent > 16666ll)
+                {
+                    std::cout << "This frame took longer: " << timeSpent << "ms" << std::endl;
+                }
                 timeSpent = std::min<int64_t>(timeSpent, 16666ll);
                 
                 double cpuPeriodUS = 1000000.0 / bus.GetCurrentFrequency();
@@ -99,6 +104,9 @@ int main(int argc, char** argv) {
                 mainWindow.Update(true);
             }
         }
+
+        bus.GetAPU().Stop();
+        audioSystem.Enable(false);
     }
 
     GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(SaveGameMessage());

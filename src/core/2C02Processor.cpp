@@ -278,12 +278,8 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_gbcOBJPaletteAccess.shouldIncr);
     visitor.WriteValue(m_gbcOBJPaletteAccess.address);
 
-    // Need to copy here.
-    auto bgFifoCopy = m_bgFifo;
-    auto objFifoCopy = m_objFifo;
-
-    visitor.WriteQueue(bgFifoCopy);
-    visitor.WriteQueue(objFifoCopy);
+    m_bgFifo.SerializeTo(visitor);
+    m_objFifo.SerializeTo(visitor);
 
     visitor.WriteValue(m_lineDots);
     visitor.WriteValue(m_scanlines);
@@ -324,8 +320,8 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_gbcOBJPaletteAccess.shouldIncr);
     visitor.ReadValue(m_gbcOBJPaletteAccess.address);
 
-    visitor.ReadQueue(m_bgFifo);
-    visitor.ReadQueue(m_objFifo);
+    m_bgFifo.DeserializeFrom(visitor);
+    m_objFifo.DeserializeFrom(visitor);
 
     visitor.ReadValue(m_lineDots);
     visitor.ReadValue(m_scanlines);
@@ -365,8 +361,8 @@ void Processor2C02::Reset()
     m_gbcBGPaletteAccess.Reset();
     m_gbcOBJPaletteAccess.Reset();
 
-    Utils::ClearContainer(m_bgFifo);
-    Utils::ClearContainer(m_objFifo);
+    m_bgFifo.Clear();
+    m_objFifo.Clear();
 
     m_lineDots = 0;
     m_scanlines = 0;
@@ -457,21 +453,19 @@ inline void Processor2C02::DebugRenderTileIds()
 
 inline void Processor2C02::RenderPixelFifos()
 {
-    if (m_bgFifo.empty() && m_objFifo.empty())
+    if (m_bgFifo.Empty() && m_objFifo.Empty())
         return;
 
     PixelFIFO bgPixel;
-    if (!m_bgFifo.empty())
+    if (!m_bgFifo.Empty())
     {
-        bgPixel = m_bgFifo.front();
-        m_bgFifo.pop();
+        bgPixel = m_bgFifo.Pop();
     }
 
     PixelFIFO objPixel;
-    if (!m_objFifo.empty())
+    if (!m_objFifo.Empty())
     {
-        objPixel = m_objFifo.front();
-        m_objFifo.pop();
+        objPixel = m_objFifo.Pop();
     }
 
     unsigned screenIndex = 3 * (m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel);
@@ -714,11 +708,11 @@ void Processor2C02::OriginalPixelFetcher()
     }
     // Push when ready
     default:
-        if (m_bgFifo.empty())
+        if (m_bgFifo.Empty())
         {
             for (auto i = 0; i < m_currentNbPixelsToRender; ++i)
             {
-                m_bgFifo.push(m_currentFetchedBGPixels[i]);
+                m_bgFifo.Push(m_currentFetchedBGPixels[i]);
             }
             m_currentStagePixelFetcher = 0;
             m_currentX += m_currentNbPixelsToRender;
@@ -855,12 +849,12 @@ void Processor2C02::SimplifiedPixelFetcher()
         if (shouldDrawWindow && i + 7 >= m_wX)
         {
             // Window pixel
-            m_bgFifo.push(windowPixels[i + 7 - m_wX]);
+            m_bgFifo.Push(windowPixels[i + 7 - m_wX]);
         }
         else
         {   
             // BG pixels
-            m_bgFifo.push(bgPixels[i]);
+            m_bgFifo.Push(bgPixels[i]);
         }
     }
 
@@ -916,7 +910,7 @@ void Processor2C02::SimplifiedPixelFetcher()
     if (shouldDrawObj)
     {
         for (uint8_t i = 0; i < 160; ++i)
-            m_objFifo.push(spritePixels[i]);
+            m_objFifo.Push(spritePixels[i]);
     }
 }
 
@@ -1077,8 +1071,8 @@ void Processor2C02::Clock()
         // OAM scan is done, go to mode 3.
         // Also clear the FIFOs
         m_lcdStatus.mode = 3;
-        Utils::ClearContainer(m_bgFifo);
-        Utils::ClearContainer(m_objFifo);
+        m_bgFifo.Clear();
+        m_objFifo.Clear();
         m_currentLinePixel = 0;
     }
 
