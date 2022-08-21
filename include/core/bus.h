@@ -40,6 +40,9 @@ namespace GBEmulator
     class Bus : public ISerializable
     {
     public:
+        // Allow the CPU to access variables directly
+        friend Z80Processor;
+
         Bus();
 
         // Not copyable

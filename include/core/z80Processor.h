@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <array>
 #include <string>
+#include <map>
 
 namespace GBEmulator
 {
@@ -99,6 +100,9 @@ namespace GBEmulator
         void ConnectBus(Bus* bus) { m_bus = bus; }
 
         bool IsIMEEnabled() const { return m_IMEEnabled; }
+        size_t GetNbInstructionsExecuted() const { return m_nbInstructionsExecuted; }
+        const auto& GetOpcodeCount() const { return m_opcodeCount; }
+        void ResetInstructionCount() { m_nbInstructionsExecuted = 0; m_opcodeCount.fill(0); }
 
     private:
         uint8_t ReadByte(uint16_t addr);
@@ -188,6 +192,9 @@ namespace GBEmulator
         uint16_t m_PC;
 
         uint8_t m_cycles = 0;
+
+        size_t m_nbInstructionsExecuted = 0;
+        std::array<size_t, 256> m_opcodeCount;
 
         // IME flags
         bool m_IMEScheduled = false;

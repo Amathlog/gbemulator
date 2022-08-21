@@ -39,13 +39,8 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
 {
     uint8_t data = 0;
 
-    // First try to read from the cartridge, if it returns true, it's done
-    if (m_cartridge && m_cartridge->ReadByte(addr, data, readOnly))
-    {
-        // Nothing to do
-    }
     // VRAM zone
-    else if (addr >= 0x8000 && addr < 0xA000)
+    if (addr >= 0x8000 && addr < 0xA000)
     {
         // VRAM banks are 8kB in size
         data = m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)];
@@ -153,19 +148,19 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
         // Interupt Enable Register (IE)
         data = m_IE.flag;
     }
+    // Try to read from the cartridge, if it returns true, it's done
+    else if (m_cartridge && m_cartridge->ReadByte(addr, data, readOnly))
+    {
+        // Nothing to do
+    }
 
     return data;
 }
 
 void Bus::WriteByte(uint16_t addr, uint8_t data)
 {
-    // First try to write from to cartridge, if it returns true, it's done
-    if (m_cartridge && m_cartridge->WriteByte(addr, data))
-    {
-        // Nothing to do
-    }
     // VRAM zone
-    else if (addr >= 0x8000 && addr < 0xA000)
+    if (addr >= 0x8000 && addr < 0xA000)
     {
         // VRAM banks are 8kB in size
         m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)] = data;
@@ -275,6 +270,11 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     {
         // Interupt Enable Register (IE)
         m_IE.flag = data & 0x1F;
+    }
+    // try to write from to cartridge, if it returns true, it's done
+    else if (m_cartridge && m_cartridge->WriteByte(addr, data))
+    {
+        // Nothing to do
     }
 }
 

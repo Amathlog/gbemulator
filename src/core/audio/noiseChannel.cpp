@@ -1,6 +1,63 @@
 #include <core/audio/noiseChannel.h>
 
 using GBEmulator::NoiseChannel;
+using GBEmulator::NoiseOscillator;
+
+NoiseOscillator::NoiseOscillator()
+{
+    m_sampleRate = Tonic::sampleRate();
+}
+
+void NoiseOscillator::Reset()
+{
+    m_nbSamplesPerRandomValue = 1;
+    m_volume = 0.0;
+    m_shiftRegister = 1;
+    m_shiftRegLength = 15;
+    m_currentSample = 0;
+}
+
+void NoiseOscillator::SetFrequency(double freq)
+{
+    if (freq == 0)
+    {
+        m_nbSamplesPerRandomValue = 1;
+        m_volume = 0;
+    }
+    else
+    {
+        double signalPeriod = 1.0 / freq;
+        unsigned newValue = (unsigned)(floor(signalPeriod * m_sampleRate));
+        if (newValue != 0)
+        {
+            m_nbSamplesPerRandomValue = newValue;
+        }
+        else
+        {
+            m_nbSamplesPerRandomValue = 1;
+            m_volume = 0.0f;
+        }
+    }
+}
+
+double NoiseOscillator::GetSample()
+{
+    if (m_volume == 0.0)
+    {
+        return 0.0;
+    }
+
+    double value = m_shiftRegister & 0x0001 ? m_volume : -m_volume;
+    if (++m_currentSample == m_nbSamplesPerRandomValue)
+    {
+        m_currentSample = 0;
+        uint16_t otherFeedback = (m_shiftRegister >> 1) & 0x0001;
+        uint16_t feedback = (m_shiftRegister ^ otherFeedback) & 0x0001;
+        m_shiftRegister = (feedback << (m_shiftRegLength - 1)) | (m_shiftRegister >> 1);
+    }
+
+    return value;
+}
 
 NoiseChannel::NoiseChannel(Tonic::Synth& synth)
 {
@@ -22,6 +79,7 @@ void NoiseChannel::Update(Tonic::Synth& synth)
         {
             m_enabled = false;
             m_noise.setVolume(0);
+            m_oscillator.m_volume = 0.0;
         }
         else
         {
@@ -43,7 +101,7 @@ void NoiseChannel::Update(Tonic::Synth& synth)
             ++m_volumeReg.initialVolume;
         }
 
-        m_noise.setVolume((float)m_volumeReg.initialVolume / 0x0F);
+        SetVolume();
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
     }
 
@@ -61,6 +119,14 @@ void NoiseChannel::Reset()
 
     m_nbUpdateCalls = 0;
     m_noise.reset();
+    m_oscillator.Reset();
+}
+
+void NoiseChannel::SetVolume()
+{
+    float newVolume = (float)m_volumeReg.initialVolume / 0x0F;
+    m_noise.setVolume(newVolume);
+    m_oscillator.m_volume = newVolume;
 }
 
 void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
@@ -76,7 +142,7 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
         // Enveloppe
         m_volumeReg.reg = data;
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
-        m_noise.setVolume((float)m_volumeReg.initialVolume / 0x0F);
+        SetVolume();
         break;
     case 0xFF22:
         // Freq
@@ -89,7 +155,10 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
         if (m_initialReg.initial > 0 && !m_enabled)
         {
             m_enabled = true;
-            m_noise.setVolume((float)m_volumeReg.initialVolume / 0x0F);
+            if (m_lengthCounter == 0)
+                m_lengthCounter = 64;
+            m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
+            SetVolume();
         }
     default:
         break;
@@ -149,5 +218,7 @@ void NoiseChannel::SetFrequency()
     float ratio = m_polyReg.ratio == 0 ? 0.5f : float(m_polyReg.ratio);
 
     freq >>= (m_polyReg.freq + 1);
-    m_noise.setFreq(freq / ratio);
+    float newFreq = freq / ratio;
+    m_noise.setFreq(newFreq);
+    m_oscillator.SetFrequency(newFreq);
 }

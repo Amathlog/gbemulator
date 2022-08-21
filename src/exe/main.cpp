@@ -81,10 +81,46 @@ int main(int argc, char** argv) {
                     start_point - previous_point)
                     .count();
                 previous_point = std::chrono::high_resolution_clock::now();
-                if (timeSpent > 16666ll)
-                {
-                    std::cout << "This frame took longer: " << timeSpent << "ms" << std::endl;
-                }
+                //size_t nbInstructions = bus.GetCPU().GetNbInstructionsExecuted();
+                //if (timeSpent > 16666ll)
+                //{
+                //    std::cout << "This frame took longer: " << timeSpent << "ms; NbInstructions = " << nbInstructions<< std::endl;
+
+                //    const auto& OpcodeCount = bus.GetCPU().GetOpcodeCount();
+                //    std::array<std::pair<uint8_t, size_t>, 5> worstOnes;
+                //    worstOnes.fill({ 0, 0 });
+                //    for (auto i = 0; i < OpcodeCount.size(); ++i)
+                //    {
+                //        bool cascade = false;
+                //        size_t j = 0;
+
+                //        for (j = 0; j < 5; ++j)
+                //        {
+                //            if (worstOnes[j].second < OpcodeCount[i])
+                //            {
+                //                cascade = true;
+                //                break;
+                //            }
+                //        }
+
+                //        if (cascade)
+                //        {
+                //            for (size_t k = 4; k > j; --k)
+                //            {
+                //                worstOnes[k] = worstOnes[k - 1];
+                //            }
+
+                //            worstOnes[j] = { i, OpcodeCount[i] };
+                //        }
+                //    }
+
+                //    std::cout << "Worst ones:" << std::endl;
+                //    for (int i = 0; i < 5; ++i)
+                //    {
+                //        std::cout << "\tOpcode: " << +worstOnes[i].first << " ; Count: " << worstOnes[i].second << std::endl;
+                //    }
+                //}
+                //const_cast<GBEmulator::Z80Processor&>(bus.GetCPU()).ResetInstructionCount();
                 timeSpent = std::min<int64_t>(timeSpent, 16666ll);
                 
                 double cpuPeriodUS = 1000000.0 / bus.GetCurrentFrequency();

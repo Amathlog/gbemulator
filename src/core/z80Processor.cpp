@@ -55,6 +55,9 @@ void Z80Processor::Reset()
     m_IMEEnabled = false;
     m_IMEScheduled = false;
     m_isPaused = false;
+
+    m_nbInstructionsExecuted = 0;
+    m_opcodeCount.fill(0);
 }
 
 inline uint8_t Z80Processor::ReadByte(uint16_t addr)
@@ -98,6 +101,8 @@ bool Z80Processor::Clock()
     {
         uint8_t opcode = FetchByte();
         m_cycles = DecodeOpcodeAndCall(opcode);
+        m_nbInstructionsExecuted++;
+        m_opcodeCount[opcode]++;
     }
 
     m_cycles--;
@@ -312,16 +317,14 @@ uint8_t Z80Processor::HandleInterrupt()
         return 0;
     }
 
-    InterruptRegister IE;
-    IE.flag = ReadByte(IE_REG_ADDR);
+    InterruptRegister& IE = m_bus->m_IE;
 
     if (IE.flag == 0x00)
         return 0;
 
-    InterruptRegister IF;
-    IF.flag = ReadByte(IF_REG_ADDR);
+    InterruptRegister& IF = m_bus->m_IF;
 
-    bool interruptPending = (IF.flag & IE.flag) != 0x00;
+    bool interruptPending = (IF.flag & IE.flag) > 0;
 
     if (!interruptPending)
         return 0;
@@ -368,9 +371,6 @@ uint8_t Z80Processor::HandleInterrupt()
         IF.joypad = 0;
         jumpingAddress = 0x0060;
     }
-
-    // Write the flag back
-    WriteByte(IF_REG_ADDR, IF.flag);
 
     // Next instruction is push on the stack
     PushWordToStack(m_PC);

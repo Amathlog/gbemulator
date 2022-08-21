@@ -1,6 +1,52 @@
 #include <core/audio/waveChannel.h>
 
 using GBEmulator::WaveChannel;
+using GBEmulator::WaveOscillator;
+
+WaveOscillator::WaveOscillator()
+{
+    m_realSampleDuration = 1.0 / Tonic::sampleRate();
+}
+
+void WaveOscillator::Reset()
+{
+    m_ptr = 0;
+    m_sampleDuration = 0.0;
+    m_volume = 0.0;
+    m_elaspedTime = 0.0;
+}
+
+void WaveOscillator::SetFrequency(double freq)
+{
+    if (freq == 0.0)
+    {
+        m_sampleDuration = 0.0;
+        m_volume = 0.0;
+    }
+    else
+    {
+        m_sampleDuration = 1.0 / (freq * 32.0);
+    }
+}
+
+double WaveOscillator::GetSample()
+{
+    if (m_volume == 0.0)
+    {
+        return 0.0;
+    }
+
+    double value = m_volume * (double)m_data[m_ptr] / 0x0F;
+    m_elaspedTime += m_realSampleDuration;
+    if (m_elaspedTime >= m_sampleDuration)
+    {
+        // Equivalent to m_ptr = (m_ptr + 1) % 32
+        m_ptr = (m_ptr + 1) & 0x1F;
+        m_elaspedTime -= m_sampleDuration;
+    }
+
+    return value;
+}
 
 WaveChannel::WaveChannel(Tonic::Synth& synth)
 {
@@ -12,7 +58,7 @@ void WaveChannel::Update(Tonic::Synth& synth)
         return;
 
     // Should be called every 1/512 seconds
-    bool clock256Hz = m_nbUpdateCalls % 2 == 0;
+    bool clock256Hz = (m_nbUpdateCalls & 0x1) == 0;
 
     // Update every n / 256 seconds
     if (m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
@@ -21,6 +67,7 @@ void WaveChannel::Update(Tonic::Synth& synth)
         {
             m_enabled = false;
             m_wave.setVolume(0);
+            m_oscillator.m_volume = 0.0;
         }
         else
         {
@@ -40,6 +87,7 @@ void WaveChannel::Reset()
     m_enabled = false;
     m_freq = 0x0000;
     m_wave.reset();
+    m_oscillator.Reset();
 
     m_nbUpdateCalls = 0;
 }
@@ -83,14 +131,17 @@ void WaveChannel::WriteByte(uint16_t addr, uint8_t data)
         break;
     }
 
-    if (addr >= 0xFF30 && addr <= 0xFF3F)
+    if (addr >= 0xFF30 && addr <= 0xFF3F && !m_enabled)
     {
         // Wave Table. Only accessible if channel disabled
-        uint8_t position = (addr - 0xFF30) * 2;
+        uint8_t position = (addr - 0xFF30) << 1;
         uint8_t firstSample = (data & 0xF0) >> 4;
         uint8_t secondSample = data & 0x0F;
         m_wave.setSample(firstSample, position);
         m_wave.setSample(secondSample, position + 1);
+
+        m_oscillator.m_data[position] = firstSample;
+        m_oscillator.m_data[position + 1] = secondSample;
     }
 }
 
@@ -114,8 +165,8 @@ uint8_t WaveChannel::ReadByte(uint16_t addr) const
     {
         // Wave Table. Only accessible if channel disabled
         uint8_t position = (addr - 0xFF30) * 2;
-        uint8_t firstSample = m_wave.getSample(position);
-        uint8_t secondSample = m_wave.getSample(position + 1);
+        uint8_t firstSample = m_oscillator.m_data[position];
+        uint8_t secondSample = m_oscillator.m_data[position + 1];
         return ((firstSample & 0x0F) << 4) | (secondSample & 0x0F);
     }
 
@@ -146,7 +197,10 @@ void WaveChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
 
 void WaveChannel::SetFrequency()
 {
-    m_wave.setFreq(65536.0f / (2048 - m_freq));
+    double newFreq = 65536.0 / (2048 - m_freq);
+    m_wave.setFreq((float)newFreq);
+
+    m_oscillator.SetFrequency(newFreq);
 }
 
 void WaveChannel::SetVolume()
@@ -172,12 +226,16 @@ void WaveChannel::SetVolume()
     }
 
     m_wave.setVolume(newVolume);
+    m_oscillator.m_volume = newVolume;
 }
 
 void WaveChannel::Restart()
 {
     //m_enabled = true;
-    m_lengthCounter = 0xFF;
+    m_oscillator.Reset();
+    if (m_lengthCounter == 0)
+        m_lengthCounter = 0xFF;
+
     SetFrequency();
     SetVolume();
     m_wave.resetPosition();

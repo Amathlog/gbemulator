@@ -68,7 +68,7 @@ void APU::Clock()
     bool shouldEmitSample = std::ceil(m_nbCycles * audioRatio) < std::ceil((m_nbCycles + 1) * audioRatio);
     if (shouldEmitSample && !m_useTonic)
     {
-        double sample = (m_channel1.GetSample() + m_channel2.GetSample()) / 2.0;
+        double sample = (m_channel1.GetSample() + m_channel2.GetSample() + m_channel3.GetSample() + m_channel4.GetSample()) / 4.0;
         m_internalBuffer[m_bufferPtr++] = (float)sample;
         m_internalBuffer[m_bufferPtr++] = (float)sample;
         

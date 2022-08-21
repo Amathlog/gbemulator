@@ -9,6 +9,24 @@
 
 namespace GBEmulator
 {
+    class NoiseOscillator
+    {
+    public:
+        NoiseOscillator();
+        void Reset();
+        void SetFrequency(double freq);
+
+        double GetSample();
+
+        unsigned m_nbSamplesPerRandomValue = 1;
+        double m_volume = 0.0;
+        uint16_t m_shiftRegister = 1;
+        uint8_t m_shiftRegLength = 15;
+        double m_sampleRate = 0.0;
+        unsigned m_currentSample = 0;
+    };
+
+
     class NoiseChannel
     {
     public:
@@ -29,8 +47,11 @@ namespace GBEmulator
         void SerializeTo(Utils::IWriteVisitor& visitor) const;
         void DeserializeFrom(Utils::IReadVisitor& visitor);
 
+        double GetSample() { return m_oscillator.GetSample(); }
+
     private:
         void SetFrequency();
+        void SetVolume();
 
         MyNoise m_noise;
         WavePatternRegister m_lengthReg;
@@ -39,6 +60,8 @@ namespace GBEmulator
         PolynomialCounterRegister m_polyReg;
 
         bool m_enabled = false;
+
+        NoiseOscillator m_oscillator;
 
         size_t m_nbUpdateCalls = 0;
         uint8_t m_lengthCounter = 0x00;

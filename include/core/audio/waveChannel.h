@@ -8,6 +8,24 @@
 
 namespace GBEmulator
 {
+    class WaveOscillator
+    {
+    public:
+        WaveOscillator();
+
+        void Reset();
+        double GetSample();
+
+        void SetFrequency(double freq);
+
+        std::array<uint8_t, 32> m_data;
+        uint8_t m_ptr = 0;
+        double m_sampleDuration = 0.0;
+        double m_elaspedTime = 0.0;
+        double m_volume = 0.0;
+        double m_realSampleDuration = 0.0;
+    };
+
     class WaveChannel
     {
     public:
@@ -28,6 +46,8 @@ namespace GBEmulator
         void SerializeTo(Utils::IWriteVisitor& visitor) const;
         void DeserializeFrom(Utils::IReadVisitor& visitor);
 
+        double GetSample() { return m_oscillator.GetSample(); }
+
     private:
         void SetFrequency();
         void SetVolume();
@@ -38,6 +58,8 @@ namespace GBEmulator
         FrequencyHighRegister m_freqMsbReg;
         uint8_t m_soundLength = 0x00;
         uint16_t m_freq = 0x0000;
+
+        WaveOscillator m_oscillator;
 
         bool m_enabled = false;
 

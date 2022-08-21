@@ -303,8 +303,13 @@ void PulseChannel::UpdateFreq()
 void PulseChannel::Restart()
 {
     SetEnable(true);
-    m_lengthCounter = 64;
+    if (m_lengthCounter == 0)
+        m_lengthCounter = 64;
+
     m_nbUpdateCalls = 0;
+    m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
+    m_sweepCounter = m_sweepReg.time;
+    m_volumeChanged = true;
     m_oscillator.Reset();
 }
 
