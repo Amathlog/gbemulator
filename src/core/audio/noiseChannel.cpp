@@ -5,38 +5,28 @@ using GBEmulator::NoiseOscillator;
 
 NoiseOscillator::NoiseOscillator()
 {
-    m_sampleRate = Tonic::sampleRate();
+    m_realSampleDuration = 1.0 / Tonic::sampleRate();
 }
 
 void NoiseOscillator::Reset()
 {
-    m_nbSamplesPerRandomValue = 1;
-    m_volume = 0.0;
     m_shiftRegister = 1;
     m_shiftRegLength = 15;
-    m_currentSample = 0;
+    m_sampleDuration = 0.0;
+    m_volume = 0.0;
+    m_elaspedTime = 0.0;
 }
 
 void NoiseOscillator::SetFrequency(double freq)
 {
-    if (freq == 0)
+    if (freq == 0.0)
     {
-        m_nbSamplesPerRandomValue = 1;
-        m_volume = 0;
+        m_sampleDuration = 0.0;
+        m_volume = 0.0;
     }
     else
     {
-        double signalPeriod = 1.0 / freq;
-        unsigned newValue = (unsigned)(floor(signalPeriod * m_sampleRate));
-        if (newValue != 0)
-        {
-            m_nbSamplesPerRandomValue = newValue;
-        }
-        else
-        {
-            m_nbSamplesPerRandomValue = 1;
-            m_volume = 0.0f;
-        }
+        m_sampleDuration = 1.0 / freq;
     }
 }
 
@@ -48,9 +38,10 @@ double NoiseOscillator::GetSample()
     }
 
     double value = m_shiftRegister & 0x0001 ? m_volume : -m_volume;
-    if (++m_currentSample == m_nbSamplesPerRandomValue)
+    m_elaspedTime += m_realSampleDuration;
+    if (m_elaspedTime >= m_sampleDuration)
     {
-        m_currentSample = 0;
+        m_elaspedTime -= m_sampleDuration;
         uint16_t otherFeedback = (m_shiftRegister >> 1) & 0x0001;
         uint16_t feedback = (m_shiftRegister ^ otherFeedback) & 0x0001;
         m_shiftRegister = (feedback << (m_shiftRegLength - 1)) | (m_shiftRegister >> 1);
@@ -221,4 +212,6 @@ void NoiseChannel::SetFrequency()
     float newFreq = freq / ratio;
     m_noise.setFreq(newFreq);
     m_oscillator.SetFrequency(newFreq);
+
+    m_oscillator.m_shiftRegLength = m_polyReg.width == 1 ? 7 : 15;
 }

@@ -18,12 +18,12 @@ namespace GBEmulator
 
         double GetSample();
 
-        unsigned m_nbSamplesPerRandomValue = 1;
+        double m_elaspedTime = 0.0;
         double m_volume = 0.0;
         uint16_t m_shiftRegister = 1;
         uint8_t m_shiftRegLength = 15;
-        double m_sampleRate = 0.0;
-        unsigned m_currentSample = 0;
+        double m_realSampleDuration = 0.0;
+        double m_sampleDuration = 0.0;
     };
 
 
