@@ -50,6 +50,9 @@ void APU::Reset()
     m_channel2.Reset();
     m_channel3.Reset();
     m_channel4.Reset();
+
+    m_circularBuffer.Reset();
+    m_bufferPtr = 0;
 }
 
 void APU::Clock()

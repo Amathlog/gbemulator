@@ -53,17 +53,17 @@ void Timer::WriteByte(uint16_t addr, uint8_t data)
         switch(m_timerControl & 0x03)
         {
         case 0:
-            m_timerControlValue = 1024; // CPU Clock / 1024
+            m_timerControlValue = 1024 - 1; // CPU Clock / 1024
             break;
         case 1:
-            m_timerControlValue = 16; // CPU Clock / 16
+            m_timerControlValue = 16 - 1; // CPU Clock / 16
             break;
         case 2:
-            m_timerControlValue = 64; // CPU Clock / 64
+            m_timerControlValue = 64 - 1; // CPU Clock / 64
             break;
         case 3:
         default:
-            m_timerControlValue = 256; // CPU Clock / 256
+            m_timerControlValue = 256 - 1; // CPU Clock / 256
             break;
         }
 
@@ -90,7 +90,7 @@ bool Timer::Clock()
 
     bool hasOverflow = false;
 
-    if (m_nbClocks % m_timerControlValue == 0)
+    if ((m_nbClocks & m_timerControlValue) == 0)
     {
         if (++m_timerCounter == 0x00) // overflow after increment
         {

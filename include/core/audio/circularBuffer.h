@@ -100,6 +100,14 @@ namespace GBEmulator
 
         void Stop() { m_stop = true; }
 
+        void Reset()
+        {
+            m_stop = false;
+            m_nbReadableSamples = 0;
+            m_writerPtr = 0;
+            m_readerPtr = 0;
+        }
+
     private:
         mutable std::mutex m_lock;
         size_t m_maxSize;
