@@ -278,45 +278,23 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     }
 }
 
-// Return true if it has terminated the latest instruction (or there is nothing to do)
+// Return true if the PPU finished a frame during the clock.
 bool Bus::Clock()
 {
     // No cartridge mean nothing to do
     if (!m_cartridge)
-        return true;
+        return false;
 
-    bool res = false;
+    bool frameFinished = false;
 
-    // CPU is clocked every 4 ticks
-    if ((m_nbCycles & (size_t)(0x3)) == 0)
+    // Clock the PPU 4 times
+    for (auto i = 0; i < 4; ++i)
     {
-        // If we are in DMA, copy data. CPU is still clocked
-        if (m_isInDMA)
-        {
-            uint16_t destAddress = 0xFE00 | (m_currentDMAAddress & 0x00FF);
-            WriteByte(destAddress, ReadByte(m_currentDMAAddress));
-            m_currentDMAAddress++;
-            if ((m_currentDMAAddress & 0x00FF) == 0xE0)
-            {
-                m_isInDMA = false;
-            }
-        }
-        res = m_cpu.Clock();
-
-        if (res)
-        {
-            m_instLogger->WriteCurrentState();
-        }
-
-        if (m_runToAddress != 0xFFFFFFFF && (uint32_t)m_cpu.GetPC() == m_runToAddress)
-        {
-            m_runToAddress = 0xFFFFFFFF;
-            m_isInBreakMode = true;
-        }
+        m_ppu.Clock();
+        frameFinished |= m_ppu.IsFrameComplete();
     }
 
     m_apu.Clock();
-    m_ppu.Clock();
 
     // Update the controller and the interrupt
     if (m_controller)
@@ -328,14 +306,41 @@ bool Bus::Clock()
         m_controller->Update();
     }
 
-    if (m_timer.Clock())
+    // Clock the timer 4 times
+    for (auto i = 0; i < 4; ++i)
     {
-        m_IF.timer = 1;
+        if (m_timer.Clock())
+        {
+            m_IF.timer = 1;
+        }
+    }
+
+    // If we are in DMA, copy data. CPU is still clocked
+    if (m_isInDMA)
+    {
+        uint16_t destAddress = 0xFE00 | (m_currentDMAAddress & 0x00FF);
+        WriteByte(destAddress, ReadByte(m_currentDMAAddress));
+        m_currentDMAAddress++;
+        if ((m_currentDMAAddress & 0x00FF) == 0xE0)
+        {
+            m_isInDMA = false;
+        }
+    }
+
+    if (m_cpu.Clock())
+    {
+        m_instLogger->WriteCurrentState();
+    }
+
+    if (m_runToAddress != 0xFFFFFFFF && (uint32_t)m_cpu.GetPC() == m_runToAddress)
+    {
+        m_runToAddress = 0xFFFFFFFF;
+        m_isInBreakMode = true;
     }
 
     m_nbCycles++;
 
-    return res;
+    return frameFinished;
 }
 
 void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const

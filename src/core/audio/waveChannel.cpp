@@ -1,11 +1,12 @@
 #include <core/audio/waveChannel.h>
+#include <core/constants.h>
 
 using GBEmulator::WaveChannel;
 using GBEmulator::WaveOscillator;
 
 WaveOscillator::WaveOscillator()
 {
-    m_realSampleDuration = 1.0 / Tonic::sampleRate();
+    m_realSampleDuration = 1.0 / GBEmulator::APU_SAMPLE_RATE_D;
 }
 
 void WaveOscillator::Reset()

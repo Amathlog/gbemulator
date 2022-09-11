@@ -45,14 +45,6 @@ namespace GBEmulator
 
         Bus();
 
-        // Not copyable
-        Bus(const Bus&) = delete;
-        Bus& operator=(const Bus&) = delete;
-
-        // Movable
-        Bus(Bus&& other) = default;
-        Bus& operator=(Bus&& other) = default;
-
         void SerializeTo(Utils::IWriteVisitor& visitor) const override;
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
@@ -64,6 +56,7 @@ namespace GBEmulator
         void SetRunToAddress(uint16_t address);
         void SetBreakOnStart(bool value) { m_shouldBreakOnStart = value; }
 
+        // Clock a CPU cycle
         bool Clock();
 
         // Read a single byte of data
@@ -92,7 +85,7 @@ namespace GBEmulator
         void ChangeMode(Mode newMode);
         Mode GetMode() const { return m_mode; }
 
-        double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? CPU_DOUBLE_SPEED_FREQ_D : CPU_SINGLE_SPEED_FREQ_D; }
+        //double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? CPU_DOUBLE_SPEED_FREQ_D : CPU_SINGLE_SPEED_FREQ_D; }
 
     private:        
         Z80Processor m_cpu;

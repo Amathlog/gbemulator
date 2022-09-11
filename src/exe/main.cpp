@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 
     GBEmulator::Bus bus;
 
-    GBAudioSystem audioSystem(bus, syncWithAudio, 2, 44100, 256);
+    GBAudioSystem audioSystem(bus, syncWithAudio, 2, GBEmulator::APU_SAMPLE_RATE, 256);
     audioSystem.Enable(enableAudioByDefault);
 
     GBEmulatorExe::CoreMessageService coreMessageService(bus, GBEmulator::Utils::GetExePath().string());
@@ -57,9 +57,9 @@ int main(int argc, char** argv) {
     }
 
     auto previous_point = std::chrono::high_resolution_clock::now();
-    constexpr bool showRealFPS = false;
+    constexpr bool showRealFPS = true;
     constexpr size_t nbSamples = 120;
-    // std::array<float, nbSamples> timeCounter;
+    std::array<float, nbSamples> timeCounter;
     size_t ptr = 0;
 
     {
@@ -123,17 +123,44 @@ int main(int argc, char** argv) {
                 //const_cast<GBEmulator::Z80Processor&>(bus.GetCPU()).ResetInstructionCount();
                 timeSpent = std::min<int64_t>(timeSpent, 16666ll);
                 
-                double cpuPeriodUS = 1000000.0 / bus.GetCurrentFrequency();
+                constexpr double cpuPeriodUS = 4.0 * 1000000.0 / GBEmulator::CPU_SINGLE_SPEED_FREQ_D;
                 size_t nbClocks = (size_t)(timeSpent / cpuPeriodUS);
                 if (!bus.IsInBreak()) {
                     for (auto i = 0; i < nbClocks; ++i) {
-                        bus.Clock();
-                        if (bus.GetPPU().IsFrameComplete())
+                        if (bus.Clock())
                              DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen().data(),
                              bus.GetPPU().GetScreen().size()));
 
                         if (bus.IsInBreak())
                             break;
+                    }
+                }
+
+                if constexpr (showRealFPS)
+                {
+                    auto end_point = std::chrono::high_resolution_clock::now();
+                    timeSpent = std::chrono::duration_cast<std::chrono::microseconds>(end_point - start_point).count();
+                    double ratio = (double)(timeSpent) / (cpuPeriodUS * nbClocks); // < 1 = faster than realtime
+                    timeCounter[ptr++] = 60.0f / (float)ratio;
+                    if (ptr == nbSamples)
+                    {
+                        ptr = 0;
+                        float res = 0;
+                        float min = 100000;
+                        float max = -1;
+                        for (auto x : timeCounter)
+                        {
+                            res += x;
+                            if (x < min)
+                            {
+                                min = x;
+                            }
+                            if (x > max)
+                            {
+                                max = x;
+                            }
+                        }
+                        std::cout << "Real FPS: " << res / nbSamples << "; Min: " << min << "; Max: " << max << std::endl;
                     }
                 }
 

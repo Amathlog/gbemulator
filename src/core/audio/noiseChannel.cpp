@@ -1,11 +1,12 @@
 #include <core/audio/noiseChannel.h>
+#include <core/constants.h>
 
 using GBEmulator::NoiseChannel;
 using GBEmulator::NoiseOscillator;
 
 NoiseOscillator::NoiseOscillator()
 {
-    m_realSampleDuration = 1.0 / Tonic::sampleRate();
+    m_realSampleDuration = 1.0 / GBEmulator::APU_SAMPLE_RATE_D;
 }
 
 void NoiseOscillator::Reset()

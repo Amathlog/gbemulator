@@ -42,7 +42,7 @@ namespace GBEmulator
         size_t m_bufferPtr = 0;
         CircularBuffer<float> m_circularBuffer;
 
-        double currentTime = 0.0;
+        double m_currentTime = 0.0;
         bool m_useTonic;
     };
 }

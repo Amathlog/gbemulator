@@ -8,6 +8,7 @@
 #include <cstring>
 #include <thread>
 #include <chrono>
+#include <cmath>
 
 class RtAudioError : public std::exception{  
     public:  

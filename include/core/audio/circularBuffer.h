@@ -17,19 +17,26 @@ namespace GBEmulator
             m_buffer.resize(maxSize);
         }
 
+        ~CircularBuffer() = default;
+
         void ReadData(void* outData, size_t bytesSize)
         {
+            constexpr bool fillMissingWith0 = true;
+
             size_t nbElements = bytesSize / sizeof(T);
             bool said = false;
 
-            while (!m_stop && nbElements > m_nbReadableSamples)
+            if constexpr (!fillMissingWith0)
             {
-                if (!said)
+                while (!m_stop && nbElements > m_nbReadableSamples)
                 {
-                    //std::cout << "Reader too fast" << std::endl;
-                    said = false;
+                    if (!said)
+                    {
+                        //std::cout << "Reader too fast" << std::endl;
+                        said = false;
+                    }
+                    // Waiting
                 }
-                // Waiting
             }
 
             if (m_stop)
@@ -38,6 +45,12 @@ namespace GBEmulator
             }
 
             std::scoped_lock lock(m_lock);
+            if constexpr (fillMissingWith0)
+            {
+                size_t missingSamples = nbElements > m_nbReadableSamples ? nbElements - m_nbReadableSamples : 0;
+                nbElements -= missingSamples;
+                std::memset((char*)outData + (nbElements * sizeof(T)), 0, sizeof(T) * missingSamples);
+            }
             size_t targetPtr = m_readerPtr + nbElements;
 
             if (targetPtr >= m_maxSize)
@@ -109,7 +122,7 @@ namespace GBEmulator
         }
 
     private:
-        mutable std::mutex m_lock;
+        std::mutex m_lock;
         size_t m_maxSize;
         std::vector<T> m_buffer;
 

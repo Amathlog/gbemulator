@@ -44,4 +44,7 @@ namespace GBEmulator
     constexpr size_t CPU_DOUBLE_SPEED_FREQ = 8388608; // 8.388608 MHz
     constexpr double CPU_DOUBLE_SPEED_FREQ_D = (double)(CPU_DOUBLE_SPEED_FREQ);
 
+    // Audio data
+    constexpr unsigned APU_SAMPLE_RATE = 41100;
+    constexpr double APU_SAMPLE_RATE_D = (double)(APU_SAMPLE_RATE);
 }

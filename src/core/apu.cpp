@@ -14,6 +14,7 @@ APU::APU()
     m_synth.setOutputGen(((m_channel1.GetWave() + m_channel2.GetWave()) * 0.75f + m_channel3.GetWave() + m_channel4.GetWave()) / 4.0f);
 
     m_useTonic = false;
+    m_currentTime = 0.0;
 }
 
 APU::~APU()
@@ -53,13 +54,14 @@ void APU::Reset()
 
     m_circularBuffer.Reset();
     m_bufferPtr = 0;
+    m_currentTime = 0;
 }
 
 void APU::Clock()
 {
-    // APU is clock at 4.194304 MHz.
-    // We clock the channels at 512 Hz, so every 8192 cycles
-    if ((m_nbCycles & (size_t)0x1FFF) == 0)
+    // APU is clock at 1.048576 MHz.
+    // We clock the channels at 512 Hz, so every 2048 cycles
+    if ((m_nbCycles & (size_t)0x07FF) == 0)
     {
         m_channel1.Update(m_synth);
         m_channel2.Update(m_synth);
@@ -67,25 +69,29 @@ void APU::Clock()
         m_channel4.Update(m_synth);
     }
 
-    double audioRatio = Tonic::sampleRate() / GBEmulator::CPU_SINGLE_SPEED_FREQ_D;
-    bool shouldEmitSample = std::ceil(m_nbCycles * audioRatio) < std::ceil((m_nbCycles + 1) * audioRatio);
-    if (shouldEmitSample && !m_useTonic)
+    constexpr double sampleTimePerCPUCycle = 4.0 / (GBEmulator::CPU_SINGLE_SPEED_FREQ_D);
+    constexpr double sampleTimePerSystemSample = 1.0 / GBEmulator::APU_SAMPLE_RATE_D;
+
+    if (!m_useTonic)
     {
-        double sample = (m_channel1.GetSample() + m_channel2.GetSample() + m_channel3.GetSample() + m_channel4.GetSample()) / 4.0;
-        m_internalBuffer[m_bufferPtr++] = (float)sample;
-        m_internalBuffer[m_bufferPtr++] = (float)sample;
-        
-        if (m_bufferPtr == m_internalBuffer.max_size())
+        m_currentTime += sampleTimePerCPUCycle;
+        if (m_currentTime >= sampleTimePerSystemSample)
         {
-            m_bufferPtr = 0;
-            m_circularBuffer.WriteData(m_internalBuffer.data(), m_internalBuffer.max_size() * sizeof(float));
+            m_currentTime -= sampleTimePerSystemSample;
+
+            double sample = (m_channel1.GetSample() + m_channel2.GetSample() + m_channel3.GetSample() + m_channel4.GetSample()) / 4.0;
+            m_internalBuffer[m_bufferPtr++] = (float)sample;
+            m_internalBuffer[m_bufferPtr++] = (float)sample;
+            
+            if (m_bufferPtr == m_internalBuffer.max_size())
+            {
+                m_bufferPtr = 0;
+                m_circularBuffer.WriteData(m_internalBuffer.data(), m_internalBuffer.max_size() * sizeof(float));
+            }
         }
     }
 
-    if (++m_nbCycles == 4194304)
-    {
-        m_nbCycles = 0;
-    }
+    ++m_nbCycles;
 }
 
 void APU::WriteByte(uint16_t addr, uint8_t data)

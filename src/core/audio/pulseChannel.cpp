@@ -1,4 +1,5 @@
 #include <core/audio/pulseChannel.h>
+#include <core/constants.h>
 
 using GBEmulator::PulseChannel;
 using GBEmulator::PulseOscillator;
@@ -14,7 +15,7 @@ double PulseOscillator::Tick()
     if (m_duty == 0.0 || m_freq == 0.0)
         return 0.0;
 
-    m_phase += m_freq / m_sampleRate;
+    m_phase += m_freq / GBEmulator::APU_SAMPLE_RATE_D;
 
     while (m_phase > 1.0)
         m_phase -= 1.0f;
