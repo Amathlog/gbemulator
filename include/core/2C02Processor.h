@@ -157,6 +157,7 @@ namespace GBEmulator
         uint8_t m_lYC = 0x00;
         uint8_t m_wY = 0x00;
         uint8_t m_wX = 0x00;
+        uint8_t m_windowStalling = 0x00;
 
         GBPaletteData m_gbBGPalette;
         GBPaletteData m_gbOBJ0Palette;

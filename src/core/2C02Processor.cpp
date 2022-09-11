@@ -350,6 +350,7 @@ void Processor2C02::Reset()
     m_lYC = 0x00;
     m_wX = 0x00;
     m_wY = 0x00;
+    m_windowStalling = 0x00;
 
     m_gbBGPalette.flags = 0x00;
     m_gbOBJ0Palette.flags = 0x00;
@@ -801,45 +802,59 @@ void Processor2C02::SimplifiedPixelFetcher()
             }
         }
     };
+
+    bool BGWindowEnabled = isGB ? m_lcdRegister.BGAndWindowPriority > 0 : true;
     
     // First fetch all the pixel colors for the BG
     uint8_t yBG = m_scanlines + m_scrollY;
     // There can be at most 167 pixels fetched (fetch more even if we don't use them)
     std::array<PixelFIFO, 167> bgPixels;
-    for (uint8_t x = 0; x < 160;)
+    if (BGWindowEnabled)
     {
-        uint8_t realX = x + (m_scrollX & 0xF8) + m_initialBGXScroll;
-        uint8_t startX = x;
-
-        if (x == 0 && m_initialBGXScroll != 0)
+        for (uint8_t x = 0; x < 160;)
         {
-            x += 8 - m_initialBGXScroll;
-        }
-        else
-        {
-            x += 8;
-        }
+            uint8_t realX = x + (m_scrollX & 0xF8) + m_initialBGXScroll;
+            uint8_t startX = x;
 
-        uint16_t tileAddr = fetchTileAddress(realX, yBG, false);
-        pixelFetch(tileAddr, bgPixels, startX, x, false);
+            if (x == 0 && m_initialBGXScroll != 0)
+            {
+                x += 8 - m_initialBGXScroll;
+            }
+            else
+            {
+                x += 8;
+            }
+
+            uint16_t tileAddr = fetchTileAddress(realX, yBG, false);
+            pixelFetch(tileAddr, bgPixels, startX, x, false);
+        }
     }
 
     // Do the same for the window, only if it is enabled
-    uint8_t yWindow = m_scanlines - m_wY;
-    uint8_t nbWindowTiles = (uint8_t)std::ceil((166 - m_wX) / 8.f);
     std::array<PixelFIFO, 167> windowPixels;
-    bool shouldDrawWindow = m_lcdRegister.windowEnable && (m_scanlines >= m_wY);
+    bool shouldDrawWindow = m_lcdRegister.windowEnable && (m_scanlines >= m_wY) && BGWindowEnabled;
     if (shouldDrawWindow)
     {
-        uint8_t xWindow = 0;
-        for (uint8_t i = 0; i < nbWindowTiles; ++i)
+        // Check also that we are in the right wX range. If not, we stall the window
+        if (m_wX > 166)
         {
-            uint16_t tileAddr = fetchTileAddress(xWindow, yWindow, true);
+            m_windowStalling++;
+            shouldDrawWindow = false;
+        }
+        else
+        {
+            uint8_t xWindow = 0;
+            uint8_t yWindow = m_scanlines - m_wY - m_windowStalling;
+            uint8_t nbWindowTiles = (uint8_t)std::ceil((166 - m_wX) / 8.f);
+            for (uint8_t i = 0; i < nbWindowTiles; ++i)
+            {
+                uint16_t tileAddr = fetchTileAddress(xWindow, yWindow, true);
 
-            uint8_t endX = (i == 0 && m_wX < 7) ? 7 - m_wX : xWindow + 8;
+                uint8_t endX = (i == 0 && m_wX < 7) ? 7 - m_wX : xWindow + 8;
 
-            pixelFetch(tileAddr, windowPixels, xWindow, endX, false);
-            xWindow = endX;
+                pixelFetch(tileAddr, windowPixels, xWindow, endX, false);
+                xWindow = endX;
+            }
         }
     }
 
@@ -851,10 +866,15 @@ void Processor2C02::SimplifiedPixelFetcher()
             // Window pixel
             m_bgFifo.Push(windowPixels[i + 7 - m_wX]);
         }
-        else
+        else if (BGWindowEnabled)
         {   
             // BG pixels
             m_bgFifo.Push(bgPixels[i]);
+        }
+        else
+        {
+            // Disabled so color 0
+            m_bgFifo.Push(PixelFIFO());
         }
     }
 
@@ -878,7 +898,7 @@ void Processor2C02::SimplifiedPixelFetcher()
             if (entry.attributes.yFlip)
             {
                 // In case of yFlip, we need to reverse the offset
-                yOffset = objSize - yOffset;
+                yOffset = objSize - yOffset - 1;
             }
 
             if (m_lcdRegister.objSize == 0)
@@ -916,10 +936,12 @@ void Processor2C02::SimplifiedPixelFetcher()
 
 void Processor2C02::Clock()
 {
+    // Only set the interrupt once, the exact cycle it becomes true.
+    if (m_lY == m_lYC && m_lcdStatus.lYcEqualLY == 0)
+        SetInteruptFlag(InteruptSource::LYC);
+
     // Update the status
     m_lcdStatus.lYcEqualLY = m_lY == m_lYC;
-    if (m_lcdStatus.lYcEqualLY)
-        SetInteruptFlag(InteruptSource::LYC);
 
     m_isFrameComplete = false;
     if (m_scanlines <= 143)
@@ -1047,6 +1069,7 @@ void Processor2C02::Clock()
         {
             // Start a new frame, with OAM scan (mode 2)
             m_scanlines = 0;
+            m_windowStalling = 0;
 
             // Re-enable the LCD at a start of a new frame, if it is enabled.
             m_isDisabled = m_lcdRegister.enable == 0;
