@@ -65,32 +65,29 @@ void NoiseChannel::Update(Tonic::Synth& synth)
     bool clock64Hz = m_nbUpdateCalls % 8 == 7;
 
     // Update every n / 256 seconds
-    if (m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
+    if (m_initialReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
-        if (m_initialReg.lengthEnable)
+        if (m_enabled)
         {
             m_enabled = false;
             m_noise.setVolume(0);
             m_oscillator.m_volume = 0.0;
-        }
-        else
-        {
-            m_lengthCounter = m_lengthReg.length;
+            m_volume = 0;
         }
     }
 
     // Enveloppe updated every n / 64 seconds
     if (m_volumeReg.nbEnveloppeSweep != 0 && clock64Hz && --m_volumeCounter == 0)
     {
-        if (m_volumeReg.enveloppeDirection == 0 && m_volumeReg.initialVolume > 0)
+        if (m_volumeReg.enveloppeDirection == 0 && m_volume > 0)
         {
             // Decrease
-            --m_volumeReg.initialVolume;
+            --m_volume;
         }
-        else if (m_volumeReg.enveloppeDirection == 1 && m_volumeReg.initialVolume < 0x0F)
+        else if (m_volumeReg.enveloppeDirection == 1 && m_volume < 0x0F)
         {
             // Increase
-            ++m_volumeReg.initialVolume;
+            ++m_volume;
         }
 
         SetVolume();
@@ -109,6 +106,7 @@ void NoiseChannel::Reset()
     m_lengthCounter = 0;
     m_volumeCounter = 0x00;
     m_enabled = false;
+    m_volume = 0;
 
     m_nbUpdateCalls = 0;
     m_noise.reset();
@@ -117,7 +115,8 @@ void NoiseChannel::Reset()
 
 void NoiseChannel::SetVolume()
 {
-    float newVolume = (float)m_volumeReg.initialVolume / 0x0F;
+    float newVolume = (float)m_volume / 0x0F;
+
     m_noise.setVolume(newVolume);
     m_oscillator.m_volume = newVolume;
 }
@@ -126,18 +125,20 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
 {
     switch (addr)
     {
-    case 0xFF19:
+    case 0xFF1F:
         // Not used
         break;
     case 0xFF20:
         // Length
         m_lengthReg.reg = data;
-        m_lengthCounter = m_lengthReg.length;
+        m_lengthCounter = 64 - m_lengthReg.length;
         break;
     case 0xFF21:
         // Enveloppe
         m_volumeReg.reg = data;
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
+        m_volume = m_volumeReg.initialVolume;
+        SetEnable(m_volumeReg.initialVolume > 0);
         SetVolume();
         break;
     case 0xFF22:
@@ -148,12 +149,13 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0xFF23:
         // Initial
         m_initialReg.reg = data;
-        if (m_initialReg.initial > 0 && !m_enabled)
+        if (m_initialReg.initial > 0)
         {
             m_enabled = true;
             if (m_lengthCounter == 0)
                 m_lengthCounter = 64;
             m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
+            m_volume = m_volumeReg.initialVolume;
             SetVolume();
         }
     default:
@@ -196,6 +198,7 @@ void NoiseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_volumeCounter);
     visitor.WriteValue(m_enabled);
     visitor.WriteValue(m_nbUpdateCalls);
+    visitor.WriteValue(m_volume);
 }
 
 void NoiseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -208,6 +211,7 @@ void NoiseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_volumeCounter);
     visitor.ReadValue(m_enabled);
     visitor.ReadValue(m_nbUpdateCalls);
+    visitor.ReadValue(visitor);
 }
 
 void NoiseChannel::SetFrequency()

@@ -73,6 +73,7 @@ namespace GBEmulator
         uint8_t m_lengthCounter = 0;
         uint8_t m_sweepCounter = 0;
         uint8_t m_volumeCounter = 0;
+        uint8_t m_volume = 0;
 
         bool m_enabled = false;
         bool m_frequencyChanged = false;

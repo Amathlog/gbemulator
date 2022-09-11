@@ -7,10 +7,18 @@
 
 using GBEmulatorExe::FindRomsWindow;
 
+FindRomsWindow::FindRomsWindow()
+{
+    m_root = GBEmulator::Utils::GetRootPath();
+}
+
 void FindRomsWindow::DrawInternal()
 {
     if (m_allRoms.empty())
         RefreshRoms();
+
+    std::filesystem::path currentParent = m_root;
+    std::string currentIndent = "";
 
     for (auto& file : m_allRoms)
     {
@@ -23,7 +31,7 @@ void FindRomsWindow::DrawInternal()
         {
             file.selected = false;
             m_open = false;
-            DispatchMessageServiceSingleton::GetInstance().Push(LoadNewGameMessage(file.fullPath));
+            DispatchMessageServiceSingleton::GetInstance().Push(LoadNewGameMessage(file.fullPath.string()));
         }
     }
 }
@@ -32,8 +40,6 @@ void FindRomsWindow::RefreshRoms()
 {
     m_allRoms.clear();
     int index = 0;
-
-    std::filesystem::path root = GBEmulator::Utils::GetRootPath();
 
     auto findRoms = [this, &index](const std::filesystem::path& path)
     {
@@ -49,7 +55,7 @@ void FindRomsWindow::RefreshRoms()
             if (extension == ".gb" || extension == ".gbc")
             {
                 FileEntry fileEntry;
-                fileEntry.fullPath = file.path().string();
+                fileEntry.fullPath = file.path();
                 fileEntry.filenameWithImguiTag = file.path().filename().string() + "##" + std::to_string(index++);
                 fileEntry.selected = false;
                 m_allRoms.push_back(std::move(fileEntry));
@@ -58,6 +64,11 @@ void FindRomsWindow::RefreshRoms()
     };
 
     // Hard coded paths
-    findRoms(root / "roms");
-    findRoms(root / "tests");
+    findRoms(m_root / "roms");
+    findRoms(m_root / "tests");
+
+    std::sort(m_allRoms.begin(), m_allRoms.end(), [](const FileEntry& a, const FileEntry& b)
+    {
+        return a.fullPath.compare(b.fullPath) < 0;
+    });
 }

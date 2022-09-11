@@ -56,7 +56,7 @@ namespace GBEmulator
         MyWave m_wave;
         WaveVolumeRegister m_volumeReg;
         FrequencyHighRegister m_freqMsbReg;
-        uint8_t m_soundLength = 0x00;
+        uint16_t m_soundLength = 0x0000;
         uint16_t m_freq = 0x0000;
 
         WaveOscillator m_oscillator;
@@ -64,6 +64,6 @@ namespace GBEmulator
         bool m_enabled = false;
 
         size_t m_nbUpdateCalls = 0;
-        uint8_t m_lengthCounter = 0x00;
+        uint16_t m_lengthCounter = 0x0000;
     };
 }

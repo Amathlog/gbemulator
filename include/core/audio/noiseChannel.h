@@ -66,5 +66,6 @@ namespace GBEmulator
         size_t m_nbUpdateCalls = 0;
         uint8_t m_lengthCounter = 0x00;
         uint8_t m_volumeCounter = 0x00;
+        uint8_t m_volume = 0x00;
     };
 }

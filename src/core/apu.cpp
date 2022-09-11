@@ -60,7 +60,7 @@ void APU::Reset()
     m_channel3.Reset();
     m_channel4.Reset();
 
-    m_circularBuffer.Reset();
+    m_circularBuffer.Stop();
     m_bufferPtr = 0;
     m_currentTime = 0;
     m_vinRegister.reg = 0x00;
@@ -96,9 +96,34 @@ void APU::Clock()
         {
             m_currentTime -= sampleTimePerSystemSample;
 
-            double sample = (m_channel1.GetSample() + m_channel2.GetSample() + m_channel3.GetSample() + m_channel4.GetSample()) / 4.0;
-            m_internalBuffer[m_bufferPtr++] = (float)sample;
-            m_internalBuffer[m_bufferPtr++] = (float)sample;
+            double channel1Sample = m_channel1.GetSample();
+            double channel2Sample = m_channel2.GetSample();
+            double channel3Sample = m_channel3.GetSample();
+            double channel4Sample = m_channel4.GetSample();
+
+            // SO1 terminal - Right
+            double SO1Sample = 0.0;
+            SO1Sample = channel1Sample * m_outputTerminalRegister.channel1ToSO1 +
+                channel2Sample * m_outputTerminalRegister.channel2ToSO1 +
+                channel3Sample * m_outputTerminalRegister.channel3ToSO1 +
+                channel4Sample * m_outputTerminalRegister.channel4ToSO1;
+
+            // Multiply by 0.25 to get the mean of all the samples and by the master volume (between 0 and 7)
+            SO1Sample *= (double)m_vinRegister.SO1OutputLevel / 7.0 * 0.25;
+
+            // SO2 terminal - Left
+            double SO2Sample = 0.0;
+            SO2Sample = channel1Sample * m_outputTerminalRegister.channel1ToSO2 +
+                channel2Sample * m_outputTerminalRegister.channel2ToSO2 +
+                channel3Sample * m_outputTerminalRegister.channel3ToSO2 +
+                channel4Sample * m_outputTerminalRegister.channel4ToSO2;
+
+            // Multiply by 0.25 to get the mean of all the samples and by the master volume (between 0 and 7)
+            SO2Sample *= (double)m_vinRegister.SO2OutputLevel / 7.0 * 0.25;
+
+            // Verify it is the right order
+            m_internalBuffer[m_bufferPtr++] = (float)SO1Sample;
+            m_internalBuffer[m_bufferPtr++] = (float)SO2Sample;
             
             if (m_bufferPtr == m_internalBuffer.max_size())
             {
@@ -145,7 +170,21 @@ void APU::WriteByte(uint16_t addr, uint8_t data)
     }
     else if (addr == 0xFF26)
     {
-        m_allSoundsOn = (data & 0x80) > 0;
+        bool allSoundsOn = (data & 0x80) > 0;
+
+        if (allSoundsOn != m_allSoundsOn)
+        {
+            if (allSoundsOn)
+            {
+                m_circularBuffer.Reset();
+            }
+            else
+            {
+                m_circularBuffer.Stop();
+            }
+        }
+
+        m_allSoundsOn = allSoundsOn;
 
         if (!m_allSoundsOn)
         {

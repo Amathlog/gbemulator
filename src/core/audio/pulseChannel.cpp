@@ -66,15 +66,11 @@ void PulseChannel::Update(Tonic::Synth& synth)
     bool clock64Hz = m_nbUpdateCalls % 8 == 7;
 
     // Update every n / 256 seconds
-    if (m_enabled && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
+    if (m_freqMsbReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
-        if (m_freqMsbReg.lengthEnable)
+        if (m_enabled)
         {
             SetEnable(false);
-        }
-        else
-        {
-            m_lengthCounter = m_waveReg.length;
         }
     }
 
@@ -85,22 +81,24 @@ void PulseChannel::Update(Tonic::Synth& synth)
     }
 
     // Enveloppe updated every n / 64 seconds
-    if (m_enabled && m_volumeReg.nbEnveloppeSweep != 0 && clock64Hz && --m_volumeCounter == 0)
+    if (m_volumeCounter > 0 && clock64Hz && --m_volumeCounter == 0)
     {
-        if (m_volumeReg.enveloppeDirection == 0 && m_volumeReg.initialVolume > 0)
+        if (m_volumeReg.enveloppeDirection == 0 && m_volume > 0)
         {
             // Decrease
-            --m_volumeReg.initialVolume;
+            --m_volume;
             m_volumeChanged = true;
         }
-        else if (m_volumeReg.enveloppeDirection == 1 && m_volumeReg.initialVolume < 0x0F)
+        else if (m_volumeReg.enveloppeDirection == 1 && m_volume < 0x0F)
         {
             // Increase
-            ++m_volumeReg.initialVolume;
+            ++m_volume;
             m_volumeChanged = true;
         }
 
-        m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
+        // Reload only if we are still in the range
+        if (m_volume > 0 && m_volume < 0x0F)
+            m_volumeCounter = m_volumeReg.nbEnveloppeSweep == 0 ? 8 : m_volumeReg.nbEnveloppeSweep;
     }
 
     if (m_frequencyChanged)
@@ -139,7 +137,7 @@ void PulseChannel::Update(Tonic::Synth& synth)
 
     if (m_volumeChanged)
     {
-        synth.setParameter(GetEnveloppeOutputParameterName(), (float)m_volumeReg.initialVolume / 0x0F);
+        synth.setParameter(GetEnveloppeOutputParameterName(), (float)m_volume / 0x0F);
         m_volumeChanged = false;
     }
 
@@ -159,6 +157,7 @@ void PulseChannel::Reset()
     m_enabled = false;
     m_frequency = 0.0;
     m_combinedFreq = 0x0000;
+    m_volume = 0;
 
     m_frequencyChanged = false;
     m_dutyChanged = false;
@@ -184,14 +183,16 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0x01:
         // Wave
         m_waveReg.reg = data;
-        m_lengthCounter = m_waveReg.length;
+        m_lengthCounter = 64 - m_waveReg.length;
         m_dutyChanged = true;
         break;
     case 0x02:
         // Enveloppe
         m_volumeReg.reg = data;
-        m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
+        m_volumeCounter = m_volumeReg.nbEnveloppeSweep == 0 ? 8 : m_volumeReg.nbEnveloppeSweep;
+        m_volume = m_volumeReg.initialVolume;
         m_volumeChanged = true;
+        SetEnable(m_volumeReg.initialVolume > 0);
         break;
     case 0x3:
         // Freq lsb
@@ -242,7 +243,7 @@ uint8_t PulseChannel::ReadByte(uint16_t addr) const
 
 double PulseChannel::GetSample()
 {
-    double currentVolume = (double)m_volumeReg.initialVolume / 0x0F;
+    double currentVolume = (double)m_volume / 0x0F;
     return m_enabled ? currentVolume * m_oscillator.Tick() : 0.0;
 }
 
@@ -265,6 +266,7 @@ void PulseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_enabledChanged);
     visitor.WriteValue(m_volumeChanged);
     visitor.WriteValue(m_nbUpdateCalls);
+    visitor.WriteValue(m_volume);
 }
 
 void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -286,6 +288,7 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_enabledChanged);
     visitor.ReadValue(m_volumeChanged);
     visitor.ReadValue(m_nbUpdateCalls);
+    visitor.ReadValue(m_volume);
 }
 
 void PulseChannel::UpdateFreq()
@@ -311,6 +314,7 @@ void PulseChannel::Restart()
     m_nbUpdateCalls = 0;
     m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
     m_sweepCounter = m_sweepReg.time;
+    m_volume = m_volumeReg.initialVolume;
     m_volumeChanged = true;
     m_oscillator.Reset();
 }

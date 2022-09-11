@@ -62,18 +62,11 @@ void WaveChannel::Update(Tonic::Synth& synth)
     bool clock256Hz = (m_nbUpdateCalls & 0x1) == 0;
 
     // Update every n / 256 seconds
-    if (m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
+    if (m_freqMsbReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
-        if (m_freqMsbReg.lengthEnable)
-        {
-            m_enabled = false;
-            m_wave.setVolume(0);
-            m_oscillator.m_volume = 0.0;
-        }
-        else
-        {
-            m_lengthCounter = m_soundLength;
-        }
+        m_enabled = false;
+        m_wave.setVolume(0);
+        m_oscillator.m_volume = 0.0;
     }
 
     m_nbUpdateCalls++;
@@ -106,7 +99,7 @@ void WaveChannel::WriteByte(uint16_t addr, uint8_t data)
     case 0xFF1B:
         // Sound length
         m_soundLength = data;
-        m_lengthCounter = m_soundLength;
+        m_lengthCounter = 256 - m_soundLength;
         break;
     case 0xFF1C:
     {
@@ -235,7 +228,7 @@ void WaveChannel::Restart()
     //m_enabled = true;
     m_oscillator.Reset();
     if (m_lengthCounter == 0)
-        m_lengthCounter = 0xFF;
+        m_lengthCounter = 256;
 
     SetFrequency();
     SetVolume();

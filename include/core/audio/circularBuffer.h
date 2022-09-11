@@ -41,7 +41,7 @@ namespace GBEmulator
 
             if (m_stop)
             {
-                return;
+                std::memset(outData, 0, sizeof(T) * nbElements);
             }
 
             std::scoped_lock lock(m_lock);
