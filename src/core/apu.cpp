@@ -34,6 +34,10 @@ void APU::SerializeTo(Utils::IWriteVisitor& visitor) const
     m_channel3.SerializeTo(visitor);
     m_channel4.SerializeTo(visitor);
     visitor.WriteValue(m_nbCycles);
+
+    visitor.WriteValue(m_vinRegister.reg);
+    visitor.WriteValue(m_outputTerminalRegister.reg);
+    visitor.WriteValue(m_allSoundsOn);
 }
 
 void APU::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -43,6 +47,10 @@ void APU::DeserializeFrom(Utils::IReadVisitor& visitor)
     m_channel3.DeserializeFrom(visitor);
     m_channel4.DeserializeFrom(visitor);
     visitor.ReadValue(m_nbCycles);
+
+    visitor.ReadValue(m_vinRegister.reg);
+    visitor.ReadValue(m_outputTerminalRegister.reg);
+    visitor.ReadValue(m_allSoundsOn);
 }
 
 void APU::Reset()
@@ -55,10 +63,19 @@ void APU::Reset()
     m_circularBuffer.Reset();
     m_bufferPtr = 0;
     m_currentTime = 0;
+    m_vinRegister.reg = 0x00;
+    m_outputTerminalRegister.reg = 0x00;
+    m_allSoundsOn = false;
 }
 
 void APU::Clock()
 {
+    // Nothing to do if sound is disabled
+    if (!m_allSoundsOn)
+    {
+        return;
+    }
+
     // APU is clock at 1.048576 MHz.
     // We clock the channels at 512 Hz, so every 2048 cycles
     if ((m_nbCycles & (size_t)0x07FF) == 0)
@@ -96,11 +113,17 @@ void APU::Clock()
 
 void APU::WriteByte(uint16_t addr, uint8_t data)
 {
+    if (!m_allSoundsOn && addr != 0xFF26)
+    {
+        // Can't access any register (except status) if sound is disabled
+        return;
+    }
+
     if (addr >= 0xFF10 && addr <= 0xFF14)
     {
         m_channel1.WriteByte(addr - 0xFF10, data);
     }
-    else if (addr >= 0xFF16 && addr <= 0xFF19)
+    else if (addr >= 0xFF15 && addr <= 0xFF19)
     {
         m_channel2.WriteByte(addr - 0xFF15, data);
     }
@@ -108,17 +131,31 @@ void APU::WriteByte(uint16_t addr, uint8_t data)
     {
         m_channel3.WriteByte(addr, data);
     }
-    else if (addr >= 0xFF20 && addr <= 0xFF23)
+    else if (addr >= 0xFF1F && addr <= 0xFF23)
     {
         m_channel4.WriteByte(addr, data);
     }
+    else if (addr == 0xFF24)
+    {
+        m_vinRegister.reg = data;
+    }
+    else if (addr == 0xFF25)
+    {
+        m_outputTerminalRegister.reg = data;
+    }
     else if (addr == 0xFF26)
     {
-        bool enable = (data & 0x80) > 0;
-        m_channel1.SetEnable(enable);
-        m_channel2.SetEnable(enable);
-        m_channel3.SetEnable(enable);
-        m_channel4.SetEnable(enable);
+        m_allSoundsOn = (data & 0x80) > 0;
+
+        if (!m_allSoundsOn)
+        {
+            m_channel1.Reset();
+            m_channel2.Reset();
+            m_channel3.Reset();
+            m_channel4.Reset();
+            m_vinRegister.reg = 0x00;
+            m_outputTerminalRegister.reg = 0x00;
+        }
     }
 }
 
@@ -128,21 +165,29 @@ uint8_t APU::ReadByte(uint16_t addr) const
     {
         return m_channel1.ReadByte(addr - 0xFF10);
     }
-    else if (addr >= 0xFF16 && addr <= 0xFF19)
+    else if (addr >= 0xFF15 && addr <= 0xFF19)
     {
         return m_channel2.ReadByte(addr - 0xFF15);
     }
-    else if ((addr >= 0xFF0A && addr <= 0xFF0E) || (addr >= 0xFF30 && addr <= 0xFF3F))
+    else if ((addr >= 0xFF1A && addr <= 0xFF1E) || (addr >= 0xFF30 && addr <= 0xFF3F))
     {
         return m_channel3.ReadByte(addr);
     }
-    else if (addr >= 0xFF20 && addr <= 0xFF23)
+    else if (addr >= 0xFF1F && addr <= 0xFF23)
     {
         return m_channel4.ReadByte(addr);
     }
+    else if (addr == 0xFF24)
+    {
+        return m_vinRegister.reg;
+    }
+    else if (addr == 0xFF25)
+    {
+        return m_outputTerminalRegister.reg;
+    }
     else if (addr == 0xFF26)
     {
-        uint8_t res = 0x00;
+        uint8_t res = 0x70;
         if (m_channel1.IsEnabled())
             res |= 0x01;
         if (m_channel2.IsEnabled())
@@ -151,6 +196,8 @@ uint8_t APU::ReadByte(uint16_t addr) const
             res |= 0x04;
         if (m_channel4.IsEnabled())
             res |= 0x08;
+        if (m_allSoundsOn)
+            res |= 0x80;
 
         return res;
     }

@@ -75,7 +75,8 @@ bool CoreMessageService::Push(const Message &message)
             if (!m_bus.IsInBreak())
                 return false;
             
-            while (!m_bus.Clock()){}
+            bool instDone = false;
+            while (!instDone){ m_bus.Clock(&instDone); }
             return true;
         }
         case DefaultDebugMessageType::BREAK_CONTINUE:

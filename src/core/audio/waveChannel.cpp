@@ -151,15 +151,15 @@ uint8_t WaveChannel::ReadByte(uint16_t addr) const
     switch (addr)
     {
     case 0xFF1A:
-        return m_enabled ? 0x80 : 0x00;
+        return m_enabled ? 0xFF : 0x7F;
     case 0xFF1B:
-        return m_soundLength;
+        return 0xFF;
     case 0xFF1C:
-        return m_volumeReg.reg;
+        return m_volumeReg.reg | 0x9F;
     case 0xFF1D:
-        return (uint8_t)(m_freq & 0x00FF);
+        return 0xFF;
     case 0xFF1E:
-        return m_freqMsbReg.reg;
+        return m_freqMsbReg.reg | 0xBF;
     }
 
     if (addr >= 0xFF30 && addr <= 0xFF3F && !m_enabled)
@@ -171,7 +171,7 @@ uint8_t WaveChannel::ReadByte(uint16_t addr) const
         return ((firstSample & 0x0F) << 4) | (secondSample & 0x0F);
     }
 
-    return 0x00;
+    return 0xFF;
 }
 
 void WaveChannel::SerializeTo(Utils::IWriteVisitor& visitor) const

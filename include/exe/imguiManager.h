@@ -31,6 +31,8 @@ namespace GBEmulatorExe
         bool ShouldClose() const { return m_closeRequested; }
         void ToggleMainMenu() { m_showMainMenu = !m_showMainMenu; }
 
+        bool IsBreakOnStart() const { return m_breakOnStart.value; }
+
         void Update();
 
     private:

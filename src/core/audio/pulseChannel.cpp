@@ -174,9 +174,12 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
     switch(addr)
     {
     case 0x00:
-        // Sweep
-        m_sweepReg.reg = data;
-        Sweep();
+        // Sweep (only channel 1)
+        if (m_number == 1)
+        {
+            m_sweepReg.reg = data;
+            Sweep();
+        }
         break;
     case 0x01:
         // Wave
@@ -215,22 +218,20 @@ uint8_t PulseChannel::ReadByte(uint16_t addr) const
     {
     case 0x00:
         // Sweep
-        return m_sweepReg.reg;
+        return m_number == 1 ? (m_sweepReg.reg | 0x80) : 0xFF;
     case 0x01:
         // Wave
-        return m_waveReg.reg;
+        return m_waveReg.reg | 0x3F;
     case 0x02:
         // Enveloppe
         return m_volumeReg.reg;
     case 0x03:
         // Freq lsb
-        return (uint8_t)(m_combinedFreq & 0x00FF);
+        return 0xFF;
     case 0x04:
     {
         // Freq Msb
-        FrequencyHighRegister regCopy = m_freqMsbReg;
-        regCopy.freqMsb = m_combinedFreq >> 8;
-        return m_freqMsbReg.reg;
+        return m_freqMsbReg.reg | 0xBF;
     }
     default:
         break;
@@ -320,7 +321,6 @@ void PulseChannel::CheckOverflow(uint16_t newFreq)
     {
         SetEnable(false);
         m_combinedFreq = 0;
-        m_sweepReg.time = 0;
     }
 }
 

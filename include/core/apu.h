@@ -36,6 +36,10 @@ namespace GBEmulator
         WaveChannel m_channel3;
         NoiseChannel m_channel4;
 
+        VinRegister m_vinRegister;
+        OutputTerminalRegister m_outputTerminalRegister;
+        bool m_allSoundsOn = false;
+
         size_t m_nbCycles = 0;
 
         std::array<float, 128> m_internalBuffer;

@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
     auto path = std::filesystem::path();
 
     // Mapper 000 also
-    //auto path = root / "tests" / "bgbtest.gb";
+    // path = root / "tests" / "external_roms" / "rom_singles" / "01-registers.gb";
 
     //path = root / "roms" / "SuperMarioLand.gb";
 
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     }
 
     auto previous_point = std::chrono::high_resolution_clock::now();
-    constexpr bool showRealFPS = true;
+    constexpr bool showRealFPS = false;
     constexpr size_t nbSamples = 120;
     std::array<float, nbSamples> timeCounter;
     size_t ptr = 0;
@@ -71,6 +71,11 @@ int main(int argc, char** argv) {
 
         mainWindow.SetUserData(&bus);
         mainWindow.ConnectController();
+
+        if (mainWindow.GetImguiManager()->IsBreakOnStart())
+        {
+            bus.BreakContinue();
+        }
 
         if (audioSystem.Initialize() || !enableAudioByDefault)
         {

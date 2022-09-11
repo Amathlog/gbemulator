@@ -57,7 +57,7 @@ namespace GBEmulator
         void SetBreakOnStart(bool value) { m_shouldBreakOnStart = value; }
 
         // Clock a CPU cycle
-        bool Clock();
+        bool Clock(bool* outInstDone = nullptr);
 
         // Read a single byte of data
         // Use the const version to read it or use readOnly flag to avoid alter the memory

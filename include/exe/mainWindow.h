@@ -28,6 +28,8 @@ namespace GBEmulatorExe
         // Need to be done after setting a bus
         void ConnectController();
 
+        const ImguiManager* GetImguiManager() const { return m_imguiManager.get(); }
+
     protected:
         void InternalUpdate(bool externalSync) override;
 

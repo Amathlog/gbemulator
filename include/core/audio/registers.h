@@ -76,4 +76,34 @@ namespace GBEmulator
 
         uint8_t reg = 0x00;
     };
+
+    union VinRegister
+    {
+        struct
+        {
+            uint8_t SO1OutputLevel : 3;
+            uint8_t outputVinToSO1 : 1;
+            uint8_t SO2OutputLevel : 3;
+            uint8_t outputVinToSO2 : 1;
+        };
+
+        uint8_t reg = 0x00;
+    };
+
+    union OutputTerminalRegister
+    {
+        struct
+        {
+            uint8_t channel1ToSO1 : 1;
+            uint8_t channel2ToSO1 : 1;
+            uint8_t channel3ToSO1 : 1;
+            uint8_t channel4ToSO1 : 1;
+            uint8_t channel1ToSO2 : 1;
+            uint8_t channel2ToSO2 : 1;
+            uint8_t channel3ToSO2 : 1;
+            uint8_t channel4ToSO2 : 1;
+        };
+
+        uint8_t reg = 0x00;
+    };
 }

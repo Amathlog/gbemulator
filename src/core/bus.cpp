@@ -93,14 +93,9 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
         // IF - Interupt flag
         data = m_IF.flag;
     }
-    else if (addr >= 0xFF10 && addr <= 0xFF26)
+    else if (addr >= 0xFF10 && addr <= 0xFF3F)
     {
-        // Sound
-        data = m_apu.ReadByte(addr);
-    }
-    else if (addr >= 0xFF30 && addr <= 0xFF3F)
-    {
-        // Waveform RAM
+        // Sound and Waveform RAM
         data = m_apu.ReadByte(addr);
     }
     else if (addr == 0xFF46)
@@ -214,14 +209,9 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
         // IF - Interupt flag
         m_IF.flag = data & 0x1F;
     }
-    else if (addr >= 0xFF10 && addr <= 0xFF26)
+    else if (addr >= 0xFF10 && addr <= 0xFF3F)
     {
-        // Sound
-        m_apu.WriteByte(addr, data);
-    }
-    else if (addr >= 0xFF30 && addr <= 0xFF3F)
-    {
-        // Waveform RAM
+        // Sound and Waveform RAM
         m_apu.WriteByte(addr, data);
     }
     else if (addr == 0xFF46)
@@ -279,7 +269,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
 }
 
 // Return true if the PPU finished a frame during the clock.
-bool Bus::Clock()
+bool Bus::Clock(bool* outInstDone)
 {
     // No cartridge mean nothing to do
     if (!m_cartridge)
@@ -329,6 +319,9 @@ bool Bus::Clock()
 
     if (m_cpu.Clock())
     {
+        if (outInstDone != nullptr)
+            *outInstDone = true;
+
         m_instLogger->WriteCurrentState();
     }
 

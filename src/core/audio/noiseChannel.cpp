@@ -105,6 +105,7 @@ void NoiseChannel::Reset()
     m_lengthReg.reg = 0x00;
     m_volumeReg.reg = 0x00;
     m_initialReg.reg = 0x00;
+    m_polyReg.reg = 0x00;
     m_lengthCounter = 0;
     m_volumeCounter = 0x00;
     m_enabled = false;
@@ -125,6 +126,9 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
 {
     switch (addr)
     {
+    case 0xFF19:
+        // Not used
+        break;
     case 0xFF20:
         // Length
         m_lengthReg.reg = data;
@@ -161,9 +165,11 @@ uint8_t NoiseChannel::ReadByte(uint16_t addr) const
 {
     switch (addr)
     {
+    case 0xFF1F:
+        return 0xFF;
     case 0xFF20:
         // Length
-        return m_lengthReg.reg;
+        return 0xFF;
     case 0xFF21:
         // Enveloppe
         return m_volumeReg.reg;
@@ -172,12 +178,12 @@ uint8_t NoiseChannel::ReadByte(uint16_t addr) const
         return m_polyReg.reg;
     case 0xFF23:
         // Initial
-        return m_initialReg.reg;
+        return m_initialReg.reg | 0xBF;
     default:
         break;
     }
 
-    return 0x00;
+    return 0xFF;
 }
 
 void NoiseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
