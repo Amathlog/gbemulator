@@ -87,6 +87,8 @@ namespace GBEmulator
         bool IsGBModeAvailable() const;
         bool IsGBCModeAvailable() const;
 
+        bool IsInDoubleSpeedMode() const { return m_isDoubleSpeedMode; }
+
         //double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? CPU_DOUBLE_SPEED_FREQ_D : CPU_SINGLE_SPEED_FREQ_D; }
 
     private:        

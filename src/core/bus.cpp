@@ -277,14 +277,21 @@ bool Bus::Clock(bool* outInstDone)
 
     bool frameFinished = false;
 
-    // Clock the PPU 4 times
-    for (auto i = 0; i < 4; ++i)
+    const unsigned numberOfPPUClocks = m_isDoubleSpeedMode ? 2 : 4;
+
+    // Clock the PPU 4 times in single speed, 2 times in double speed.
+    for (auto i = 0; i < numberOfPPUClocks; ++i)
     {
         m_ppu.Clock();
         frameFinished |= m_ppu.IsFrameComplete();
     }
 
-    m_apu.Clock();
+    // APU is clocked every cpu cycle in single speed,
+    // and every 2 cycles in double speed.
+    if (!m_isDoubleSpeedMode || (m_nbCycles & 0x1) == 0)
+    {
+        m_apu.Clock();
+    }
 
     // Update the controller and the interrupt
     if (m_controller)
@@ -296,7 +303,8 @@ bool Bus::Clock(bool* outInstDone)
         m_controller->Update();
     }
 
-    // Clock the timer 4 times
+    // Clock the timer always 4 times
+    // So in double speed mode it will be twice as fast
     for (auto i = 0; i < 4; ++i)
     {
         if (m_timer.Clock())

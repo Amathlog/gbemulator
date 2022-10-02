@@ -128,7 +128,9 @@ int main(int argc, char** argv) {
                 //const_cast<GBEmulator::Z80Processor&>(bus.GetCPU()).ResetInstructionCount();
                 timeSpent = std::min<int64_t>(timeSpent, 16666ll);
                 
-                constexpr double cpuPeriodUS = 4.0 * 1000000.0 / GBEmulator::CPU_SINGLE_SPEED_FREQ_D;
+                constexpr double cpuPeriodSingleSpeedUS = 4.0 * 1000000.0 / GBEmulator::CPU_SINGLE_SPEED_FREQ_D;
+                constexpr double cpuPeriodDoubleSpeedUS = 4.0 * 1000000.0 / GBEmulator::CPU_DOUBLE_SPEED_FREQ_D;
+                double cpuPeriodUS = bus.IsInDoubleSpeedMode() ? cpuPeriodDoubleSpeedUS : cpuPeriodSingleSpeedUS;
                 size_t nbClocks = (size_t)(timeSpent / cpuPeriodUS);
                 if (!bus.IsInBreak()) {
                     for (auto i = 0; i < nbClocks; ++i) {
