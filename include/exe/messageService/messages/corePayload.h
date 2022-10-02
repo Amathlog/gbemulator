@@ -17,7 +17,7 @@ namespace GBEmulatorExe
         LOAD_STATE,
         GET_MODE,
         CHANGE_MODE,
-        RESET
+        RESET,
     };
 
     class CorePayload : public Payload
@@ -34,5 +34,7 @@ namespace GBEmulatorExe
         std::string m_data;
         int m_saveStateNumber;
         GBEmulator::Mode m_mode;
+        bool m_GBModeEnabled;
+        bool m_GBCModeEnabled;
     };
 }

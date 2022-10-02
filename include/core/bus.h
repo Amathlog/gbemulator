@@ -84,6 +84,8 @@ namespace GBEmulator
         // Will reset the game
         void ChangeMode(Mode newMode);
         Mode GetMode() const { return m_mode; }
+        bool IsGBModeAvailable() const;
+        bool IsGBCModeAvailable() const;
 
         //double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? CPU_DOUBLE_SPEED_FREQ_D : CPU_SINGLE_SPEED_FREQ_D; }
 

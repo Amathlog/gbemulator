@@ -13,10 +13,11 @@ enum class FileVersion : int32_t
 {
     NoVersion = 0,
     Version_0_0_1 = 1,
+    Version_0_0_2 = 2,
     Version_0_1_0 = 1 << 8,
     Version_1_0_0 = 1 << 16,
     
-    CurrentVersion = Version_0_0_1,
+    CurrentVersion = Version_0_0_2,
 };
 
 class FileReadVisitor : public IReadVisitor

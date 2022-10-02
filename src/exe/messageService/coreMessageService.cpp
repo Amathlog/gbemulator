@@ -111,6 +111,8 @@ bool CoreMessageService::Pull(Message &message)
         {
         case DefaultCoreMessageType::GET_MODE:
             payload->m_mode = m_bus.GetMode();
+            payload->m_GBModeEnabled = m_bus.IsGBModeAvailable();
+            payload->m_GBCModeEnabled = m_bus.IsGBCModeAvailable();
             return true;
         }
     }

@@ -54,6 +54,8 @@ namespace GBEmulatorExe
 
         Format m_currentFormat = Format::ORIGINAL;
 
+        std::array<bool, 2> m_modes;
+
         std::array<bool, (size_t)Format::COUNT> m_changeFormats;
         
         inline static constexpr unsigned MAX_SAVE_STATES = 4;

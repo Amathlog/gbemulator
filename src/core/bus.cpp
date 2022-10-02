@@ -436,15 +436,29 @@ void Bus::Reset()
 
 void Bus::ChangeMode(Mode newMode)
 {
-    if (!m_cartridge)
-        return;
-
-    if (newMode == Mode::GB && m_cartridge->GetHeader().CGBOnly ||
-        newMode == Mode::GBC && !m_cartridge->GetHeader().supportCGBMode)
+    if ((newMode == Mode::GB && !IsGBModeAvailable()) ||
+        (newMode == Mode::GBC && !IsGBCModeAvailable()))
         return;
 
     m_mode = newMode;
-    Reset();
+
+    // No need to reset if we have no game loaded.
+    if (m_cartridge)
+        Reset();
+}
+
+bool Bus::IsGBModeAvailable() const
+{
+    // Return true if we have no cartridge to allow the user to change it
+    // before starting a game.
+    return m_cartridge ? !m_cartridge->GetHeader().CGBOnly : true;
+}
+
+bool Bus::IsGBCModeAvailable() const
+{
+    // Return true if we have no cartridge to allow the user to change it
+    // before starting a game.
+    return m_cartridge ? (m_cartridge->GetHeader().CGBOnly || m_cartridge->GetHeader().supportCGBMode) : true;
 }
 
 void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
@@ -452,15 +466,17 @@ void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
     if (!cartridge)
         return;
 
-    // Set the current mode to the highest supported
-    // GBC not supported yet
-    if (cartridge->GetHeader().CGBOnly)
-        return;
-
     m_cartridge = cartridge;
 
-    //m_mode = m_cartridge->GetHeader().supportCGBMode ? Mode::GBC : Mode::GB;
-    m_mode = Mode::GB;
+    // If the game supports both modes, let it. Otherwise, set it to the supported mode.
+    if (!IsGBModeAvailable())
+    {
+        m_mode = Mode::GBC;
+    }
+    else if (!IsGBCModeAvailable())
+    {
+        m_mode = Mode::GB;
+    }
 
     Reset();
 

@@ -163,6 +163,25 @@ void ImguiManager::Update()
                 ImGui::EndMenu();
             }
 
+            if (ImGui::BeginMenu("Mode"))
+            {
+                GetModeMessage message;
+                DispatchMessageServiceSingleton::GetInstance().Pull(message);
+                const CorePayload& payload = message.GetTypedPayload();
+
+                m_modes[(int)payload.m_mode] = true;
+
+                ImGui::BeginDisabled(!payload.m_GBModeEnabled);
+                ImGui::MenuItem("GB", nullptr, &m_modes[0]);
+                ImGui::EndDisabled();
+
+                ImGui::BeginDisabled(!payload.m_GBCModeEnabled);
+                ImGui::MenuItem("GBC", nullptr, &m_modes[1]);
+                ImGui::EndDisabled();
+
+                ImGui::EndMenu();
+            }
+
             // ImGui::MenuItem("Enable Audio", nullptr, &m_isSoundEnabled.value);
 
             ImGui::EndMenu();
@@ -213,6 +232,19 @@ void ImguiManager::Update()
             DispatchMessageServiceSingleton::GetInstance().Push(ChangeFormatMessage(m_currentFormat));
             break;
         }
+    }
+
+    // Check mode
+    if (m_modes[0] && m_modes[1])
+    {
+        GetModeMessage message;
+        DispatchMessageServiceSingleton::GetInstance().Pull(message);
+        const CorePayload& payload = message.GetTypedPayload();
+
+        ChangeModeMessage changeModeMessage(payload.m_mode == GBEmulator::Mode::GB ? GBEmulator::Mode::GBC : GBEmulator::Mode::GB);
+        DispatchMessageServiceSingleton::GetInstance().Push(changeModeMessage);
+
+        m_modes[(int)payload.m_mode] = false;
     }
 
     // Check reset
@@ -336,6 +368,11 @@ void ImguiManager::Serialize()
     visitor.WriteValue(m_isSoundEnabled.value);
     visitor.WriteValue(m_currentFormat);
     visitor.WriteValue(m_breakOnStart.value);
+
+    if (visitor.GetVersion() >= GBEmulator::Utils::FileVersion::Version_0_0_2)
+    {
+        visitor.WriteContainer(m_modes);
+    }
 }
 
 void ImguiManager::Deserialize()
@@ -370,4 +407,9 @@ void ImguiManager::Deserialize()
     visitor.ReadValue(m_isSoundEnabled.value);
     visitor.ReadValue(m_currentFormat);
     visitor.ReadValue(m_breakOnStart.value);
+
+    if (visitor.GetVersion() >= GBEmulator::Utils::FileVersion::Version_0_0_2)
+    {
+        visitor.ReadContainer(m_modes);
+    }
 }
