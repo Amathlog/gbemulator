@@ -50,6 +50,13 @@ void Z80Processor::Reset()
     m_SP = 0xFFFE;
     m_PC = 0x0100;
 
+    // When we reset, we set the accumulator to 0x10 if we are in GBC mode.
+    // A value of 0x11 would say that it is a GBA hardware, but we don't support this here.
+    if (m_bus->GetMode() == GBEmulator::Mode::GBC)
+    {
+        m_AF.A = 0x10;
+    }
+
     m_cycles = 0;
 
     m_IMEEnabled = false;
