@@ -24,6 +24,7 @@ void Z80Processor::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_IMEEnabled);
     visitor.WriteValue(m_IMEScheduled);
     visitor.WriteValue(m_isPaused);
+    visitor.WriteValue(m_isStopped);
 }
 
 void Z80Processor::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -39,6 +40,7 @@ void Z80Processor::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_IMEEnabled);
     visitor.ReadValue(m_IMEScheduled);
     visitor.ReadValue(m_isPaused);
+    visitor.ReadValue(m_isStopped);
 }
 
 void Z80Processor::Reset()
@@ -52,7 +54,7 @@ void Z80Processor::Reset()
 
     // When we reset, we set the accumulator to 0x10 if we are in GBC mode.
     // A value of 0x11 would say that it is a GBA hardware, but we don't support this here.
-    if (m_bus->GetMode() == GBEmulator::Mode::GBC)
+    if (m_bus && m_bus->GetMode() == GBEmulator::Mode::GBC)
     {
         m_AF.A = 0x10;
     }
@@ -339,6 +341,7 @@ uint8_t Z80Processor::HandleInterrupt()
     if (m_isPaused)
     {
         m_isPaused = false;
+        m_isStopped = false;
 
         // If IME == 0, we don't do anything and just resume the CPU
         if (!m_IMEEnabled)
@@ -1782,7 +1785,9 @@ uint8_t Z80Processor::STOP(uint8_t opcode)
     // Always read next byte
     FetchByte();
 
-    // TODO
+    m_isStopped = true;
+    m_isPaused = true;
+
     return 2;
 }
 

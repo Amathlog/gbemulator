@@ -104,6 +104,11 @@ namespace GBEmulator
         const auto& GetOpcodeCount() const { return m_opcodeCount; }
         void ResetInstructionCount() { m_nbInstructionsExecuted = 0; m_opcodeCount.fill(0); }
 
+        bool IsStopped() const { return m_isStopped; }
+
+        // Will be used by the bus to un-pause after a speed switch
+        void ForceUnpause() { m_isPaused = false; m_isStopped = false; }
+
     private:
         uint8_t ReadByte(uint16_t addr);
         void WriteByte(uint16_t addr, uint8_t data);
@@ -201,8 +206,11 @@ namespace GBEmulator
         bool m_IMEEnabled = false;
         bool m_isPaused = false;
 
+        // Special stop flag
+        bool m_isStopped = false;
+
         // Other members
-        Bus* m_bus;
+        Bus* m_bus = nullptr;
 
         using OpCall = uint8_t(Z80Processor::*)(uint8_t);
         using Z = Z80Processor;

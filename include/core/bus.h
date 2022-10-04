@@ -49,7 +49,6 @@ namespace GBEmulator
         void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
         void Reset();
-        Mode GetCurrentMode() const { return m_mode; }
 
         bool IsInBreak() const { return m_isInBreakMode; }
         void BreakContinue() { m_isInBreakMode = !m_isInBreakMode; }
@@ -89,8 +88,6 @@ namespace GBEmulator
 
         bool IsInDoubleSpeedMode() const { return m_isDoubleSpeedMode; }
 
-        //double GetCurrentFrequency() const { return m_isDoubleSpeedMode ? CPU_DOUBLE_SPEED_FREQ_D : CPU_SINGLE_SPEED_FREQ_D; }
-
     private:        
         Z80Processor m_cpu;
         Processor2C02 m_ppu;
@@ -100,6 +97,8 @@ namespace GBEmulator
 
         Mode m_mode = Mode::GB;
 
+        bool m_isPreparingForChangingSpeed = false;
+        uint16_t m_nbRemainingCyclesForChangingSpeed = 0x0000;
         bool m_isDoubleSpeedMode = false;
 
         std::vector<uint8_t> m_VRAM;

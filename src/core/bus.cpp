@@ -108,6 +108,19 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
         // LCD
         data = m_ppu.ReadByte(addr, readOnly);
     }
+    else if (addr == 0xFF4D && m_mode == Mode::GBC)
+    {
+        // Switching speed (GBC only)
+        if (m_isDoubleSpeedMode)
+        {
+            data |= 0x80;
+        }
+
+        if (m_isPreparingForChangingSpeed)
+        {
+            data |= 0x01;
+        }
+    }
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
         // VRAM bank select (GBC only)
@@ -226,6 +239,14 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
         // LCD
         m_ppu.WriteByte(addr, data);
     }
+    else if (addr == 0xFF4D && m_mode == Mode::GBC)
+    {
+        // Switching speed (GBC Only)
+        if (!!(data & 0x01))
+        {
+            m_isPreparingForChangingSpeed = true;
+        }
+    }
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
         // VRAM bank select (GBC only)
@@ -274,6 +295,11 @@ bool Bus::Clock(bool* outInstDone)
     // No cartridge mean nothing to do
     if (!m_cartridge)
         return false;
+
+    if (m_nbRemainingCyclesForChangingSpeed > 0 && --m_nbRemainingCyclesForChangingSpeed == 0)
+    {
+        m_cpu.ForceUnpause();
+    }
 
     bool frameFinished = false;
 
@@ -333,6 +359,14 @@ bool Bus::Clock(bool* outInstDone)
         m_instLogger->WriteCurrentState();
     }
 
+    // Check if we need to change speed
+    if (m_mode == Mode::GBC && m_isPreparingForChangingSpeed && m_cpu.IsStopped())
+    {
+        m_isPreparingForChangingSpeed = false;
+        m_isDoubleSpeedMode = !m_isDoubleSpeedMode;
+        m_nbRemainingCyclesForChangingSpeed = 2050; // Taken from PanDocs
+    }
+
     if (m_runToAddress != 0xFFFFFFFF && (uint32_t)m_cpu.GetPC() == m_runToAddress)
     {
         m_runToAddress = 0xFFFFFFFF;
@@ -355,6 +389,8 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     m_apu.SerializeTo(visitor);
     m_cartridge->SerializeTo(visitor);
 
+    visitor.WriteValue(m_mode);
+
     visitor.WriteContainer(m_VRAM);
     visitor.WriteValue(m_currentVRAMBank);
     visitor.WriteContainer(m_WRAM);
@@ -369,6 +405,10 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
 
     visitor.WriteValue(m_isInDMA);
     visitor.WriteValue(m_currentDMAAddress);
+
+    visitor.WriteValue(m_isPreparingForChangingSpeed);
+    visitor.WriteValue(m_nbRemainingCyclesForChangingSpeed);
+    visitor.WriteValue(m_isDoubleSpeedMode);
 }
 
 void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -381,6 +421,8 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
     m_ppu.DeserializeFrom(visitor);
     m_apu.DeserializeFrom(visitor);
     m_cartridge->DeserializeFrom(visitor);
+
+    visitor.ReadValue(m_mode);
 
     visitor.ReadContainer(m_VRAM);
     visitor.ReadValue(m_currentVRAMBank);
@@ -396,6 +438,10 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
 
     visitor.ReadValue(m_isInDMA);
     visitor.ReadValue(m_currentDMAAddress);
+
+    visitor.ReadValue(m_isPreparingForChangingSpeed);
+    visitor.ReadValue(m_nbRemainingCyclesForChangingSpeed);
+    visitor.ReadValue(m_isDoubleSpeedMode);
 }
 
 void Bus::Reset()

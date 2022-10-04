@@ -169,6 +169,9 @@ void ImguiManager::Update()
                 DispatchMessageServiceSingleton::GetInstance().Pull(message);
                 const CorePayload& payload = message.GetTypedPayload();
 
+                m_modes[0] = false;
+                m_modes[1] = false;
+
                 m_modes[(int)payload.m_mode] = true;
 
                 ImGui::BeginDisabled(!payload.m_GBModeEnabled);
