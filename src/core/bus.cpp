@@ -124,7 +124,9 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
         // VRAM bank select (GBC only)
-        // TODO
+        // All bits are set to 1, except bit 0, which correspond to the current 
+        // bank number
+        data = (0xFE | m_currentVRAMBank);
     }
     else if (addr == 0xFF50)
     {
@@ -144,7 +146,7 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     else if (addr == 0xFF70 && m_mode == Mode::GBC)
     {
         // WRAM Bank select (GBC only)
-        // TODO
+        data = m_currentWRAMBank;
     }
     else if (addr >= 0xFF80 && addr <= 0xFFFE)
     {
@@ -250,7 +252,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
         // VRAM bank select (GBC only)
-        // TODO
+        m_currentVRAMBank = (data & 0x01);
     }
     else if (addr == 0xFF50)
     {
@@ -270,7 +272,10 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr == 0xFF70 && m_mode == Mode::GBC)
     {
         // WRAM Bank select (GBC only)
-        // TODO
+        // A bank of 0 will select bank 1
+        m_currentWRAMBank = (data & 0x07);
+        if (m_currentWRAMBank == 0)
+            m_currentWRAMBank = 1;
     }
     else if (addr >= 0xFF80 && addr <= 0xFFFE)
     {
