@@ -809,10 +809,8 @@ void Processor2C02::SimplifiedPixelFetcher()
         return addr;
     };
 
-    const bool isGB = m_bus->GetMode() == Mode::GB;
-
-    auto pixelFetch = [this, isGB](uint16_t addr, auto& pixelArray, uint8_t startIndex, 
-                                    uint8_t endIndex, bool xFlip, const OAMEntry* oamEntry = nullptr)
+    auto pixelFetch = [this](uint16_t addr, auto& pixelArray, uint8_t startIndex, 
+                                uint8_t endIndex, bool xFlip, const OAMEntry* oamEntry = nullptr)
     {
         uint8_t tileLsb = ReadVRAM(addr, 0);
         uint8_t tileMsb = ReadVRAM(addr + 1, 0);
@@ -847,12 +845,12 @@ void Processor2C02::SimplifiedPixelFetcher()
             if (oamEntry != nullptr && color != 0)
             {
                 pixelArray[startIndex + i].bgPriority = oamEntry->attributes.bgAndWindowOverObj;
-                pixelArray[startIndex + i].palette = isGB ? oamEntry->attributes.paletteNumberGB : oamEntry->attributes.paletteNumberGBC;
+                pixelArray[startIndex + i].palette = !m_isGBC ? oamEntry->attributes.paletteNumberGB : oamEntry->attributes.paletteNumberGBC;
             }
         }
     };
 
-    bool BGWindowEnabled = isGB ? m_lcdRegister.BGAndWindowPriority > 0 : true;
+    bool BGWindowEnabled = !m_isGBC ? m_lcdRegister.BGAndWindowPriority > 0 : true;
     
     // First fetch all the pixel colors for the BG
     uint8_t yBG = m_scanlines + m_scrollY;
@@ -1023,7 +1021,7 @@ void Processor2C02::Clock()
 
             // On GB, OAM priority is given their X position. On GBC it's their order in the OAM
             // So on GB, sort the vector accroding to their X position
-            if (m_lineDots == 79 && !m_selectedOAM.empty() && m_bus->GetMode() == Mode::GB)
+            if (m_lineDots == 79 && !m_selectedOAM.empty() && !m_isGBC)
             {
                 std::sort(m_selectedOAM.begin(), m_selectedOAM.end(), [this](uint8_t a, uint8_t b) -> bool
                 {
