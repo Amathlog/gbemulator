@@ -68,12 +68,30 @@ Processor2C02::Processor2C02()
 {
     m_screen.resize(GB_NB_PIXELS * 3);
     m_selectedOAM.reserve(10); // Max of 10 sprites selected on a single line
+
+    // 16kB video ram
+    // Will be limited to 8kB in GB mode
+    m_VRAM.resize(0x4000);
+}
+
+inline uint8_t Processor2C02::ReadVRAM(uint16_t addr, uint8_t bankNumber)
+{
+    return m_VRAM[bankNumber * 0x2000 + (addr & 0x1FFF)];
+}
+
+inline void Processor2C02::WriteVRAM(uint16_t addr, uint8_t bankNumber, uint8_t data)
+{
+    m_VRAM[bankNumber * 0x2000 + (addr & 0x1FFF)] = data;
 }
 
 uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
 {
     uint8_t data = 0;
-    if (addr >= 0xFE00 && addr <= 0xFE9F)
+    if (addr >= 0x8000 && addr < 0xA000)
+    {
+        data = ReadVRAM(addr, m_currentVRAMBank);
+    }
+    else if (addr >= 0xFE00 && addr <= 0xFE9F)
     {
         // OAM
         // Index is selected using the 6 msb of the address lower nibble.
@@ -159,12 +177,23 @@ uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
     {
         data = ReadGBCPaletteData(m_gbcOBJPalettes, m_gbcOBJPaletteAccess);
     }
+    else if (addr == 0xFF4F)
+    {
+        // VRAM bank select (GBC only)
+        // All bits are set to 1, except bit 0, which correspond to the current 
+        // bank number
+        data = (0xFE | m_currentVRAMBank);
+    }
     return data;
 }
 
 void Processor2C02::WriteByte(uint16_t addr, uint8_t data)
 {
-    if (addr >= 0xFE00 && addr <= 0xFE9F)
+    if (addr >= 0x8000 && addr < 0xA000)
+    {
+        WriteVRAM(addr, m_currentVRAMBank, data);
+    }
+    else if (addr >= 0xFE00 && addr <= 0xFE9F)
     {
         // OAM
         // Index is selected using the 6 msb of the address lower nibble.
@@ -254,6 +283,11 @@ void Processor2C02::WriteByte(uint16_t addr, uint8_t data)
     {
         WriteGBCPaletteData(m_gbcOBJPalettes, m_gbcOBJPaletteAccess, data);
     }
+    else if (addr == 0xFF4F)
+    {
+        // VRAM bank select (GBC only)
+        m_currentVRAMBank = (data & 0x01);
+    }
 }
 
 void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
@@ -296,6 +330,9 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
 
     visitor.WriteContainer(m_OAM);
     visitor.WriteContainer(m_selectedOAM);
+
+    visitor.WriteContainer(m_VRAM);
+    visitor.WriteValue(m_currentVRAMBank);
 }
 
 void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -338,6 +375,9 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
 
     visitor.ReadContainer(m_OAM);
     visitor.ReadContainer(m_selectedOAM);
+
+    visitor.ReadContainer(m_VRAM);
+    visitor.ReadValue(m_currentVRAMBank);
 }
 
 void Processor2C02::Reset()
@@ -379,6 +419,15 @@ void Processor2C02::Reset()
 
     m_OAM.fill(OAMEntry());
     m_selectedOAM.clear();
+
+    std::fill(m_VRAM.begin(), m_VRAM.end(), 0x00);
+
+    // By default, we point on the first VRAM bank (won't move in GB mode)
+    // Each VRAM bank is 8kB size
+    m_currentVRAMBank = 0;
+
+    if (m_bus)
+        m_isGBC = m_bus->GetMode() == Mode::GBC;
 }
 
 inline void Processor2C02::DebugRenderNoise()
@@ -417,7 +466,7 @@ inline void Processor2C02::DebugRenderTileIds()
     uint16_t baseAddress = m_lcdRegister.bgTileMapArea == 0 ? 0x9800 : 0x9C00;
     uint16_t tileMapAddress = baseAddress + rowIndex * 32 + columnIndex;
 
-    uint8_t data = m_bus->ReadByte(tileMapAddress);
+    uint8_t data = ReadVRAM(tileMapAddress, 0);
 
     unsigned screenIndex = m_scanlines * GB_INTERNAL_WIDTH + m_currentLinePixel;
 
@@ -479,7 +528,7 @@ inline void Processor2C02::RenderPixelFifos()
     if (objPixel.color == 0 || (objPixel.bgPriority == 1 && bgPixel.color != 0))
     {
         // Draw BG pixel
-        if (m_bus->GetMode() == Mode::GB)
+        if (!m_isGBC)
         {
             pixelColor = &gbPalette[GetColorIndexFromGBPalette(m_gbBGPalette, bgPixel.color)];
         }
@@ -491,7 +540,7 @@ inline void Processor2C02::RenderPixelFifos()
     else
     {
         // Draw OBJ pixel
-        if (m_bus->GetMode() == Mode::GB)
+        if (!m_isGBC)
         {
             pixelColor = &gbPalette[GetColorIndexFromGBPalette(objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
         }
@@ -631,7 +680,7 @@ void Processor2C02::OriginalPixelFetcher()
             // We also cannot draw more than the specified number of pixels to draw.
             m_currentNbPixelsToRender = std::min<uint8_t>(maxPixelsToRender, 8 - (X % 8));
 
-            uint8_t tileId = m_bus->ReadByte(tileAddress);
+            uint8_t tileId = ReadVRAM(tileAddress, 0);
 
             // Finally, compute the address of the tile data to read from in the next stage
             // If tileAreaData is 0, the starting address is 0x9000 and the tileId is a signed integer
@@ -682,7 +731,7 @@ void Processor2C02::OriginalPixelFetcher()
     // Get Tile data low
     case 2:
     {
-        uint8_t tileLsb = m_bus->ReadByte(m_BGWindowTileAddress);
+        uint8_t tileLsb = ReadVRAM(m_BGWindowTileAddress, 0);
         tileLsb <<= (8 - m_currentNbPixelsToRender);
         for (auto i = 0; i < m_currentNbPixelsToRender; ++i)
         {
@@ -696,7 +745,7 @@ void Processor2C02::OriginalPixelFetcher()
     // Get Tile data high
     case 4:
     {
-        uint8_t tileMsb = m_bus->ReadByte(m_BGWindowTileAddress + 1);
+        uint8_t tileMsb = ReadVRAM(m_BGWindowTileAddress + 1, 0);
         tileMsb <<= (8 - m_currentNbPixelsToRender);
         for (auto i = 0; i < m_currentNbPixelsToRender; ++i)
         {
@@ -735,7 +784,7 @@ void Processor2C02::SimplifiedPixelFetcher()
         uint16_t tileAddress = tileMapAreaRegister == 0 ? 0x9800 : 0x9C00;
         tileAddress += tileCoordinate;
 
-        uint8_t tileId = m_bus->ReadByte(tileAddress);
+        uint8_t tileId = ReadVRAM(tileAddress, 0);
 
         // Finally, compute the address of the tile data to read from in the next stage
         // If tileAreaData is 0, the starting address is 0x9000 and the tileId is a signed integer
@@ -765,8 +814,8 @@ void Processor2C02::SimplifiedPixelFetcher()
     auto pixelFetch = [this, isGB](uint16_t addr, auto& pixelArray, uint8_t startIndex, 
                                     uint8_t endIndex, bool xFlip, const OAMEntry* oamEntry = nullptr)
     {
-        uint8_t tileLsb = m_bus->ReadByte(addr);
-        uint8_t tileMsb = m_bus->ReadByte(addr + 1);
+        uint8_t tileLsb = ReadVRAM(addr, 0);
+        uint8_t tileMsb = ReadVRAM(addr + 1, 0);
 
         auto reverseByte = [](uint8_t b) -> uint8_t
         {

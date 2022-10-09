@@ -101,9 +101,6 @@ namespace GBEmulator
         uint16_t m_nbRemainingCyclesForChangingSpeed = 0x0000;
         bool m_isDoubleSpeedMode = false;
 
-        std::vector<uint8_t> m_VRAM;
-        uint8_t m_currentVRAMBank;
-
         std::vector<uint8_t> m_WRAM;
         uint8_t m_currentWRAMBank;
 

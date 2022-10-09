@@ -4,6 +4,7 @@
 #include <core/constants.h>
 #include <core/utils/utils.h>
 #include <array>
+#include <vector>
 #include <queue>
 
 namespace GBEmulator
@@ -147,6 +148,9 @@ namespace GBEmulator
         void OriginalPixelFetcher();
         void SimplifiedPixelFetcher();
 
+        uint8_t ReadVRAM(uint16_t addr, uint8_t bankNumber);
+        void WriteVRAM(uint16_t addr, uint8_t bankNumber, uint8_t data);
+
         Bus* m_bus = nullptr;
         LCDRegister m_lcdRegister;
         LCDStatus m_lcdStatus;
@@ -164,7 +168,7 @@ namespace GBEmulator
         GBPaletteData m_gbOBJ1Palette;
 
         // GBC Spcific
-
+        bool m_isGBC = false;
         GBCPaletteDataArray m_gbcBGPalettes;
         GBCPaletteDataArray m_gbcOBJPalettes;
         GBCPaletteAccess m_gbcBGPaletteAccess;
@@ -199,5 +203,9 @@ namespace GBEmulator
         std::vector<uint8_t> m_screen;
         bool m_isFrameComplete = false;
         bool m_isDisabled = false;
+
+        // VRAM
+        std::vector<uint8_t> m_VRAM;
+        uint8_t m_currentVRAMBank;
     };
 }

@@ -10,10 +10,6 @@ constexpr bool enableLogger = false;
 
 Bus::Bus()
 {
-    // 16kB video ram
-    // Will be limited to 8kB in GB mode
-    m_VRAM.resize(0x4000);
-
     // 32kB work ram (in GBC mode). Will be limited to 
     // 8kB in GB mode.
     m_WRAM.resize(0x8000);
@@ -42,8 +38,7 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     // VRAM zone
     if (addr >= 0x8000 && addr < 0xA000)
     {
-        // VRAM banks are 8kB in size
-        data = m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)];
+        data = m_ppu.ReadByte(addr, readOnly);
     }
     // WRAM zone
     else if (addr >= 0xC000 && addr <= 0xFDFF)
@@ -124,9 +119,7 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
         // VRAM bank select (GBC only)
-        // All bits are set to 1, except bit 0, which correspond to the current 
-        // bank number
-        data = (0xFE | m_currentVRAMBank);
+        data = m_ppu.ReadByte(addr, readOnly);
     }
     else if (addr == 0xFF50)
     {
@@ -172,8 +165,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     // VRAM zone
     if (addr >= 0x8000 && addr < 0xA000)
     {
-        // VRAM banks are 8kB in size
-        m_VRAM[m_currentVRAMBank * 0x2000 + (addr & 0x1FFF)] = data;
+        m_ppu.WriteByte(addr, data);
     }
     // WRAM zone
     else if (addr >= 0xC000 && addr <= 0xFDFF)
@@ -252,7 +244,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
     {
         // VRAM bank select (GBC only)
-        m_currentVRAMBank = (data & 0x01);
+        m_ppu.WriteByte(addr, data);
     }
     else if (addr == 0xFF50)
     {
@@ -396,8 +388,6 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
 
     visitor.WriteValue(m_mode);
 
-    visitor.WriteContainer(m_VRAM);
-    visitor.WriteValue(m_currentVRAMBank);
     visitor.WriteContainer(m_WRAM);
     visitor.WriteValue(m_currentWRAMBank);
     visitor.WriteValue(m_nbCycles);
@@ -429,8 +419,6 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
 
     visitor.ReadValue(m_mode);
 
-    visitor.ReadContainer(m_VRAM);
-    visitor.ReadValue(m_currentVRAMBank);
     visitor.ReadContainer(m_WRAM);
     visitor.ReadValue(m_currentWRAMBank);
     visitor.ReadValue(m_nbCycles);
@@ -462,12 +450,7 @@ void Bus::Reset()
     // fill it with random values, as it often appears to be the case when
     // you boot a Gameboy
     std::fill(m_WRAM.begin(), m_WRAM.end(), 0x00);
-    std::fill(m_VRAM.begin(), m_VRAM.end(), 0x00);
     m_HRAM.fill(0x00);
-
-    // By default, we point on the first VRAM bank (won't move in GB mode)
-    // Each VRAM bank is 8kB size
-    m_currentVRAMBank = 0;
 
     // By default, we point on the second WRAM bank (won't move in GB mode)
     // Each WRAM bank is 4kB in size and two banks can be "mapped" at the same time.
