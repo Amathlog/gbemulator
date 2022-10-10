@@ -18,7 +18,7 @@ namespace // annonymous
     inline uint8_t ReadGBCPaletteData(const Processor2C02::GBCPaletteDataArray& palettesData, const GBCPaletteAccess& paletteAccess)
     {
         uint8_t paletteIndex = paletteAccess.address >> 3;
-        uint8_t colorIndex = (paletteAccess.address >> 1) % 0x03;
+        uint8_t colorIndex = (paletteAccess.address >> 1) & 0x03;
         uint8_t isHigherBit = (paletteAccess.address & 0x01) > 0;
 
         uint16_t color = palettesData[paletteIndex].colors[colorIndex].data;
@@ -29,18 +29,18 @@ namespace // annonymous
     inline void WriteGBCPaletteData(Processor2C02::GBCPaletteDataArray& palettesData, GBCPaletteAccess& paletteAccess, uint8_t data)
     {
         uint8_t paletteIndex = paletteAccess.address >> 3;
-        uint8_t colorIndex = (paletteAccess.address >> 1) % 0x03;
+        uint8_t colorIndex = (paletteAccess.address >> 1) & 0x03;
         uint8_t isHigherBit = (paletteAccess.address & 0x01) > 0;
 
         uint16_t& color = palettesData[paletteIndex].colors[colorIndex].data;
 
         if (isHigherBit)
-            color = (data << 8) | (color & 0x00FF);
+            color = ((uint16_t)data << 8) | (color & 0x00FF);
         else
             color = (color & 0xFF00) | (data);
 
         if (paletteAccess.shouldIncr)
-            paletteAccess.address = (paletteAccess.address + 1) % 0x3F;
+            paletteAccess.address = (paletteAccess.address + 1) & 0x3F;
     }
 
     inline uint8_t GetColorIndexFromGBPalette(const GBPaletteData& palette, uint8_t index)
