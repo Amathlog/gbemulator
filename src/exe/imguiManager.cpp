@@ -6,6 +6,7 @@
 #include <exe/imguiWindows/ramWindow.h>
 #include <exe/imguiWindows/tileDataWindow.h>
 #include <exe/imguiWindows/findRomsWindow.h>
+#include <exe/imguiWindows/oamWindow.h>
 #include <exe/window.h>
 #include <cstddef>
 
@@ -28,6 +29,20 @@
 
 using GBEmulatorExe::ImguiManager;
 using GBEmulatorExe::DebugWindow;
+
+namespace {
+    // C++17 fold expression to iterate over all the variadic template parameters
+    template <typename... Windows>
+    void CreateAllWindows(ImguiManager::ChildWidgetMap& map)
+    {
+        (
+            [&]()
+            {
+                map.emplace(Windows::GetStaticWindowId(), std::make_unique<Windows>());
+            }()
+        , ...);
+    }
+}
 
 ImguiManager::ImguiManager(Window* window)
     : m_window(window)
@@ -60,10 +75,7 @@ ImguiManager::ImguiManager(Window* window)
     }
 
     // Create all windows
-    m_childWidgets.emplace(DebugWindow::GetStaticWindowId(), std::make_unique<DebugWindow>());
-    m_childWidgets.emplace(RamWindow::GetStaticWindowId(), std::make_unique<RamWindow>());
-    m_childWidgets.emplace(TileDataWindow::GetStaticWindowId(), std::make_unique<TileDataWindow>());
-    m_childWidgets.emplace(FindRomsWindow::GetStaticWindowId(), std::make_unique<FindRomsWindow>());
+    CreateAllWindows<DebugWindow, RamWindow, TileDataWindow, FindRomsWindow, OAMWindow>(m_childWidgets);
     
     Deserialize();
 }
@@ -196,6 +208,7 @@ void ImguiManager::Update()
             ImGui::MenuItem("Ram visualizer", nullptr, &m_childWidgets[RamWindow::GetStaticWindowId()]->m_open);
             ImGui::MenuItem("Disassembly", nullptr, &m_childWidgets[DebugWindow::GetStaticWindowId()]->m_open);
             ImGui::MenuItem("Tile data", nullptr, &m_childWidgets[TileDataWindow::GetStaticWindowId()]->m_open);
+            ImGui::MenuItem("OAM", nullptr, &m_childWidgets[OAMWindow::GetStaticWindowId()]->m_open);
             ImGui::MenuItem("Break on start", nullptr, &m_breakOnStart.value);
             ImGui::EndMenu();
         }

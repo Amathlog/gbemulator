@@ -20,7 +20,11 @@ namespace GBEmulatorExe
         GET_BREAK_STATUS,
         GET_CPU_REGISTERS,
         RUN_TO,
-        SET_BREAK_ON_START
+        SET_BREAK_ON_START,
+        GET_OAM_ENTRIES,
+        GET_GB_PALETTES,
+        GET_OBJ_GBC_PALETTE,
+        GET_BG_GBC_PALETTE,
     };
 
     struct CPURegistersInfo

@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <iostream>
 #include <core/utils/utils.h>
+#include <cstring>
 
 namespace fs = std::filesystem;
 
@@ -151,6 +152,42 @@ bool CoreMessageService::Pull(Message &message)
             payload->m_cpuRegistersInfo.m_PC = m_bus.GetCPU().GetPC();
             payload->m_cpuRegistersInfo.m_SP = m_bus.GetCPU().GetStackPointer();
             payload->m_cpuRegistersInfo.m_IMEEnabled = m_bus.GetCPU().IsIMEEnabled();
+            return true;
+        }
+        case DefaultDebugMessageType::GET_OAM_ENTRIES:
+        {
+            const auto& OAMEntries = m_bus.GetPPU().GetOAMEntries();
+            const size_t OAMEntriesSize = OAMEntries.size() * sizeof(decltype(OAMEntries[0]));
+            assert(payload->m_dataCapacity >= OAMEntriesSize);
+
+            std::memcpy(payload->m_data, (uint8_t*)OAMEntries.data(), OAMEntriesSize);
+            return true;
+        }
+        case DefaultDebugMessageType::GET_GB_PALETTES:
+        {
+            assert(payload->m_dataCapacity >= 3);
+            payload->m_data[0] = m_bus.GetPPU().GetOAM0Palette().flags;
+            payload->m_data[1] = m_bus.GetPPU().GetOAM1Palette().flags;
+            payload->m_data[2] = m_bus.GetPPU().GetBGPalette().flags;
+
+            return true;
+        }
+        case DefaultDebugMessageType::GET_OBJ_GBC_PALETTE:
+        {
+            const auto& objPalettes = m_bus.GetPPU().GetOBJPalettesGBC();
+            const size_t paletteSize = objPalettes.size() * sizeof(decltype(objPalettes[0]));
+            assert(payload->m_dataCapacity >= paletteSize);
+
+            std::memcpy(payload->m_data, (uint8_t*)objPalettes.data(), paletteSize);
+            return true;
+        }
+        case DefaultDebugMessageType::GET_BG_GBC_PALETTE:
+        {
+            const auto& bgPalettes = m_bus.GetPPU().GetBGPalettesGBC();
+            const size_t paletteSize = bgPalettes.size() * sizeof(decltype(bgPalettes[0]));
+            assert(payload->m_dataCapacity >= paletteSize);
+
+            std::memcpy(payload->m_data, (uint8_t*)bgPalettes.data(), paletteSize);
             return true;
         }
         }

@@ -12,6 +12,8 @@ namespace GBEmulatorExe
         RamWindowId,
         TileDataWindowId,
         FindRomsWindowId,
+        OAMWindowId,
+        BGWindowId,
 
         Undefined = 0xFFFFFFFF
     };

@@ -35,6 +35,8 @@ namespace GBEmulatorExe
 
         void Update();
 
+        using ChildWidgetMap = std::map<int, std::unique_ptr<ImGuiWindow>>;
+
     private:
         void HandleFileExplorer();
         void HandlePerf(bool showFPS);
@@ -62,7 +64,6 @@ namespace GBEmulatorExe
         std::array<bool, MAX_SAVE_STATES> m_requestSaveState;
         std::array<bool, MAX_SAVE_STATES> m_requestLoadState;
 
-        using ChildWidgetMap = std::map<int, std::unique_ptr<ImGuiWindow>>;
         ChildWidgetMap m_childWidgets;
     };
 }

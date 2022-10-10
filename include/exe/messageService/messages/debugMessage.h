@@ -57,4 +57,32 @@ namespace GBEmulatorExe
         SetBreakOnStartMessage(bool value) : DebugMessage(DefaultDebugMessageType::SET_BREAK_ON_START, value)
         {}
     };
+
+    struct GetOAMEntriesMessage : DebugMessage
+    {
+        GetOAMEntriesMessage(uint8_t* data, size_t dataSize, size_t dataCapacity)
+            : DebugMessage(DefaultDebugMessageType::GET_OAM_ENTRIES, data, dataSize, dataCapacity, 0, 0)
+        {}
+    };
+
+    struct GetGBPaletteMessage : DebugMessage
+    {
+        GetGBPaletteMessage(uint8_t* data, size_t dataSize, size_t dataCapacity)
+            : DebugMessage(DefaultDebugMessageType::GET_GB_PALETTES, data, dataSize, dataCapacity, 0, 0)
+        {}
+    };
+
+    struct GetObjGBCPaletteMessage : DebugMessage
+    {
+        GetObjGBCPaletteMessage(uint8_t* data, size_t dataSize, size_t dataCapacity)
+            : DebugMessage(DefaultDebugMessageType::GET_OBJ_GBC_PALETTE, data, dataSize, dataCapacity, 0, 0)
+        {}
+    };
+
+    struct GetBGGBCPaletteMessage : DebugMessage
+    {
+        GetBGGBCPaletteMessage(uint8_t* data, size_t dataSize, size_t dataCapacity)
+            : DebugMessage(DefaultDebugMessageType::GET_BG_GBC_PALETTE, data, dataSize, dataCapacity, 0, 0)
+        {}
+    };
 }

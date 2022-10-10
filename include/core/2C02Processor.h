@@ -91,6 +91,31 @@ namespace GBEmulator
         uint8_t bgPriority = 0x00;
     };
 
+
+    union Attributes
+    {
+        struct
+        {
+            uint8_t paletteNumberGBC : 3;
+            uint8_t tileVRAMBank : 1;
+            uint8_t paletteNumberGB : 1;
+            uint8_t xFlip : 1;
+            uint8_t yFlip : 1;
+            uint8_t bgAndWindowOverObj : 1;
+        };
+
+        uint8_t flags = 0x00;
+    };
+
+    struct OAMEntry
+    {
+        uint8_t xPosition = 0x00;
+        uint8_t yPosition = 0x00;
+        uint8_t tileIndex = 0x00;
+    
+        Attributes attributes;
+    };
+
     class Processor2C02 : public ISerializable
     {
     public:
@@ -106,6 +131,14 @@ namespace GBEmulator
         constexpr unsigned GetWidth() const { return GB_INTERNAL_WIDTH; }
         const auto& GetScreen() const { return m_screen; }
 
+        const auto& GetOAMEntries() const { return m_OAM; }
+        GBPaletteData GetBGPalette() const { return m_gbBGPalette; }
+        GBPaletteData GetOAM0Palette() const { return m_gbOBJ0Palette; }
+        GBPaletteData GetOAM1Palette() const { return m_gbOBJ1Palette; }
+
+        const auto& GetBGPalettesGBC() const { return m_gbcBGPalettes; }
+        const auto& GetOBJPalettesGBC() const { return m_gbcOBJPalettes; }
+
         bool IsFrameComplete() const { return m_isFrameComplete; }
 
         void ConnectBus(Bus* bus) { m_bus = bus; }
@@ -116,30 +149,6 @@ namespace GBEmulator
         using GBCPaletteDataArray = std::array<GBCPaletteData, 8>;
 
     private:
-
-        union Attributes
-        {
-            struct
-            {
-                uint8_t paletteNumberGBC : 3;
-                uint8_t tileVRAMBank : 1;
-                uint8_t paletteNumberGB : 1;
-                uint8_t xFlip : 1;
-                uint8_t yFlip : 1;
-                uint8_t bgAndWindowOverObj : 1;
-            };
-
-            uint8_t flags = 0x00;
-        };
-
-        struct OAMEntry
-        {
-            uint8_t xPosition = 0x00;
-            uint8_t yPosition = 0x00;
-            uint8_t tileIndex = 0x00;
-        
-            Attributes attributes;
-        };
 
         void DebugRenderNoise();
         void DebugRenderTileIds();
