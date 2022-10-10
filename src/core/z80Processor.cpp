@@ -56,7 +56,7 @@ void Z80Processor::Reset()
     // A value of 0x11 would say that it is a GBA hardware, but we don't support this here.
     if (m_bus && m_bus->GetMode() == GBEmulator::Mode::GBC)
     {
-        m_AF.A = 0x10;
+        m_AF.A = 0x11;
     }
 
     m_cycles = 0;
