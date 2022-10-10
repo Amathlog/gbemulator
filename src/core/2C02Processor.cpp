@@ -525,7 +525,21 @@ inline void Processor2C02::RenderPixelFifos()
     // We can render either the BG pixel, or the OBJ pixel
     // BG: If the OBJ color is 0 (transparent) or BG over OBJ flag is on
     const RGB555* pixelColor = nullptr;
-    if (objPixel.color == 0 || (objPixel.bgPriority == 1 && bgPixel.color != 0))
+    bool bgPriority = false;
+    const bool noObjColor = objPixel.color == 0;
+    if (m_isGBC)
+    {
+        // On GBC, BGAndWindowPriority cleared mean that the bg/window will never have priority.
+        // Otherwise, it's driven by either the bgPixel/objPixel attribute.
+        bgPriority = m_lcdRegister.BGAndWindowPriority != 0 && (bgPixel.bgPriority == 1 || objPixel.bgPriority == 1);
+    }
+    else
+    {
+        // On GB, it is only driven by the objPixel attribute
+        bgPriority = objPixel.bgPriority == 1;
+    }
+
+    if (noObjColor || (bgPriority && bgPixel.color != 0))
     {
         // Draw BG pixel
         if (!m_isGBC)
@@ -775,7 +789,7 @@ void Processor2C02::SimplifiedPixelFetcher()
 {
     // In this version, we "hack" our way by pushing all the pixels on one dot.
 
-    auto fetchTileAddress = [this](uint8_t X, uint8_t Y, bool isWindow)
+    auto fetchTileAddress = [this](uint8_t X, uint8_t Y, bool isWindow, Attributes& outAttributes)
     {
         // Compute the address of the BG tile using the lcd control register to
         // know where the tile map is in memory.
@@ -784,6 +798,11 @@ void Processor2C02::SimplifiedPixelFetcher()
         uint16_t tileAddress = tileMapAreaRegister == 0 ? 0x9800 : 0x9C00;
         tileAddress += tileCoordinate;
 
+        // In GBC mode, there are attributes data in the exact same place for BG/Window in VRAM bank 1.
+        if (m_isGBC)
+            outAttributes.flags = ReadVRAM(tileAddress, 1);
+
+        // Tile id is always in VRAM bank 0
         uint8_t tileId = ReadVRAM(tileAddress, 0);
 
         // Finally, compute the address of the tile data to read from in the next stage
@@ -810,10 +829,13 @@ void Processor2C02::SimplifiedPixelFetcher()
     };
 
     auto pixelFetch = [this](uint16_t addr, auto& pixelArray, uint8_t startIndex, 
-                                uint8_t endIndex, bool xFlip, const OAMEntry* oamEntry = nullptr)
+                                uint8_t endIndex, const Attributes attributes, bool isSprite)
     {
-        uint8_t tileLsb = ReadVRAM(addr, 0);
-        uint8_t tileMsb = ReadVRAM(addr + 1, 0);
+        // VRAM bank is always 0 in GB.
+        const uint8_t VRAMBank = m_isGBC ? attributes.tileVRAMBank : 0;
+
+        uint8_t tileLsb = ReadVRAM(addr, VRAMBank);
+        uint8_t tileMsb = ReadVRAM(addr + 1, VRAMBank);
 
         auto reverseByte = [](uint8_t b) -> uint8_t
         {
@@ -824,7 +846,7 @@ void Processor2C02::SimplifiedPixelFetcher()
         };
 
         // In case of xFilp, reverse the bits
-        if (xFlip)
+        if (attributes.xFlip)
         {
             tileLsb = reverseByte(tileLsb);
             tileMsb = reverseByte(tileMsb);
@@ -842,18 +864,29 @@ void Processor2C02::SimplifiedPixelFetcher()
             tileMsb <<= 1;
             tileLsb <<= 1;
 
-            if (oamEntry != nullptr && color != 0)
+            if (!isSprite || color != 0)
             {
-                pixelArray[startIndex + i].bgPriority = oamEntry->attributes.bgAndWindowOverObj;
-                pixelArray[startIndex + i].palette = !m_isGBC ? oamEntry->attributes.paletteNumberGB : oamEntry->attributes.paletteNumberGBC;
+                pixelArray[startIndex + i].bgPriority = attributes.bgAndWindowOverObj;
+                pixelArray[startIndex + i].palette = !m_isGBC ? attributes.paletteNumberGB : attributes.paletteNumberGBC;
             }
         }
     };
 
     bool BGWindowEnabled = !m_isGBC ? m_lcdRegister.BGAndWindowPriority > 0 : true;
+
+    Attributes BGAttributes{};
+    Attributes WindowAttributes{};
     
     // First fetch all the pixel colors for the BG
     uint8_t yBG = m_scanlines + m_scrollY;
+
+    // Filp it if needed
+    if (m_isGBC && BGAttributes.yFlip == 1)
+    {
+        const uint8_t yOffset = yBG & 0x07;
+        yBG = (yBG & 0xF8) | (7 - yOffset);
+    }
+
     // There can be at most 167 pixels fetched (fetch more even if we don't use them)
     std::array<PixelFIFO, 167> bgPixels;
     if (BGWindowEnabled)
@@ -872,14 +905,15 @@ void Processor2C02::SimplifiedPixelFetcher()
                 x += 8;
             }
 
-            uint16_t tileAddr = fetchTileAddress(realX, yBG, false);
-            pixelFetch(tileAddr, bgPixels, startX, x, false);
+            uint16_t tileAddr = fetchTileAddress(realX, yBG, false, BGAttributes);
+            pixelFetch(tileAddr, bgPixels, startX, x, BGAttributes, false);
         }
     }
 
     // Do the same for the window, only if it is enabled
     std::array<PixelFIFO, 167> windowPixels;
     bool shouldDrawWindow = m_lcdRegister.windowEnable && (m_scanlines >= m_wY) && BGWindowEnabled;
+
     if (shouldDrawWindow)
     {
         // Check also that we are in the right wX range. If not, we stall the window
@@ -895,11 +929,11 @@ void Processor2C02::SimplifiedPixelFetcher()
             uint8_t nbWindowTiles = (uint8_t)std::ceil((166 - m_wX) / 8.f);
             for (uint8_t i = 0; i < nbWindowTiles; ++i)
             {
-                uint16_t tileAddr = fetchTileAddress(xWindow, yWindow, true);
+                uint16_t tileAddr = fetchTileAddress(xWindow, yWindow, true, WindowAttributes);
 
                 uint8_t endX = (i == 0 && m_wX < 7) ? 7 - m_wX : xWindow + 8;
 
-                pixelFetch(tileAddr, windowPixels, xWindow, endX, false);
+                pixelFetch(tileAddr, windowPixels, xWindow, endX, WindowAttributes, false);
                 xWindow = endX;
             }
         }
@@ -969,7 +1003,7 @@ void Processor2C02::SimplifiedPixelFetcher()
 
             uint8_t startX = entry.xPosition < 8 ? 0 : entry.xPosition - 8;
             uint8_t endX = entry.xPosition;
-            pixelFetch(tileAddress, spritePixels, startX, endX, entry.attributes.xFlip, &entry);
+            pixelFetch(tileAddress, spritePixels, startX, endX, entry.attributes, true);
         }
     }
 
@@ -1035,8 +1069,8 @@ void Processor2C02::Clock()
             if (m_lcdStatus.mode == 3)
             {
                 // Drawing pixels
-                constexpr bool useSimplefied = true;
-                if constexpr (useSimplefied)
+                constexpr bool useSimplified = true;
+                if constexpr (useSimplified)
                 {
                     if (m_lineDots == 80)
                         SimplifiedPixelFetcher();

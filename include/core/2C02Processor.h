@@ -117,26 +117,28 @@ namespace GBEmulator
 
     private:
 
+        union Attributes
+        {
+            struct
+            {
+                uint8_t paletteNumberGBC : 3;
+                uint8_t tileVRAMBank : 1;
+                uint8_t paletteNumberGB : 1;
+                uint8_t xFlip : 1;
+                uint8_t yFlip : 1;
+                uint8_t bgAndWindowOverObj : 1;
+            };
+
+            uint8_t flags = 0x00;
+        };
+
         struct OAMEntry
         {
             uint8_t xPosition = 0x00;
             uint8_t yPosition = 0x00;
             uint8_t tileIndex = 0x00;
         
-            union Attributes
-            {
-                struct
-                {
-                    uint8_t paletteNumberGBC : 3;
-                    uint8_t tileVRAMBank : 1;
-                    uint8_t paletteNumberGB : 1;
-                    uint8_t xFlip : 1;
-                    uint8_t yFlip : 1;
-                    uint8_t bgAndWindowOverObj : 1;
-                };
-
-                uint8_t flags = 0x00;
-            } attributes;
+            Attributes attributes;
         };
 
         void DebugRenderNoise();
