@@ -25,6 +25,7 @@ namespace GBEmulatorExe
         GET_GB_PALETTES,
         GET_OBJ_GBC_PALETTE,
         GET_BG_GBC_PALETTE,
+        GET_VRAM
     };
 
     struct CPURegistersInfo
@@ -64,5 +65,6 @@ namespace GBEmulatorExe
         uint16_t m_nbDisassemblyLines = 0x0000;
         bool m_isInBreakMode = false;
         CPURegistersInfo m_cpuRegistersInfo;
+        uint8_t m_VRAMBank = 0;
     };
 }

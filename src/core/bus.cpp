@@ -126,10 +126,16 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
         // Set to non-zero to disable boot ROM
         // Not used in Read
     }
-    else if (addr >= 0xFF51 && addr <= 0xFF55 && m_mode == Mode::GBC)
+    else if (addr == 0xFF55 && m_mode == Mode::GBC)
     {
         // VRAM DMA (GBC only)
-        // TODO
+        // Only 0xFF55 is readable
+        // 0xFF means the transfer is done. Otherwise, returns the number of blocks
+        // remaining.
+        // If DMA was stopped, write 1 to bit 7
+        data = m_DMABlocksRemainingGBC == 0 ? 0xFF : m_DMABlocksRemainingGBC;
+        if (m_DMAWasStoppedGBC && m_DMABlocksRemainingGBC != 0)
+            data = (data | 0x80);
     }
     else if (addr >= 0xFF68 && addr <= 0xFF6B && m_mode == Mode::GBC)
     {
@@ -254,7 +260,38 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xFF51 && addr <= 0xFF55 && m_mode == Mode::GBC)
     {
         // VRAM DMA (GBC only)
-        // TODO
+        switch(addr)
+        {
+        case 0xFF51:
+            // High address source
+            m_DMASourceAddrGBC = ((uint16_t)data << 8) | (m_DMASourceAddrGBC & 0x00FF);
+            break;
+        case 0xFF52:
+            // Low address source, 4 lower bits ignored
+            m_DMASourceAddrGBC = (m_DMASourceAddrGBC & 0xFF00) | (data & 0xF0);
+            break;
+        case 0xFF53:
+            // High address dest, 3 higher bits ignored. Will be between 0x8000 and 0x9FF0
+            m_DMADestAddrGBC = 0x8000 | (((uint16_t)data << 8) & 0x1F) | (m_DMADestAddrGBC & 0x00FF);
+            break;
+        case 0xFF54:
+            // Low address dest, 4 lower bits ignored
+            m_DMADestAddrGBC = (m_DMADestAddrGBC & 0xFF00) | (data & 0xF0);
+            break;
+        case 0xFF55:
+            // If DMA is not active (no remaining blocks) writing to this starts a new DMA
+            if (m_DMABlocksRemainingGBC == 0)
+            {
+                m_isDMAHBlankModeGBC = (data & 0x80) > 0;
+                m_DMABlocksRemainingGBC = (data & 0x7F);
+                m_DMAWasStoppedGBC = false;
+            } 
+            else
+            {
+                // Otherwise, if we are in HBlank mode, and bit 7 is 0, stop the transfer
+                m_DMAWasStoppedGBC = ((data & 0x80) == 0) && m_isDMAHBlankModeGBC;
+            }
+        }
     }
     else if (addr >= 0xFF68 && addr <= 0xFF6B && m_mode == Mode::GBC)
     {
@@ -348,6 +385,37 @@ bool Bus::Clock(bool* outInstDone)
         }
     }
 
+    // But in VRAM DMA (only GBC), the CPU is stopped during the transfer
+    // Transfer everything (when in general purpose mode) or a single block (in hblank mode)
+    // in one clock.
+    if (m_DMABlocksRemainingGBC != 0 && !m_DMAHBlankWasHandled && !m_DMAWasStoppedGBC)
+    {
+        if (!m_isDMAHBlankModeGBC || m_ppu.IsInHBlank())
+        {
+            const uint16_t nbBytesToTransfer = (uint16_t)(m_isDMAHBlankModeGBC ? 1 : m_DMABlocksRemainingGBC) * 8;
+            for (uint16_t i = 0; i < nbBytesToTransfer; ++i)
+            {
+                WriteByte(m_DMADestAddrGBC++, ReadByte(m_DMASourceAddrGBC++));
+            }
+
+            if (m_isDMAHBlankModeGBC)
+            {
+                m_DMABlocksRemainingGBC--;
+                m_DMAHBlankWasHandled = true;
+            }
+            else
+            {
+                m_DMABlocksRemainingGBC = 0;
+            }
+        }
+    }
+
+    // When we exit HBlank, reset this flag
+    if (!m_ppu.IsInHBlank() && m_DMAHBlankWasHandled)
+    {
+        m_DMAHBlankWasHandled = false;
+    }
+
     if (m_cpu.Clock())
     {
         if (outInstDone != nullptr)
@@ -404,6 +472,13 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_isPreparingForChangingSpeed);
     visitor.WriteValue(m_nbRemainingCyclesForChangingSpeed);
     visitor.WriteValue(m_isDoubleSpeedMode);
+
+    visitor.WriteValue(m_DMASourceAddrGBC);
+    visitor.WriteValue(m_DMADestAddrGBC);
+    visitor.WriteValue(m_DMABlocksRemainingGBC);
+    visitor.WriteValue(m_isDMAHBlankModeGBC);
+    visitor.WriteValue(m_DMAWasStoppedGBC);
+    visitor.WriteValue(m_DMAHBlankWasHandled);
 }
 
 void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
@@ -435,6 +510,13 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_isPreparingForChangingSpeed);
     visitor.ReadValue(m_nbRemainingCyclesForChangingSpeed);
     visitor.ReadValue(m_isDoubleSpeedMode);
+
+    visitor.ReadValue(m_DMASourceAddrGBC);
+    visitor.ReadValue(m_DMADestAddrGBC);
+    visitor.ReadValue(m_DMABlocksRemainingGBC);
+    visitor.ReadValue(m_isDMAHBlankModeGBC);
+    visitor.ReadValue(m_DMAWasStoppedGBC);
+    visitor.ReadValue(m_DMAHBlankWasHandled);
 }
 
 void Bus::Reset()
@@ -474,6 +556,13 @@ void Bus::Reset()
 
     m_isInDMA = false;
     m_currentDMAAddress = 0x0000;
+
+    m_DMASourceAddrGBC = 0x0000;
+    m_DMADestAddrGBC = 0x8000;
+    m_DMABlocksRemainingGBC = 0x00;
+    m_isDMAHBlankModeGBC = false;
+    m_DMAWasStoppedGBC = false;
+    m_DMAHBlankWasHandled = false;
 }
 
 void Bus::ChangeMode(Mode newMode)

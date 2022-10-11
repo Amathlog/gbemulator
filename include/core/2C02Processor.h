@@ -140,8 +140,11 @@ namespace GBEmulator
         const auto& GetOBJPalettesGBC() const { return m_gbcOBJPalettes; }
 
         bool IsFrameComplete() const { return m_isFrameComplete; }
+        bool IsInHBlank() const { return m_lcdStatus.mode == 0; }
 
         void ConnectBus(Bus* bus) { m_bus = bus; }
+
+        const std::vector<uint8_t>& GetVRAM() const { return m_VRAM; }
 
         void Reset();
         void Clock();

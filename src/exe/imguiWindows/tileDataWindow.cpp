@@ -61,18 +61,19 @@ void TileDataWindow::UpdateImage()
 void TileDataWindow::DrawInternal()
 {
     double elapsedTime = ImGui::GetTime();
-    constexpr double updateDeltaTime = 1.0;
+    constexpr double updateDeltaTime = 0.1;
     if (elapsedTime > m_lastUpdateTime + updateDeltaTime || m_forceUpdate)
     {
         m_lastUpdateTime = elapsedTime;
         m_forceUpdate = false;
-        GetRamDataMessage msg(m_data.data(), m_data.size(), m_data.size(), 0x8000 + m_currentBlock * 0x0800);
+        GetVRAMMessage msg(m_data.data(), m_data.size(), m_data.size(), 0x8000 + m_currentBlock * 0x0800, m_currentBank);
         DispatchMessageServiceSingleton::GetInstance().Pull(msg);
 
         UpdateImage();
     }
 
-    static std::array<bool, 3> m_checkBoxesBlocks = {true, false};
+    static std::array<bool, 2> m_checkBoxesBlocks = {true, false};
+    static std::array<bool, 2> m_checkBoxesBank = {true, false};
 
     ImGui::Text("%s", "Select a block: ");
     ImGui::SameLine();
@@ -80,13 +81,24 @@ void TileDataWindow::DrawInternal()
     ImGui::SameLine();
     ImGui::Checkbox("Start address 0x8800", &m_checkBoxesBlocks[1]);
 
-    for (auto i = 0; i < 3; i++)
+    ImGui::Text("%s", "VRAM bank: ");
+    ImGui::SameLine();
+    ImGui::Checkbox("0", &m_checkBoxesBank[0]);
+    ImGui::SameLine();
+    ImGui::Checkbox("1", &m_checkBoxesBank[1]);
+
+    for (auto i = 0; i < 2; i++)
     {
         if (m_checkBoxesBlocks[i] && i != m_currentBlock)
         {
             m_checkBoxesBlocks[m_currentBlock] = false;
             m_currentBlock = i;
-            break;
+        }
+
+        if (m_checkBoxesBank[i] && i != m_currentBank)
+        {
+            m_checkBoxesBank[m_currentBank] = false;
+            m_currentBank = i;
         }
     }
 

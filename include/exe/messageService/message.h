@@ -74,7 +74,7 @@ namespace GBEmulatorExe {
 
         const PayloadType& GetTypedPayload() { return ownPayload; }
 
-    private:
+    protected:
         PayloadType ownPayload;
     };
 }

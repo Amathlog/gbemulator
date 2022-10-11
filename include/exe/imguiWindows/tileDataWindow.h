@@ -28,6 +28,7 @@ namespace GBEmulatorExe
 
         std::vector<uint8_t> m_data;
         unsigned m_currentBlock = 0;
+        unsigned m_currentBank = 0;
         std::unique_ptr<Image> m_image;
         unsigned m_texture;
     };

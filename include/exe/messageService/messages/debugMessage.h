@@ -85,4 +85,13 @@ namespace GBEmulatorExe
             : DebugMessage(DefaultDebugMessageType::GET_BG_GBC_PALETTE, data, dataSize, dataCapacity, 0, 0)
         {}
     };
+
+    struct GetVRAMMessage : DebugMessage
+    {
+        GetVRAMMessage(uint8_t* data, size_t dataSize, size_t dataCapacity, uint16_t addressStart, uint8_t VRAMBank)
+            : DebugMessage(DefaultDebugMessageType::GET_VRAM, data, dataSize, dataCapacity, addressStart, 0)
+        {
+            ownPayload.m_VRAMBank = VRAMBank;
+        }
+    };
 }

@@ -190,6 +190,20 @@ bool CoreMessageService::Pull(Message &message)
             std::memcpy(payload->m_data, (uint8_t*)bgPalettes.data(), paletteSize);
             return true;
         }
+        case DefaultDebugMessageType::GET_VRAM:
+        {
+            const std::vector<uint8_t> vram = m_bus.GetPPU().GetVRAM();
+            assert(payload->m_dataCapacity < vram.size());
+
+            uint16_t offset = payload->m_addressStart - 0x8000;
+            if (payload->m_VRAMBank >= 1)
+            {
+                offset += vram.size() / 2;
+            }
+
+            std::memcpy(payload->m_data, (uint8_t*)vram.data() + offset, payload->m_dataCapacity);
+            return true;
+        }
         }
     }
 
