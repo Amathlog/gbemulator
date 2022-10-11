@@ -1080,8 +1080,10 @@ void Processor2C02::Clock()
                     OriginalPixelFetcher();
                 }
 
+                // Min number of dots = 172 (after the 80 from OAM scan)
                 // Max number of dots = 289 (after the 80 from OAM scan)
-                if (m_lineDots == 368)
+                // if (m_lineDots == 368) // Max
+                if (m_lineDots == 251)
                 {
                     m_lcdStatus.mode = 0;
                     SetInteruptFlag(InteruptSource::HBlank);
@@ -1170,7 +1172,7 @@ void Processor2C02::Clock()
         m_lY = (uint8_t)m_scanlines;
         m_currentStagePixelFetcher = 0;
     }
-    else if (m_lineDots == 80)
+    else if (m_lineDots == 80 && m_scanlines < 144)
     {
         // OAM scan is done, go to mode 3.
         // Also clear the FIFOs
