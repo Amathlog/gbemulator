@@ -12,19 +12,35 @@ struct GLFWwindow;
 
 namespace GBEmulatorExe
 {
-    class Window
+    class WindowBase
+    {
+    public:
+        virtual ~WindowBase() = default;
+
+        virtual void Update(bool externalSync) = 0;
+    
+        void Enable(bool enable) {m_enable = enable;}
+        bool IsEnabled() {return m_enable;}
+
+        void SetUserData(void* userData) { m_userData = userData; }
+
+        virtual bool RequestedClose() = 0;
+
+    protected:
+        void* m_userData = nullptr;
+        bool m_isMainWindow = false;
+        bool m_enable = false;
+    };
+
+    class Window : public WindowBase
     {
     public:
         Window(const char* name, unsigned width, unsigned height);
         virtual ~Window();
 
-        void Update(bool externalSync);
+        void Update(bool externalSync) override;
         GLFWwindow* GetWindow() {return m_window;}
 
-        void Enable(bool enable) {m_enable = enable;}
-        bool IsEnabled() {return m_enable;}
-
-        void SetUserData(void* userData) { m_userData = userData; }
 
         template <typename T, typename... Args, typename = std::enable_if_t<std::is_base_of_v<Window, T>>>
         Window* CreateNewChildWindow(Args&& ...args)
@@ -33,17 +49,14 @@ namespace GBEmulatorExe
             return m_childrenWindows.back().get();
         }
 
-        virtual bool RequestedClose();
+        bool RequestedClose() override;
         virtual void OnScreenResized(int width, int height) {};
 
     protected:
         virtual void InternalUpdate(bool /*externalSync*/) {}
 
-        void* m_userData = nullptr;
         GLFWwindow* m_window = nullptr;
         std::vector<std::unique_ptr<Window>> m_childrenWindows;
-        bool m_enable = true;
-        bool m_isMainWindow = false;
 
         std::chrono::time_point<std::chrono::high_resolution_clock> m_lastUpdateTime;
     };

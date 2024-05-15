@@ -12,7 +12,7 @@ struct ImGuiContext;
 
 namespace GBEmulatorExe
 {
-    class Window;
+    class WindowBase;
 
     struct Toggle
     {
@@ -25,7 +25,7 @@ namespace GBEmulatorExe
     class ImguiManager
     {
     public:
-        ImguiManager(Window* window);
+        ImguiManager(WindowBase* window);
         ~ImguiManager();
 
         bool ShouldClose() const { return m_closeRequested; }
@@ -45,7 +45,6 @@ namespace GBEmulatorExe
         void Serialize();
         void Deserialize();
         
-        Window* m_window;
         ImGuiContext* m_context;
 
         bool m_showFileExplorer = false;

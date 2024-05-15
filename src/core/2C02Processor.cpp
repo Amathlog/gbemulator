@@ -1,53 +1,55 @@
-#include <core/2C02Processor.h>
-#include <core/bus.h>
-#include <core/utils/utils.h>
-#include <core/utils/tile.h>
-#include <core/constants.h>
 #include <algorithm>
 #include <cmath>
+#include <core/2C02Processor.h>
+#include <core/bus.h>
+#include <core/constants.h>
+#include <core/utils/tile.h>
+#include <core/utils/utils.h>
 #include <cstring>
 
-using GBEmulator::Processor2C02;
+using GBEmulator::GBCPaletteAccess;
 using GBEmulator::GBCPaletteData;
 using GBEmulator::GBPaletteData;
-using GBEmulator::GBCPaletteAccess;
 using GBEmulator::InteruptSource;
+using GBEmulator::Processor2C02;
 
 namespace // annonymous
 {
-    inline uint8_t ReadGBCPaletteData(const Processor2C02::GBCPaletteDataArray& palettesData, const GBCPaletteAccess& paletteAccess)
-    {
-        uint8_t paletteIndex = paletteAccess.address >> 3;
-        uint8_t colorIndex = (paletteAccess.address >> 1) & 0x03;
-        uint8_t isHigherBit = (paletteAccess.address & 0x01) > 0;
+inline uint8_t ReadGBCPaletteData(const Processor2C02::GBCPaletteDataArray& palettesData,
+                                  const GBCPaletteAccess& paletteAccess)
+{
+    uint8_t paletteIndex = paletteAccess.address >> 3;
+    uint8_t colorIndex = (paletteAccess.address >> 1) & 0x03;
+    uint8_t isHigherBit = (paletteAccess.address & 0x01) > 0;
 
-        uint16_t color = palettesData[paletteIndex].colors[colorIndex].data;
+    uint16_t color = palettesData[paletteIndex].colors[colorIndex].data;
 
-        return isHigherBit ? (color >> 8) : (color & 0x00FF);
-    }
-
-    inline void WriteGBCPaletteData(Processor2C02::GBCPaletteDataArray& palettesData, GBCPaletteAccess& paletteAccess, uint8_t data)
-    {
-        uint8_t paletteIndex = paletteAccess.address >> 3;
-        uint8_t colorIndex = (paletteAccess.address >> 1) & 0x03;
-        uint8_t isHigherBit = (paletteAccess.address & 0x01) > 0;
-
-        uint16_t& color = palettesData[paletteIndex].colors[colorIndex].data;
-
-        if (isHigherBit)
-            color = ((uint16_t)data << 8) | (color & 0x00FF);
-        else
-            color = (color & 0xFF00) | (data);
-
-        if (paletteAccess.shouldIncr)
-            paletteAccess.address = (paletteAccess.address + 1) & 0x3F;
-    }
-
-    inline uint8_t GetColorIndexFromGBPalette(const GBPaletteData& palette, uint8_t index)
-    {
-        return (palette.flags >> (index << 1)) & 0x03;
-    }
+    return isHigherBit ? (color >> 8) : (color & 0x00FF);
 }
+
+inline void WriteGBCPaletteData(Processor2C02::GBCPaletteDataArray& palettesData, GBCPaletteAccess& paletteAccess,
+                                uint8_t data)
+{
+    uint8_t paletteIndex = paletteAccess.address >> 3;
+    uint8_t colorIndex = (paletteAccess.address >> 1) & 0x03;
+    uint8_t isHigherBit = (paletteAccess.address & 0x01) > 0;
+
+    uint16_t& color = palettesData[paletteIndex].colors[colorIndex].data;
+
+    if (isHigherBit)
+        color = ((uint16_t)data << 8) | (color & 0x00FF);
+    else
+        color = (color & 0xFF00) | (data);
+
+    if (paletteAccess.shouldIncr)
+        paletteAccess.address = (paletteAccess.address + 1) & 0x3F;
+}
+
+inline uint8_t GetColorIndexFromGBPalette(const GBPaletteData& palette, uint8_t index)
+{
+    return (palette.flags >> (index << 1)) & 0x03;
+}
+} // namespace
 
 inline void GBCPaletteData::Reset()
 {
@@ -100,7 +102,7 @@ uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
         OAMEntry& entry = m_OAM[index];
 
         // Then for each entry, there are 4 bytes, determined by the 2 lsb of the address.
-        switch(addr & 0x0003)
+        switch (addr & 0x0003)
         {
         case 0:
             data = entry.yPosition;
@@ -180,7 +182,7 @@ uint8_t Processor2C02::ReadByte(uint16_t addr, bool /*readOnly*/)
     else if (addr == 0xFF4F)
     {
         // VRAM bank select (GBC only)
-        // All bits are set to 1, except bit 0, which correspond to the current 
+        // All bits are set to 1, except bit 0, which correspond to the current
         // bank number
         data = (0xFE | m_currentVRAMBank);
     }
@@ -202,7 +204,7 @@ void Processor2C02::WriteByte(uint16_t addr, uint8_t data)
         OAMEntry& entry = m_OAM[index];
 
         // Then for each entry, there are 4 bytes, determined by the 2 lsb of the address.
-        switch(addr & 0x0003)
+        switch (addr & 0x0003)
         {
         case 0:
             entry.yPosition = data;
@@ -304,8 +306,10 @@ void Processor2C02::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_gbOBJ0Palette);
     visitor.WriteValue(m_gbOBJ1Palette);
 
-    std::for_each(m_gbcBGPalettes.begin(), m_gbcBGPalettes.end(), [&visitor](auto& item) { item.SerializeTo(visitor); });
-    std::for_each(m_gbcOBJPalettes.begin(), m_gbcOBJPalettes.end(), [&visitor](auto& item) { item.SerializeTo(visitor); });
+    std::for_each(m_gbcBGPalettes.begin(), m_gbcBGPalettes.end(),
+                  [&visitor](auto& item) { item.SerializeTo(visitor); });
+    std::for_each(m_gbcOBJPalettes.begin(), m_gbcOBJPalettes.end(),
+                  [&visitor](auto& item) { item.SerializeTo(visitor); });
 
     visitor.WriteValue(m_gbcBGPaletteAccess.shouldIncr);
     visitor.WriteValue(m_gbcBGPaletteAccess.address);
@@ -349,8 +353,10 @@ void Processor2C02::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_gbOBJ0Palette);
     visitor.ReadValue(m_gbOBJ1Palette);
 
-    std::for_each(m_gbcBGPalettes.begin(), m_gbcBGPalettes.end(), [&visitor](auto& item) { item.DeserializeFrom(visitor); });
-    std::for_each(m_gbcOBJPalettes.begin(), m_gbcOBJPalettes.end(), [&visitor](auto& item) { item.DeserializeFrom(visitor); });
+    std::for_each(m_gbcBGPalettes.begin(), m_gbcBGPalettes.end(),
+                  [&visitor](auto& item) { item.DeserializeFrom(visitor); });
+    std::for_each(m_gbcOBJPalettes.begin(), m_gbcOBJPalettes.end(),
+                  [&visitor](auto& item) { item.DeserializeFrom(visitor); });
 
     visitor.ReadValue(m_gbcBGPaletteAccess.shouldIncr);
     visitor.ReadValue(m_gbcBGPaletteAccess.address);
@@ -458,7 +464,7 @@ inline void Processor2C02::DebugRenderTileIds()
     // 64 -> 128:   Yellow -> Green
     // 128 -> 192:  Green -> Cyan
     // 192 -> 255:  Cyan -> Blue
-    // 
+    //
     // Find the tile map index
     unsigned columnIndex = m_currentLinePixel / 5;
     unsigned rowIndex = m_scanlines / 4;
@@ -556,7 +562,8 @@ inline void Processor2C02::RenderPixelFifos()
         // Draw OBJ pixel
         if (!m_isGBC)
         {
-            pixelColor = &gbPalette[GetColorIndexFromGBPalette(objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
+            pixelColor = &gbPalette[GetColorIndexFromGBPalette(
+                objPixel.palette == 0 ? m_gbOBJ0Palette : m_gbOBJ1Palette, objPixel.color)];
         }
         else
         {
@@ -578,7 +585,7 @@ void Processor2C02::SetInteruptFlag(InteruptSource is)
 {
     bool changed = false;
     InterruptRegister ifRegister;
-    ifRegister.flag = m_bus->ReadByte(IF_REG_ADDR); 
+    ifRegister.flag = m_bus->ReadByte(IF_REG_ADDR);
 
     switch (is)
     {
@@ -588,7 +595,7 @@ void Processor2C02::SetInteruptFlag(InteruptSource is)
             ifRegister.lcdStat = 1;
         changed = true;
         break;
-    
+
     case InteruptSource::HBlank:
         if (m_lcdStatus.mode0HBlankIS)
         {
@@ -640,7 +647,7 @@ void Processor2C02::OriginalPixelFetcher()
     case 0:
     {
         // For the tile, we need to know if we have to render a BG tile or a Window tile.
-        // We need to render a window tile, if the current pixel X and Y are greater than the 
+        // We need to render a window tile, if the current pixel X and Y are greater than the
         // window scroll X and Y register and window is enabled.
         // From this moment we only render window tiles, for the rest of the line.
         // But before that we need to render BG tiles. We render BG tiles until we reach the
@@ -686,7 +693,8 @@ void Processor2C02::OriginalPixelFetcher()
             // Compute the address of the BG tile using the lcd control register to
             // know where the tile map is in memory.
             uint16_t tileCoordinate = (Y / 8) * 32 + (X / 8);
-            uint8_t tileMapAreaRegister = m_isWindowRendering ? m_lcdRegister.windowTileMapArea : m_lcdRegister.bgTileMapArea;
+            uint8_t tileMapAreaRegister =
+                m_isWindowRendering ? m_lcdRegister.windowTileMapArea : m_lcdRegister.bgTileMapArea;
             uint16_t tileAddress = tileMapAreaRegister == 0 ? 0x9800 : 0x9C00;
             tileAddress += tileCoordinate;
 
@@ -789,7 +797,7 @@ void Processor2C02::SimplifiedPixelFetcher()
 {
     // In this version, we "hack" our way by pushing all the pixels on one dot.
 
-    auto fetchTileAddress = [this](uint8_t X, uint8_t Y, bool isWindow, Attributes& outAttributes)
+    auto fetchTileAddress = [this](uint8_t X, uint8_t Y, bool isWindow, Attributes& outAttributes, bool checkYFlip)
     {
         // Compute the address of the BG tile using the lcd control register to
         // know where the tile map is in memory.
@@ -823,13 +831,18 @@ void Processor2C02::SimplifiedPixelFetcher()
         addr += realTileId * 16; // Each tile is 16 bytes
         // And offset the address given the current line
         uint8_t YOffset = Y % 8;
+        if (checkYFlip && outAttributes.yFlip)
+        {
+            YOffset = 7 - YOffset;
+        }
+
         addr += YOffset * 2;
 
         return addr;
     };
 
-    auto pixelFetch = [this](uint16_t addr, auto& pixelArray, uint8_t startIndex, 
-                                uint8_t endIndex, const Attributes attributes, bool isSprite)
+    auto pixelFetch = [this](uint16_t addr, auto& pixelArray, uint8_t startIndex, uint8_t endIndex,
+                             const Attributes attributes, bool isSprite)
     {
         // VRAM bank is always 0 in GB.
         const uint8_t VRAMBank = m_isGBC ? attributes.tileVRAMBank : 0;
@@ -867,7 +880,8 @@ void Processor2C02::SimplifiedPixelFetcher()
             if (!isSprite || color != 0)
             {
                 pixelArray[startIndex + i].bgPriority = attributes.bgAndWindowOverObj;
-                pixelArray[startIndex + i].palette = !m_isGBC ? attributes.paletteNumberGB : attributes.paletteNumberGBC;
+                pixelArray[startIndex + i].palette =
+                    !m_isGBC ? attributes.paletteNumberGB : attributes.paletteNumberGBC;
             }
         }
     };
@@ -876,16 +890,9 @@ void Processor2C02::SimplifiedPixelFetcher()
 
     Attributes BGAttributes{};
     Attributes WindowAttributes{};
-    
+
     // First fetch all the pixel colors for the BG
     uint8_t yBG = m_scanlines + m_scrollY;
-
-    // Filp it if needed
-    if (m_isGBC && BGAttributes.yFlip == 1)
-    {
-        const uint8_t yOffset = yBG & 0x07;
-        yBG = (yBG & 0xF8) | (7 - yOffset);
-    }
 
     // There can be at most 167 pixels fetched (fetch more even if we don't use them)
     std::array<PixelFIFO, 167> bgPixels;
@@ -905,7 +912,7 @@ void Processor2C02::SimplifiedPixelFetcher()
                 x += 8;
             }
 
-            uint16_t tileAddr = fetchTileAddress(realX, yBG, false, BGAttributes);
+            uint16_t tileAddr = fetchTileAddress(realX, yBG, false, BGAttributes, m_isGBC);
             pixelFetch(tileAddr, bgPixels, startX, x, BGAttributes, false);
         }
     }
@@ -929,7 +936,7 @@ void Processor2C02::SimplifiedPixelFetcher()
             uint8_t nbWindowTiles = (uint8_t)std::ceil((166 - m_wX) / 8.f);
             for (uint8_t i = 0; i < nbWindowTiles; ++i)
             {
-                uint16_t tileAddr = fetchTileAddress(xWindow, yWindow, true, WindowAttributes);
+                uint16_t tileAddr = fetchTileAddress(xWindow, yWindow, true, WindowAttributes, m_isGBC);
 
                 uint8_t endX = (i == 0 && m_wX < 7) ? 7 - m_wX : xWindow + 8;
 
@@ -948,7 +955,7 @@ void Processor2C02::SimplifiedPixelFetcher()
             m_bgFifo.Push(windowPixels[i + 7 - m_wX]);
         }
         else if (BGWindowEnabled)
-        {   
+        {
             // BG pixels
             m_bgFifo.Push(bgPixels[i]);
         }
@@ -1037,7 +1044,8 @@ void Processor2C02::Clock()
         // 0 - 79 = OAM scan (Mode 2)
         if (m_lineDots < 80)
         {
-            // Only do stuff on even numbers and if the OBJ are enabled and if we didn't reach the limit of 10 selected sprites
+            // Only do stuff on even numbers and if the OBJ are enabled and if we didn't reach the limit of 10 selected
+            // sprites
             if (m_lineDots % 2 == 0 && m_lcdRegister.objEnable == 1 && m_selectedOAM.size() < 10)
             {
                 // Get the current entry
@@ -1046,7 +1054,8 @@ void Processor2C02::Clock()
 
                 uint8_t objSize = m_lcdRegister.objSize == 0 ? 8 : 16;
 
-                // A sprite is selected if the current scanline (+ 16) is between the y position and the y position + its size (8 or 16)
+                // A sprite is selected if the current scanline (+ 16) is between the y position and the y position +
+                // its size (8 or 16)
                 if (m_scanlines + 16 >= entry.yPosition && m_scanlines + 16 < entry.yPosition + objSize)
                 {
                     m_selectedOAM.push_back(index);
@@ -1057,10 +1066,8 @@ void Processor2C02::Clock()
             // So on GB, sort the vector accroding to their X position
             if (m_lineDots == 79 && !m_selectedOAM.empty() && !m_isGBC)
             {
-                std::sort(m_selectedOAM.begin(), m_selectedOAM.end(), [this](uint8_t a, uint8_t b) -> bool
-                {
-                    return m_OAM[a].xPosition < m_OAM[b].xPosition;
-                });
+                std::sort(m_selectedOAM.begin(), m_selectedOAM.end(),
+                          [this](uint8_t a, uint8_t b) -> bool { return m_OAM[a].xPosition < m_OAM[b].xPosition; });
             }
         }
         else

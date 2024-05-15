@@ -19,6 +19,7 @@
 #define SHA1_HPP
  
  
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <vector>

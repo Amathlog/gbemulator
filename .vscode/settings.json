@@ -5,5 +5,7 @@
         "fstream": "cpp",
         "sstream": "cpp",
         "iosfwd": "cpp"
-    }
+    },
+
+    "editor.formatOnSave": true
 }

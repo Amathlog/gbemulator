@@ -1,12 +1,12 @@
-#include <core/cartridge.h>
 #include <algorithm>
-#include <cstdint>
-#include <cstring>
 #include <cassert>
-#include <sys/types.h>
-#include <core/utils/sha1.h>
+#include <core/cartridge.h>
 #include <core/mappers/mapperBase.h>
 #include <core/mappers/mapperFactory.h>
+#include <core/utils/sha1.h>
+#include <cstdint>
+#include <cstring>
+#include <sys/types.h>
 
 using GBEmulator::Cartridge;
 using GBEmulator::Header;
@@ -28,7 +28,7 @@ void Header::FillFromData(const uint8_t* data)
     uint8_t cgbFlag = data[0x0143];
     CGBOnly = cgbFlag == 0xC0;
     supportCGBMode = (cgbFlag == 0x80) || supportCGBMode;
-    
+
     sgbFlag = data[0x0146];
     cartridgeType = data[0x0147];
 
@@ -38,7 +38,7 @@ void Header::FillFromData(const uint8_t* data)
 
     uint8_t ramSizeCode = data[0x0149];
     assert(ramSizeCode <= 5 && "Unsupported ram size");
-    switch(ramSizeCode)
+    switch (ramSizeCode)
     {
     case 0: // Fall-through
     case 1:
@@ -105,15 +105,9 @@ Cartridge::Cartridge(Utils::IReadVisitor& visitor)
     m_sha1 = sha1.final();
 }
 
-Cartridge::~Cartridge()
-{
-    delete m_mapper;
-}
+Cartridge::~Cartridge() { delete m_mapper; }
 
-void Cartridge::SerializeRam(Utils::IWriteVisitor& visitor) const
-{
-    visitor.WriteContainer(m_externalRAM);
-}
+void Cartridge::SerializeRam(Utils::IWriteVisitor& visitor) const { visitor.WriteContainer(m_externalRAM); }
 
 void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
@@ -123,10 +117,7 @@ void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const
         m_mapper->SerializeTo(visitor);
 }
 
-void Cartridge::DeserializeRam(Utils::IReadVisitor& visitor)
-{
-    visitor.ReadContainer(m_externalRAM);
-}
+void Cartridge::DeserializeRam(Utils::IReadVisitor& visitor) { visitor.ReadContainer(m_externalRAM); }
 
 void Cartridge::DeserializeFrom(Utils::IReadVisitor& visitor)
 {
@@ -138,7 +129,8 @@ void Cartridge::DeserializeFrom(Utils::IReadVisitor& visitor)
 
 void Cartridge::Reset()
 {
-    std::fill(m_externalRAM.begin(), m_externalRAM.end(), 0x00);
+    // This removes all saved data on reset, so disable it for now.
+    // std::fill(m_externalRAM.begin(), m_externalRAM.end(), 0x00);
 
     if (m_mapper)
         m_mapper->Reset();

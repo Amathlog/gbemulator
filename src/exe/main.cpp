@@ -1,3 +1,5 @@
+#include "exe/SDL/mainWindowSDL.h"
+#include "exe/common.h"
 #include <algorithm>
 #include <core/bus.h>
 #include <core/apu.h>
@@ -14,7 +16,9 @@
 #include <exe/messageService/messages/screenPayload.h>
 #include <filesystem>
 #include <memory>
+#include <type_traits>
 #include <vector>
+
 
 namespace fs = std::filesystem;
 using namespace GBEmulatorExe;
@@ -63,6 +67,8 @@ int main(int argc, char** argv) {
     size_t ptr = 0;
 
     {
+        using MainWindow = std::conditional_t<ConfigConstants::USE_SDL, GBEmulatorExe::MainWindowSDL, GBEmulatorExe::MainWindow>;
+
         MainWindow mainWindow("GB/GBC Emulator", 
             GBEmulator::GB_INTERNAL_WIDTH * windowScalingFactor,
             GBEmulator::GB_INTERNAL_HEIGHT * windowScalingFactor, 
