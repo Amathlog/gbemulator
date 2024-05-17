@@ -27,7 +27,6 @@ file (GLOB IMGUI_SRC
     "${IMGUI_DIR}/*cpp"
     "${IMGUI_DIR}/backends/imgui_impl_glfw.cpp"
     "${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp"
-    "${IMGUI_DIR}/backends/imgui_impl_sdl2.cpp"
 )
 
 add_library(ImGui STATIC ${IMGUI_SRC})
@@ -47,12 +46,6 @@ if(WIN32)
   target_compile_options(ImGuiFE PRIVATE /wd4267 /wd4996 /wd4244)
 endif(WIN32)
 
-# Build SDL
-set(SDL_DIR "${GBEmulator_SOURCE_DIR}/external/SDL")
-add_subdirectory(${SDL_DIR} SDL)
-
-include_directories("${SDL_DIR}/include")
-
 include_directories(${GBEmulator_SOURCE_DIR}/include)
 
 file(GLOB_RECURSE NEW_EXE_SRC
@@ -62,5 +55,5 @@ file(GLOB_RECURSE NEW_EXE_SRC
 )
 
 add_executable(GBEmulator ${NEW_EXE_SRC})
-target_link_libraries(GBEmulator GBEmulator_Core ${OPENGL_LIBRARIES} glfw ${CMAKE_DL_LIBS} Tonic rtaudio ImGuiFE ImGui SDL2)
+target_link_libraries(GBEmulator GBEmulator_Core ${OPENGL_LIBRARIES} glfw ${CMAKE_DL_LIBS} rtaudio ImGuiFE ImGui)
 set_target_properties(GBEmulator PROPERTIES FOLDER ${MAIN_FOLDER})

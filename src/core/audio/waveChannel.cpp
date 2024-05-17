@@ -4,10 +4,7 @@
 using GBEmulator::WaveChannel;
 using GBEmulator::WaveOscillator;
 
-WaveOscillator::WaveOscillator()
-{
-    m_realSampleDuration = 1.0 / GBEmulator::APU_SAMPLE_RATE_D;
-}
+WaveOscillator::WaveOscillator() { m_realSampleDuration = 1.0 / GBEmulator::APU_SAMPLE_RATE_D; }
 
 void WaveOscillator::Reset()
 {
@@ -49,11 +46,7 @@ double WaveOscillator::GetSample()
     return value;
 }
 
-WaveChannel::WaveChannel(Tonic::Synth& synth)
-{
-}
-
-void WaveChannel::Update(Tonic::Synth& synth)
+void WaveChannel::Update()
 {
     if (!m_enabled)
         return;
@@ -65,7 +58,6 @@ void WaveChannel::Update(Tonic::Synth& synth)
     if (m_freqMsbReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
         m_enabled = false;
-        m_wave.setVolume(0);
         m_oscillator.m_volume = 0.0;
     }
 
@@ -80,7 +72,6 @@ void WaveChannel::Reset()
     m_lengthCounter = 0;
     m_enabled = false;
     m_freq = 0x0000;
-    m_wave.reset();
     m_oscillator.Reset();
 
     m_nbUpdateCalls = 0;
@@ -131,8 +122,6 @@ void WaveChannel::WriteByte(uint16_t addr, uint8_t data)
         uint8_t position = (addr - 0xFF30) << 1;
         uint8_t firstSample = (data & 0xF0) >> 4;
         uint8_t secondSample = data & 0x0F;
-        m_wave.setSample(firstSample, position);
-        m_wave.setSample(secondSample, position + 1);
 
         m_oscillator.m_data[position] = firstSample;
         m_oscillator.m_data[position + 1] = secondSample;
@@ -191,14 +180,12 @@ void WaveChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
 
 void WaveChannel::SetFrequency()
 {
-    double newFreq = 65536.0 / (2048 - m_freq);
-    m_wave.setFreq((float)newFreq);
-
+    const double newFreq = 65536.0 / (2048 - m_freq);
     m_oscillator.SetFrequency(newFreq);
 }
 
 void WaveChannel::SetVolume()
-{        
+{
     float newVolume = 0.f;
     if (m_enabled)
     {
@@ -219,18 +206,16 @@ void WaveChannel::SetVolume()
         }
     }
 
-    m_wave.setVolume(newVolume);
     m_oscillator.m_volume = newVolume;
 }
 
 void WaveChannel::Restart()
 {
-    //m_enabled = true;
+    // m_enabled = true;
     m_oscillator.Reset();
     if (m_lengthCounter == 0)
         m_lengthCounter = 256;
 
     SetFrequency();
     SetVolume();
-    m_wave.resetPosition();
 }

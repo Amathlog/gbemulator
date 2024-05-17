@@ -1,4 +1,5 @@
 #include <core/audio/pulseChannel.h>
+
 #include <core/constants.h>
 
 using GBEmulator::PulseChannel;
@@ -7,7 +8,6 @@ using GBEmulator::PulseOscillator;
 PulseOscillator::PulseOscillator(double sampleRate)
     : m_sampleRate(sampleRate)
 {
-    
 }
 
 double PulseOscillator::Tick()
@@ -15,7 +15,7 @@ double PulseOscillator::Tick()
     if (m_duty == 0.0 || m_freq == 0.0)
         return 0.0;
 
-    m_phase += m_freq / GBEmulator::APU_SAMPLE_RATE_D;
+    m_phase += m_freq / m_sampleRate;
 
     while (m_phase > 1.0)
         m_phase -= 1.0f;
@@ -26,39 +26,13 @@ double PulseOscillator::Tick()
     return m_phase <= m_duty ? -1.0 : 1.0;
 }
 
-std::string PulseChannel::GetDutyCycleParameterName()
-{
-    return std::string("dutyCyclePulse") + std::to_string(m_number);
-}
-
-std::string PulseChannel::GetFrequencyParameterName()
-{
-    return std::string("freqPulse") + std::to_string(m_number);
-}
-
-std::string PulseChannel::GetOutputParameterName()
-{
-    return std::string("outputPulse") + std::to_string(m_number);
-}
-
-std::string PulseChannel::GetEnveloppeOutputParameterName()
-{
-    return std::string("outputEnvPulse") + std::to_string(m_number);
-}
-
-PulseChannel::PulseChannel(Tonic::Synth& synth, int number)
+PulseChannel::PulseChannel(int number)
     : m_number(number)
-    , m_oscillator(Tonic::sampleRate())
+    , m_oscillator(GBEmulator::APU_SAMPLE_RATE_D)
 {
-    Tonic::ControlGenerator controlDutyPulse = synth.addParameter(GetDutyCycleParameterName(), 0.5f);
-    Tonic::ControlGenerator controlFreqPulse = synth.addParameter(GetFrequencyParameterName(), 440.0f);
-    Tonic::ControlGenerator controlOutputPulse = synth.addParameter(GetOutputParameterName());
-    Tonic::ControlGenerator controlOutputEnvPulse = synth.addParameter(GetEnveloppeOutputParameterName());
-
-    m_wave = controlOutputEnvPulse * controlOutputPulse * Tonic::RectWave().freq(controlFreqPulse).pwm(controlDutyPulse);
 }
 
-void PulseChannel::Update(Tonic::Synth& synth)
+void PulseChannel::Update()
 {
     // Should be called every 1/512 seconds
     bool clock256Hz = m_nbUpdateCalls % 2 == 0;
@@ -103,7 +77,6 @@ void PulseChannel::Update(Tonic::Synth& synth)
 
     if (m_frequencyChanged)
     {
-        synth.setParameter(GetFrequencyParameterName(), (float)m_frequency);
         m_oscillator.SetFrequency(m_frequency);
         m_frequencyChanged = false;
     }
@@ -124,20 +97,17 @@ void PulseChannel::Update(Tonic::Synth& synth)
             newDuty = 0.75f;
         }
 
-        synth.setParameter(GetDutyCycleParameterName(), newDuty);
         m_oscillator.SetDuty(newDuty);
         m_dutyChanged = false;
     }
 
     if (m_enabledChanged)
     {
-        synth.setParameter(GetOutputParameterName(), m_enabled ? 1.0f : 0.0f);
         m_enabledChanged = false;
     }
 
     if (m_volumeChanged)
     {
-        synth.setParameter(GetEnveloppeOutputParameterName(), (float)m_volume / 0x0F);
         m_volumeChanged = false;
     }
 
@@ -164,13 +134,13 @@ void PulseChannel::Reset()
     m_volumeChanged = false;
     m_enabledChanged = false;
     m_nbUpdateCalls = 0;
-    
+
     m_oscillator.Reset();
 }
 
 void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
 {
-    switch(addr)
+    switch (addr)
     {
     case 0x00:
         // Sweep (only channel 1)
@@ -215,7 +185,7 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
 
 uint8_t PulseChannel::ReadByte(uint16_t addr) const
 {
-    switch(addr)
+    switch (addr)
     {
     case 0x00:
         // Sweep

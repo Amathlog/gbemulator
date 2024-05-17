@@ -1,30 +1,29 @@
-#include <exe/SDL/mainWindowSDL.h>
 #include <exe/imguiManager.h>
 
 #include <core/utils/fileVisitor.h>
-#include <cstddef>
+#include <core/utils/utils.h>
+
 #include <exe/imguiWindows/debugWindow.h>
 #include <exe/imguiWindows/findRomsWindow.h>
 #include <exe/imguiWindows/imguiWindow.h>
 #include <exe/imguiWindows/oamWindow.h>
 #include <exe/imguiWindows/ramWindow.h>
 #include <exe/imguiWindows/tileDataWindow.h>
-#include <exe/window.h>
-
-#include <backends/imgui_impl_glfw.h>
-#include <backends/imgui_impl_opengl3.h>
-#include <backends/imgui_impl_sdl2.h>
-#include <imgui.h>
-
-#include <ImGuiFileBrowser.h>
-#include <core/utils/utils.h>
-#include <exe/common.h>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
 #include <exe/messageService/messages/debugMessage.h>
 #include <exe/messageService/messages/screenMessage.h>
 #include <exe/messageService/messages/screenPayload.h>
+#include <exe/window.h>
+
+#include <ImGuiFileBrowser.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <backends/imgui_impl_sdl2.h>
 #include <glad/glad.h>
+#include <imgui.h>
+
+#include <cstddef>
 #include <memory>
 #include <string>
 
@@ -55,16 +54,7 @@ ImguiManager::ImguiManager(WindowBase* window)
     // ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
-    if constexpr (ConfigConstants::USE_SDL)
-    {
-        MainWindowSDL* windowSDL = reinterpret_cast<MainWindowSDL*>(window);
-        ImGui_ImplSDL2_InitForOpenGL(windowSDL->GetWindow(), windowSDL->GetGLContext());
-    }
-    else
-    {
-        ImGui_ImplGlfw_InitForOpenGL(reinterpret_cast<Window*>(window)->GetWindow(), true);
-    }
-
+    ImGui_ImplGlfw_InitForOpenGL(reinterpret_cast<Window*>(window)->GetWindow(), true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
     m_changeFormats.fill(false);

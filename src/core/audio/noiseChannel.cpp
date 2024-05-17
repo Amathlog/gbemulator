@@ -4,10 +4,7 @@
 using GBEmulator::NoiseChannel;
 using GBEmulator::NoiseOscillator;
 
-NoiseOscillator::NoiseOscillator()
-{
-    m_realSampleDuration = 1.0 / GBEmulator::APU_SAMPLE_RATE_D;
-}
+NoiseOscillator::NoiseOscillator() { m_realSampleDuration = 1.0 / GBEmulator::APU_SAMPLE_RATE_D; }
 
 void NoiseOscillator::Reset()
 {
@@ -51,11 +48,7 @@ double NoiseOscillator::GetSample()
     return value;
 }
 
-NoiseChannel::NoiseChannel(Tonic::Synth& synth)
-{
-}
-
-void NoiseChannel::Update(Tonic::Synth& synth)
+void NoiseChannel::Update()
 {
     if (!m_enabled)
         return;
@@ -70,7 +63,6 @@ void NoiseChannel::Update(Tonic::Synth& synth)
         if (m_enabled)
         {
             m_enabled = false;
-            m_noise.setVolume(0);
             m_oscillator.m_volume = 0.0;
             m_volume = 0;
         }
@@ -109,17 +101,10 @@ void NoiseChannel::Reset()
     m_volume = 0;
 
     m_nbUpdateCalls = 0;
-    m_noise.reset();
     m_oscillator.Reset();
 }
 
-void NoiseChannel::SetVolume()
-{
-    float newVolume = (float)m_volume / 0x0F;
-
-    m_noise.setVolume(newVolume);
-    m_oscillator.m_volume = newVolume;
-}
+void NoiseChannel::SetVolume() { m_oscillator.m_volume = (float)m_volume / 0x0F; }
 
 void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
 {
@@ -221,7 +206,6 @@ void NoiseChannel::SetFrequency()
 
     freq >>= (m_polyReg.freq + 1);
     float newFreq = freq / ratio;
-    m_noise.setFreq(newFreq);
     m_oscillator.SetFrequency(newFreq);
 
     m_oscillator.m_shiftRegLength = m_polyReg.width == 1 ? 7 : 15;

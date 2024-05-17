@@ -1,16 +1,17 @@
 #include <exe/imguiWindows/findRomsWindow.h>
+
+#include <core/utils/utils.h>
+
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
-#include <core/utils/utils.h>
+
 #include <imgui.h>
-#include <iostream>
+
+#include <algorithm>
 
 using GBEmulatorExe::FindRomsWindow;
 
-FindRomsWindow::FindRomsWindow()
-{
-    m_root = GBEmulator::Utils::GetRootPath();
-}
+FindRomsWindow::FindRomsWindow() { m_root = GBEmulator::Utils::GetRootPath(); }
 
 void FindRomsWindow::DrawInternal()
 {
@@ -24,7 +25,7 @@ void FindRomsWindow::DrawInternal()
     {
         ImGui::Selectable(file.filenameWithImguiTag.c_str(), &file.selected);
     }
-    
+
     for (auto& file : m_allRoms)
     {
         if (file.selected)
@@ -67,8 +68,6 @@ void FindRomsWindow::RefreshRoms()
     findRoms(m_root / "roms");
     findRoms(m_root / "tests");
 
-    std::sort(m_allRoms.begin(), m_allRoms.end(), [](const FileEntry& a, const FileEntry& b)
-    {
-        return a.fullPath.compare(b.fullPath) < 0;
-    });
+    std::sort(m_allRoms.begin(), m_allRoms.end(),
+              [](const FileEntry& a, const FileEntry& b) { return a.fullPath.compare(b.fullPath) < 0; });
 }

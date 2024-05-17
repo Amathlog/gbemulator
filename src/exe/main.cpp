@@ -1,24 +1,21 @@
-#include "exe/SDL/mainWindowSDL.h"
-#include "exe/common.h"
-#include <algorithm>
-#include <core/bus.h>
 #include <core/apu.h>
-#include <core/constants.h>
+#include <core/bus.h>
 #include <core/cartridge.h>
+#include <core/constants.h>
 #include <core/utils/fileVisitor.h>
+#include <core/utils/utils.h>
+
 #include <exe/audio/gbAudioSystem.h>
 #include <exe/mainWindow.h>
-#include <core/utils/utils.h>
 #include <exe/messageService/coreMessageService.h>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/coreMessage.h>
 #include <exe/messageService/messages/screenMessage.h>
 #include <exe/messageService/messages/screenPayload.h>
-#include <filesystem>
-#include <memory>
-#include <type_traits>
-#include <vector>
 
+#include <algorithm>
+#include <filesystem>
+#include <vector>
 
 namespace fs = std::filesystem;
 using namespace GBEmulatorExe;
@@ -28,7 +25,8 @@ static bool syncWithAudio = false;
 
 static unsigned windowScalingFactor = 5;
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     // Load a rom from a file
     auto root = GBEmulator::Utils::GetRootPath();
     auto path = std::filesystem::path();
@@ -36,10 +34,11 @@ int main(int argc, char** argv) {
     // Mapper 000 also
     path = root / "tests" / "external_roms" / "dmg-acid2.gb";
 
-    //path = root / "roms" / "SuperMarioLand.gb";
+    // path = root / "roms" / "SuperMarioLand.gb";
 
     // Check the arg, if there is a file to load
-    if (argc > 1) {
+    if (argc > 1)
+    {
         path = fs::path(argv[1]);
         if (path.is_relative())
             path = root / path;
@@ -51,8 +50,7 @@ int main(int argc, char** argv) {
     audioSystem.Enable(enableAudioByDefault);
 
     GBEmulatorExe::CoreMessageService coreMessageService(bus, GBEmulator::Utils::GetExePath().string());
-    GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(
-        &coreMessageService);
+    GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Connect(&coreMessageService);
 
     if (!path.empty())
     {
@@ -67,13 +65,9 @@ int main(int argc, char** argv) {
     size_t ptr = 0;
 
     {
-        using MainWindow = std::conditional_t<ConfigConstants::USE_SDL, GBEmulatorExe::MainWindowSDL, GBEmulatorExe::MainWindow>;
-
-        MainWindow mainWindow("GB/GBC Emulator", 
-            GBEmulator::GB_INTERNAL_WIDTH * windowScalingFactor,
-            GBEmulator::GB_INTERNAL_HEIGHT * windowScalingFactor, 
-            GBEmulator::GB_INTERNAL_WIDTH, 
-            GBEmulator::GB_INTERNAL_HEIGHT);
+        MainWindow mainWindow("GB/GBC Emulator", GBEmulator::GB_INTERNAL_WIDTH * windowScalingFactor,
+                              GBEmulator::GB_INTERNAL_HEIGHT * windowScalingFactor, GBEmulator::GB_INTERNAL_WIDTH,
+                              GBEmulator::GB_INTERNAL_HEIGHT);
 
         mainWindow.SetUserData(&bus);
         mainWindow.ConnectController();
@@ -86,16 +80,17 @@ int main(int argc, char** argv) {
         if (audioSystem.Initialize() || !enableAudioByDefault)
         {
             previous_point = std::chrono::high_resolution_clock::now();
-            while (!mainWindow.RequestedClose()) {
+            while (!mainWindow.RequestedClose())
+            {
                 auto start_point = std::chrono::high_resolution_clock::now();
-                auto timeSpent = std::chrono::duration_cast<std::chrono::microseconds>(
-                    start_point - previous_point)
-                    .count();
+                auto timeSpent =
+                    std::chrono::duration_cast<std::chrono::microseconds>(start_point - previous_point).count();
                 previous_point = std::chrono::high_resolution_clock::now();
-                //size_t nbInstructions = bus.GetCPU().GetNbInstructionsExecuted();
-                //if (timeSpent > 16666ll)
+                // size_t nbInstructions = bus.GetCPU().GetNbInstructionsExecuted();
+                // if (timeSpent > 16666ll)
                 //{
-                //    std::cout << "This frame took longer: " << timeSpent << "ms; NbInstructions = " << nbInstructions<< std::endl;
+                //     std::cout << "This frame took longer: " << timeSpent << "ms; NbInstructions = " <<
+                //     nbInstructions<< std::endl;
 
                 //    const auto& OpcodeCount = bus.GetCPU().GetOpcodeCount();
                 //    std::array<std::pair<uint8_t, size_t>, 5> worstOnes;
@@ -128,21 +123,24 @@ int main(int argc, char** argv) {
                 //    std::cout << "Worst ones:" << std::endl;
                 //    for (int i = 0; i < 5; ++i)
                 //    {
-                //        std::cout << "\tOpcode: " << +worstOnes[i].first << " ; Count: " << worstOnes[i].second << std::endl;
+                //        std::cout << "\tOpcode: " << +worstOnes[i].first << " ; Count: " << worstOnes[i].second <<
+                //        std::endl;
                 //    }
                 //}
-                //const_cast<GBEmulator::Z80Processor&>(bus.GetCPU()).ResetInstructionCount();
+                // const_cast<GBEmulator::Z80Processor&>(bus.GetCPU()).ResetInstructionCount();
                 timeSpent = std::min<int64_t>(timeSpent, 16666ll);
-                
+
                 constexpr double cpuPeriodSingleSpeedUS = 4.0 * 1000000.0 / GBEmulator::CPU_SINGLE_SPEED_FREQ_D;
                 constexpr double cpuPeriodDoubleSpeedUS = 4.0 * 1000000.0 / GBEmulator::CPU_DOUBLE_SPEED_FREQ_D;
                 double cpuPeriodUS = bus.IsInDoubleSpeedMode() ? cpuPeriodDoubleSpeedUS : cpuPeriodSingleSpeedUS;
                 size_t nbClocks = (size_t)(timeSpent / cpuPeriodUS);
-                if (!bus.IsInBreak()) {
-                    for (auto i = 0; i < nbClocks; ++i) {
+                if (!bus.IsInBreak())
+                {
+                    for (auto i = 0; i < nbClocks; ++i)
+                    {
                         if (bus.Clock())
-                             DispatchMessageServiceSingleton::GetInstance().Push(RenderMessage(bus.GetPPU().GetScreen().data(),
-                             bus.GetPPU().GetScreen().size()));
+                            DispatchMessageServiceSingleton::GetInstance().Push(
+                                RenderMessage(bus.GetPPU().GetScreen().data(), bus.GetPPU().GetScreen().size()));
 
                         if (bus.IsInBreak())
                             break;
@@ -173,7 +171,8 @@ int main(int argc, char** argv) {
                                 max = x;
                             }
                         }
-                        std::cout << "Real FPS: " << res / nbSamples << "; Min: " << min << "; Max: " << max << std::endl;
+                        std::cout << "Real FPS: " << res / nbSamples << "; Min: " << min << "; Max: " << max
+                                  << std::endl;
                     }
                 }
 

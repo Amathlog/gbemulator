@@ -4,28 +4,18 @@
 using GBEmulator::APU;
 
 APU::APU()
-    : m_synth()
-    , m_channel1(m_synth, 1)
-    , m_channel2(m_synth, 2)
-    , m_channel3(m_synth)
-    , m_channel4(m_synth)
+    : m_channel1(1)
+    , m_channel2(2)
+    , m_channel3()
+    , m_channel4()
     , m_circularBuffer(1000000)
 {
-    m_synth.setOutputGen(((m_channel1.GetWave() + m_channel2.GetWave()) * 0.75f + m_channel3.GetWave() + m_channel4.GetWave()) / 4.0f);
-
-    m_useTonic = false;
     m_currentTime = 0.0;
 }
 
-APU::~APU()
-{
-    Stop();
-}
+APU::~APU() { Stop(); }
 
-void APU::Stop()
-{
-    m_circularBuffer.Stop();
-}
+void APU::Stop() { m_circularBuffer.Stop(); }
 
 void APU::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
@@ -80,56 +70,53 @@ void APU::Clock()
     // We clock the channels at 512 Hz, so every 2048 cycles
     if ((m_nbCycles & (size_t)0x07FF) == 0)
     {
-        m_channel1.Update(m_synth);
-        m_channel2.Update(m_synth);
-        m_channel3.Update(m_synth);
-        m_channel4.Update(m_synth);
+        m_channel1.Update();
+        m_channel2.Update();
+        m_channel3.Update();
+        m_channel4.Update();
     }
 
     constexpr double sampleTimePerCPUCycle = 4.0 / (GBEmulator::CPU_SINGLE_SPEED_FREQ_D);
     constexpr double sampleTimePerSystemSample = 1.0 / GBEmulator::APU_SAMPLE_RATE_D;
 
-    if (!m_useTonic)
+    m_currentTime += sampleTimePerCPUCycle;
+    if (m_currentTime >= sampleTimePerSystemSample)
     {
-        m_currentTime += sampleTimePerCPUCycle;
-        if (m_currentTime >= sampleTimePerSystemSample)
+        m_currentTime -= sampleTimePerSystemSample;
+
+        double channel1Sample = m_channel1.GetSample();
+        double channel2Sample = m_channel2.GetSample();
+        double channel3Sample = m_channel3.GetSample();
+        double channel4Sample = m_channel4.GetSample();
+
+        // SO1 terminal - Right
+        double SO1Sample = 0.0;
+        SO1Sample = channel1Sample * m_outputTerminalRegister.channel1ToSO1 +
+                    channel2Sample * m_outputTerminalRegister.channel2ToSO1 +
+                    channel3Sample * m_outputTerminalRegister.channel3ToSO1 +
+                    channel4Sample * m_outputTerminalRegister.channel4ToSO1;
+
+        // Multiply by 0.25 to get the mean of all the samples and by the master volume (between 0 and 7)
+        SO1Sample *= (double)m_vinRegister.SO1OutputLevel / 7.0 * 0.25;
+
+        // SO2 terminal - Left
+        double SO2Sample = 0.0;
+        SO2Sample = channel1Sample * m_outputTerminalRegister.channel1ToSO2 +
+                    channel2Sample * m_outputTerminalRegister.channel2ToSO2 +
+                    channel3Sample * m_outputTerminalRegister.channel3ToSO2 +
+                    channel4Sample * m_outputTerminalRegister.channel4ToSO2;
+
+        // Multiply by 0.25 to get the mean of all the samples and by the master volume (between 0 and 7)
+        SO2Sample *= (double)m_vinRegister.SO2OutputLevel / 7.0 * 0.25;
+
+        // Verify it is the right order
+        m_internalBuffer[m_bufferPtr++] = (float)SO1Sample;
+        m_internalBuffer[m_bufferPtr++] = (float)SO2Sample;
+
+        if (m_bufferPtr == m_internalBuffer.max_size())
         {
-            m_currentTime -= sampleTimePerSystemSample;
-
-            double channel1Sample = m_channel1.GetSample();
-            double channel2Sample = m_channel2.GetSample();
-            double channel3Sample = m_channel3.GetSample();
-            double channel4Sample = m_channel4.GetSample();
-
-            // SO1 terminal - Right
-            double SO1Sample = 0.0;
-            SO1Sample = channel1Sample * m_outputTerminalRegister.channel1ToSO1 +
-                channel2Sample * m_outputTerminalRegister.channel2ToSO1 +
-                channel3Sample * m_outputTerminalRegister.channel3ToSO1 +
-                channel4Sample * m_outputTerminalRegister.channel4ToSO1;
-
-            // Multiply by 0.25 to get the mean of all the samples and by the master volume (between 0 and 7)
-            SO1Sample *= (double)m_vinRegister.SO1OutputLevel / 7.0 * 0.25;
-
-            // SO2 terminal - Left
-            double SO2Sample = 0.0;
-            SO2Sample = channel1Sample * m_outputTerminalRegister.channel1ToSO2 +
-                channel2Sample * m_outputTerminalRegister.channel2ToSO2 +
-                channel3Sample * m_outputTerminalRegister.channel3ToSO2 +
-                channel4Sample * m_outputTerminalRegister.channel4ToSO2;
-
-            // Multiply by 0.25 to get the mean of all the samples and by the master volume (between 0 and 7)
-            SO2Sample *= (double)m_vinRegister.SO2OutputLevel / 7.0 * 0.25;
-
-            // Verify it is the right order
-            m_internalBuffer[m_bufferPtr++] = (float)SO1Sample;
-            m_internalBuffer[m_bufferPtr++] = (float)SO2Sample;
-            
-            if (m_bufferPtr == m_internalBuffer.max_size())
-            {
-                m_bufferPtr = 0;
-                m_circularBuffer.WriteData(m_internalBuffer.data(), m_internalBuffer.max_size() * sizeof(float));
-            }
+            m_bufferPtr = 0;
+            m_circularBuffer.WriteData(m_internalBuffer.data(), m_internalBuffer.max_size() * sizeof(float));
         }
     }
 
@@ -248,16 +235,7 @@ uint8_t APU::ReadByte(uint16_t addr) const
     return 0x00;
 }
 
-void APU::FillSamples(float *outData, unsigned int numFrames, unsigned int numChannels)
+void APU::FillSamples(float* outData, unsigned int numFrames, unsigned int numChannels)
 {
-    //std::unique_lock<std::mutex> lk(m_lock);
-
-    if (m_useTonic)
-    {
-        m_synth.fillBufferOfFloats(outData, numFrames, numChannels);
-    }
-    else
-    {
-        m_circularBuffer.ReadData(outData, numFrames * numChannels * sizeof(float));
-    }
+    m_circularBuffer.ReadData(outData, numFrames * numChannels * sizeof(float));
 }

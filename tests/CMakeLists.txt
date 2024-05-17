@@ -13,7 +13,7 @@ file(GLOB_RECURSE TESTS_SRC
 )
 
 add_executable(GBEmulatorUnitTests ${TESTS_SRC})
-target_link_libraries(GBEmulatorUnitTests GBEmulator_Core Tonic)
+target_link_libraries(GBEmulatorUnitTests GBEmulator_Core)
 target_link_libraries(GBEmulatorUnitTests gtest_main)
 set_target_properties(GBEmulatorUnitTests PROPERTIES FOLDER ${MAIN_FOLDER})
 

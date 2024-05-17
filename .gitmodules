@@ -10,9 +10,6 @@
 [submodule "external/rtaudio"]
 	path = external/rtaudio
 	url = https://github.com/thestk/rtaudio.git
-[submodule "external/Tonic"]
-	path = external/Tonic
-	url = https://github.com/TonicAudio/Tonic.git
 [submodule "external/rgbds"]
 	path = external/rgbds
 	url = https://github.com/gbdev/rgbds.git

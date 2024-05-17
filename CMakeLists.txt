@@ -33,23 +33,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 endif(WIN32)
 
-# Generate Tonic lib
-set(TONIC_DIR ${GBEmulator_SOURCE_DIR}/external/Tonic/src)
-set(TONIC_INCLUDES ${TONIC_DIR} ${GBEmulator_SOURCE_DIR}/external/include)
-include_directories(${TONIC_INCLUDES})
-file(GLOB_RECURSE TONIC_SRC
-    "${TONIC_DIR}/*"
-)
-
-add_library(Tonic STATIC ${TONIC_SRC})
-if(UNIX)
-  target_compile_options(Tonic PRIVATE "-Wno-implicit-int-float-conversion")
-endif(UNIX)
-if(WIN32)
-  target_compile_options(Tonic PRIVATE /wd4068 /wd4267 /wd4244 /wd4305 /wd4018)
-endif(WIN32)
-set_target_properties(Tonic PROPERTIES FOLDER ${EXTERNAL_FOLDER})
-
 # Include RTAudio
 if(UNIX)
     set(RTAUDIO_API_PULSE ON)
