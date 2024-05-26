@@ -46,7 +46,7 @@ public:
 
 private:
     void SetFrequency();
-    void SetVolume();
+    void SetVolume(uint8_t new_volume);
 
     WavePatternRegister m_lengthReg;
     VolumeEnveloppeRegister m_volumeReg;

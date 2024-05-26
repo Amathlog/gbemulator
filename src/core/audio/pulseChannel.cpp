@@ -61,13 +61,11 @@ void PulseChannel::Update()
         {
             // Decrease
             --m_volume;
-            m_volumeChanged = true;
         }
         else if (m_volumeReg.enveloppeDirection == 1 && m_volume < 0x0F)
         {
             // Increase
             ++m_volume;
-            m_volumeChanged = true;
         }
 
         // Reload only if we are still in the range
@@ -101,16 +99,6 @@ void PulseChannel::Update()
         m_dutyChanged = false;
     }
 
-    if (m_enabledChanged)
-    {
-        m_enabledChanged = false;
-    }
-
-    if (m_volumeChanged)
-    {
-        m_volumeChanged = false;
-    }
-
     m_nbUpdateCalls++;
 }
 
@@ -131,8 +119,6 @@ void PulseChannel::Reset()
 
     m_frequencyChanged = false;
     m_dutyChanged = false;
-    m_volumeChanged = false;
-    m_enabledChanged = false;
     m_nbUpdateCalls = 0;
 
     m_oscillator.Reset();
@@ -161,8 +147,6 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
         m_volumeReg.reg = data;
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep == 0 ? 8 : m_volumeReg.nbEnveloppeSweep;
         m_volume = m_volumeReg.initialVolume;
-        m_volumeChanged = true;
-        SetEnable(m_volumeReg.initialVolume > 0);
         break;
     case 0x3:
         // Freq lsb
@@ -233,8 +217,6 @@ void PulseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_combinedFreq);
     visitor.WriteValue(m_frequencyChanged);
     visitor.WriteValue(m_dutyChanged);
-    visitor.WriteValue(m_enabledChanged);
-    visitor.WriteValue(m_volumeChanged);
     visitor.WriteValue(m_nbUpdateCalls);
     visitor.WriteValue(m_volume);
 }
@@ -255,8 +237,6 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_combinedFreq);
     visitor.ReadValue(m_frequencyChanged);
     visitor.ReadValue(m_dutyChanged);
-    visitor.ReadValue(m_enabledChanged);
-    visitor.ReadValue(m_volumeChanged);
     visitor.ReadValue(m_nbUpdateCalls);
     visitor.ReadValue(m_volume);
 }
@@ -285,8 +265,13 @@ void PulseChannel::Restart()
     m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
     m_sweepCounter = m_sweepReg.time;
     m_volume = m_volumeReg.initialVolume;
-    m_volumeChanged = true;
     m_oscillator.Reset();
+
+    // If the initial volume is 0, re-disable the channel
+    if (m_volumeReg.initialVolume == 0)
+    {
+        SetEnable(false);
+    }
 }
 
 void PulseChannel::CheckOverflow(uint16_t newFreq)

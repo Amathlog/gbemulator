@@ -63,8 +63,7 @@ void NoiseChannel::Update()
         if (m_enabled)
         {
             m_enabled = false;
-            m_oscillator.m_volume = 0.0;
-            m_volume = 0;
+            SetVolume(0);
         }
     }
 
@@ -74,15 +73,14 @@ void NoiseChannel::Update()
         if (m_volumeReg.enveloppeDirection == 0 && m_volume > 0)
         {
             // Decrease
-            --m_volume;
+            SetVolume(m_volume - 1);
         }
         else if (m_volumeReg.enveloppeDirection == 1 && m_volume < 0x0F)
         {
             // Increase
-            ++m_volume;
+            SetVolume(m_volume + 1);
         }
 
-        SetVolume();
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
     }
 
@@ -104,7 +102,11 @@ void NoiseChannel::Reset()
     m_oscillator.Reset();
 }
 
-void NoiseChannel::SetVolume() { m_oscillator.m_volume = (float)m_volume / 0x0F; }
+void NoiseChannel::SetVolume(uint8_t new_volume)
+{
+    m_volume = new_volume;
+    m_oscillator.m_volume = (float)m_volume / 0x0F;
+}
 
 void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
 {
@@ -122,9 +124,7 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
         // Enveloppe
         m_volumeReg.reg = data;
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
-        m_volume = m_volumeReg.initialVolume;
-        SetEnable(m_volumeReg.initialVolume > 0);
-        SetVolume();
+        SetVolume(m_volumeReg.initialVolume);
         break;
     case 0xFF22:
         // Freq
@@ -140,8 +140,13 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
             if (m_lengthCounter == 0)
                 m_lengthCounter = 64;
             m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
-            m_volume = m_volumeReg.initialVolume;
-            SetVolume();
+            SetVolume(m_volumeReg.initialVolume);
+
+            // Initial volume of 0 immediatly re-disable the channel
+            if (m_volumeReg.initialVolume == 0)
+            {
+                m_enabled = false;
+            }
         }
     default:
         break;

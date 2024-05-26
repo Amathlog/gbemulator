@@ -237,5 +237,12 @@ uint8_t APU::ReadByte(uint16_t addr) const
 
 void APU::FillSamples(float* outData, unsigned int numFrames, unsigned int numChannels)
 {
-    m_circularBuffer.ReadData(outData, numFrames * numChannels * sizeof(float));
+    if (!m_allSoundsOn)
+    {
+        std::memset(outData, 0, sizeof(float) * numFrames * numChannels);
+    }
+    else
+    {
+        m_circularBuffer.ReadData(outData, numFrames * numChannels * sizeof(float));
+    }
 }

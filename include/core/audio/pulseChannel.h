@@ -39,11 +39,7 @@ public:
     void Reset();
 
     bool IsEnabled() const { return m_enabled; }
-    void SetEnable(bool enabled)
-    {
-        m_enabledChanged = enabled != m_enabled;
-        m_enabled = enabled;
-    }
+    void SetEnable(bool enabled) { m_enabled = enabled; }
 
     void WriteByte(uint16_t addr, uint8_t data);
     uint8_t ReadByte(uint16_t addr) const;
@@ -78,8 +74,6 @@ private:
     bool m_enabled = false;
     bool m_frequencyChanged = false;
     bool m_dutyChanged = false;
-    bool m_enabledChanged = false;
-    bool m_volumeChanged = false;
 
     size_t m_nbUpdateCalls = 0;
 };
