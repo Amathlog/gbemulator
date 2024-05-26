@@ -48,11 +48,14 @@ double NoiseOscillator::GetSample()
     return value;
 }
 
+double NoiseChannel::GetSample()
+{
+    const double currentSample = m_oscillator.GetSample();
+    return m_enabled ? currentSample : 0.0;
+}
+
 void NoiseChannel::Update()
 {
-    if (!m_enabled)
-        return;
-
     // Should be called every 1/512 seconds
     bool clock256Hz = m_nbUpdateCalls % 2 == 0;
     bool clock64Hz = m_nbUpdateCalls % 8 == 7;
@@ -60,11 +63,7 @@ void NoiseChannel::Update()
     // Update every n / 256 seconds
     if (m_initialReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
-        if (m_enabled)
-        {
-            m_enabled = false;
-            SetVolume(0);
-        }
+        m_enabled = false;
     }
 
     // Enveloppe updated every n / 64 seconds
@@ -125,6 +124,9 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
         m_volumeReg.reg = data;
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
         SetVolume(m_volumeReg.initialVolume);
+        // If DAC is off, disable the channel
+        if (!IsDACOn())
+            m_enabled = false;
         break;
     case 0xFF22:
         // Freq
@@ -142,12 +144,13 @@ void NoiseChannel::WriteByte(uint16_t addr, uint8_t data)
             m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
             SetVolume(m_volumeReg.initialVolume);
 
-            // Initial volume of 0 immediatly re-disable the channel
-            if (m_volumeReg.initialVolume == 0)
-            {
+            // If DAC is off, re-disable the channel
+            if (!IsDACOn())
                 m_enabled = false;
-            }
         }
+
+        // Trigger is fire and forget, so set back the bit to 0.
+        m_initialReg.initial = 0;
     default:
         break;
     }

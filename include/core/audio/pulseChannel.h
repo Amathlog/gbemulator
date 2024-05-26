@@ -43,6 +43,7 @@ public:
 
     void WriteByte(uint16_t addr, uint8_t data);
     uint8_t ReadByte(uint16_t addr) const;
+    bool IsDACOn() const { return !!(m_volumeReg.reg & 0xF8); }
 
     void SerializeTo(Utils::IWriteVisitor& visitor) const;
     void DeserializeFrom(Utils::IReadVisitor& visitor);

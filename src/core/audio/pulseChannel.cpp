@@ -42,10 +42,7 @@ void PulseChannel::Update()
     // Update every n / 256 seconds
     if (m_freqMsbReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
-        if (m_enabled)
-        {
-            SetEnable(false);
-        }
+        SetEnable(false);
     }
 
     // Update every n / 128 seconds
@@ -147,6 +144,11 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
         m_volumeReg.reg = data;
         m_volumeCounter = m_volumeReg.nbEnveloppeSweep == 0 ? 8 : m_volumeReg.nbEnveloppeSweep;
         m_volume = m_volumeReg.initialVolume;
+        // If DAC is off, disable the channel
+        if (!IsDACOn())
+        {
+            SetEnable(false);
+        }
         break;
     case 0x3:
         // Freq lsb
@@ -161,6 +163,8 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
         if (m_freqMsbReg.initial > 0)
             Restart();
         UpdateFreq();
+        // Trigger is fire and forget, so set back the bit to 0.
+        m_freqMsbReg.initial = 0;
         break;
     default:
         break;
@@ -197,8 +201,9 @@ uint8_t PulseChannel::ReadByte(uint16_t addr) const
 
 double PulseChannel::GetSample()
 {
-    double currentVolume = (double)m_volume / 0x0F;
-    return m_enabled ? currentVolume * m_oscillator.Tick() : 0.0;
+    const double currentVolume = (double)m_volume / 0x0F;
+    const double currentSample = m_oscillator.Tick();
+    return m_enabled ? currentVolume * currentSample : 0.0;
 }
 
 void PulseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
@@ -265,10 +270,9 @@ void PulseChannel::Restart()
     m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
     m_sweepCounter = m_sweepReg.time;
     m_volume = m_volumeReg.initialVolume;
-    m_oscillator.Reset();
 
-    // If the initial volume is 0, re-disable the channel
-    if (m_volumeReg.initialVolume == 0)
+    // If DAC is off, re-disable the channel
+    if (!IsDACOn())
     {
         SetEnable(false);
     }

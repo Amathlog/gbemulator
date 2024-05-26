@@ -42,7 +42,8 @@ public:
     void SerializeTo(Utils::IWriteVisitor& visitor) const;
     void DeserializeFrom(Utils::IReadVisitor& visitor);
 
-    double GetSample() { return m_oscillator.GetSample(); }
+    double GetSample();
+    bool IsDACOn() const { return !!(m_volumeReg.reg & 0xF8); }
 
 private:
     void SetFrequency();

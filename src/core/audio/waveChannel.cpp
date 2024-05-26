@@ -46,11 +46,14 @@ double WaveOscillator::GetSample()
     return value;
 }
 
+double WaveChannel::GetSample()
+{
+    const double currentSample = m_oscillator.GetSample();
+    return m_enabled ? currentSample : 0.0;
+}
+
 void WaveChannel::Update()
 {
-    if (!m_enabled)
-        return;
-
     // Should be called every 1/512 seconds
     bool clock256Hz = (m_nbUpdateCalls & 0x1) == 0;
 
@@ -58,7 +61,6 @@ void WaveChannel::Update()
     if (m_freqMsbReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
     {
         m_enabled = false;
-        m_oscillator.m_volume = 0.0;
     }
 
     m_nbUpdateCalls++;
@@ -71,6 +73,7 @@ void WaveChannel::Reset()
     m_freqMsbReg.reg = 0x00;
     m_lengthCounter = 0;
     m_enabled = false;
+    m_DAC = false;
     m_freq = 0x0000;
     m_oscillator.Reset();
 
@@ -82,10 +85,10 @@ void WaveChannel::WriteByte(uint16_t addr, uint8_t data)
     switch (addr)
     {
     case 0xFF1A:
-        // Enable
-        m_enabled = (data & 0x80) > 0;
-        SetVolume();
-
+        // Enable DAC
+        m_DAC = (data & 0x80) > 0;
+        if (!m_DAC)
+            m_enabled = false;
         break;
     case 0xFF1B:
         // Sound length
@@ -110,7 +113,8 @@ void WaveChannel::WriteByte(uint16_t addr, uint8_t data)
         m_freq = ((uint16_t)m_freqMsbReg.freqMsb << 8) | (m_freq & 0x00FF);
         if (m_freqMsbReg.initial > 0)
             Restart();
-
+        // Trigger is fire and forget, so set back the bit to 0.
+        m_freqMsbReg.initial = 0;
         break;
     default:
         break;
@@ -133,7 +137,7 @@ uint8_t WaveChannel::ReadByte(uint16_t addr) const
     switch (addr)
     {
     case 0xFF1A:
-        return m_enabled ? 0xFF : 0x7F;
+        return m_DAC ? 0xFF : 0x7F;
     case 0xFF1B:
         return 0xFF;
     case 0xFF1C:
@@ -164,6 +168,7 @@ void WaveChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_freqMsbReg);
     visitor.WriteValue(m_freq);
     visitor.WriteValue(m_enabled);
+    visitor.WriteValue(m_DAC);
     visitor.WriteValue(m_nbUpdateCalls);
 }
 
@@ -175,6 +180,7 @@ void WaveChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_freqMsbReg);
     visitor.ReadValue(m_freq);
     visitor.ReadValue(m_enabled);
+    visitor.ReadValue(m_DAC);
     visitor.ReadValue(m_nbUpdateCalls);
 }
 
@@ -211,11 +217,14 @@ void WaveChannel::SetVolume()
 
 void WaveChannel::Restart()
 {
-    // m_enabled = true;
+    m_enabled = true;
     m_oscillator.Reset();
     if (m_lengthCounter == 0)
         m_lengthCounter = 256;
 
     SetFrequency();
     SetVolume();
+
+    if (!m_DAC)
+        m_enabled = false;
 }

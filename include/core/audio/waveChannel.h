@@ -43,7 +43,7 @@ public:
     void SerializeTo(Utils::IWriteVisitor& visitor) const;
     void DeserializeFrom(Utils::IReadVisitor& visitor);
 
-    double GetSample() { return m_oscillator.GetSample(); }
+    double GetSample();
 
 private:
     void SetFrequency();
@@ -58,6 +58,7 @@ private:
     WaveOscillator m_oscillator;
 
     bool m_enabled = false;
+    bool m_DAC = false;
 
     size_t m_nbUpdateCalls = 0;
     uint16_t m_lengthCounter = 0x0000;
