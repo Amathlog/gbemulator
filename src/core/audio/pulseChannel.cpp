@@ -1,7 +1,9 @@
 #include <core/audio/pulseChannel.h>
 
+#include <core/apu.h>
 #include <core/constants.h>
 
+using GBEmulator::APU;
 using GBEmulator::PulseChannel;
 using GBEmulator::PulseOscillator;
 
@@ -32,12 +34,12 @@ PulseChannel::PulseChannel(int number)
 {
 }
 
-void PulseChannel::Update()
+void PulseChannel::Update(uint8_t divCounter)
 {
     // Should be called every 1/512 seconds
-    bool clock256Hz = m_nbUpdateCalls % 2 == 0;
-    bool clock128Hz = m_nbUpdateCalls % 4 == 2;
-    bool clock64Hz = m_nbUpdateCalls % 8 == 7;
+    bool clock256Hz = divCounter % 2 == 0;
+    bool clock128Hz = divCounter % 4 == 2;
+    bool clock64Hz = divCounter % 8 == 7;
 
     // Update every n / 256 seconds
     if (m_freqMsbReg.lengthEnable && m_lengthCounter != 0 && clock256Hz && --m_lengthCounter == 0)
@@ -95,8 +97,6 @@ void PulseChannel::Update()
         m_oscillator.SetDuty(newDuty);
         m_dutyChanged = false;
     }
-
-    m_nbUpdateCalls++;
 }
 
 void PulseChannel::Reset()
@@ -116,12 +116,11 @@ void PulseChannel::Reset()
 
     m_frequencyChanged = false;
     m_dutyChanged = false;
-    m_nbUpdateCalls = 0;
 
     m_oscillator.Reset();
 }
 
-void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
+void PulseChannel::WriteByte(uint16_t addr, uint8_t data, const APU* apu)
 {
     switch (addr)
     {
@@ -157,15 +156,39 @@ void PulseChannel::WriteByte(uint16_t addr, uint8_t data)
         UpdateFreq();
         break;
     case 0x04:
+    {
         // Freq Msb
+        const bool lengthWasDisabled = !m_freqMsbReg.lengthEnable;
         m_freqMsbReg.reg = data;
         m_combinedFreq = ((uint16_t)m_freqMsbReg.freqMsb << 8) | m_freqLsb;
-        if (m_freqMsbReg.initial > 0)
+        if (!!m_freqMsbReg.initial)
             Restart();
         UpdateFreq();
+
+        // Obscure behavior: If the length is not clocked at next APU clock (updatecall & 0x01 != 0)
+        // and the length counter was disabled and is now enabled and the length counter is not 0,
+        // clock the length.
+        if (lengthWasDisabled && !!(data & 0x40) && m_lengthCounter != 0 && !!(apu->GetDivCounter() & 0x01))
+        {
+            if (--m_lengthCounter == 0)
+            {
+                // Weird thing, if the trigger is on and we clock the length and it reaches 0,
+                // don't disable and reload the length counter with 63
+                if (!!m_freqMsbReg.initial)
+                    m_lengthCounter = 0x3F;
+                else
+                    SetEnable(false);
+            }
+        }
+
         // Trigger is fire and forget, so set back the bit to 0.
         m_freqMsbReg.initial = 0;
+
+        // Reset the length enabled if it was changed by the Restart
+        m_freqMsbReg.lengthEnable = !!(data & 0x40);
+
         break;
+    }
     default:
         break;
     }
@@ -222,7 +245,6 @@ void PulseChannel::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_combinedFreq);
     visitor.WriteValue(m_frequencyChanged);
     visitor.WriteValue(m_dutyChanged);
-    visitor.WriteValue(m_nbUpdateCalls);
     visitor.WriteValue(m_volume);
 }
 
@@ -242,7 +264,6 @@ void PulseChannel::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_combinedFreq);
     visitor.ReadValue(m_frequencyChanged);
     visitor.ReadValue(m_dutyChanged);
-    visitor.ReadValue(m_nbUpdateCalls);
     visitor.ReadValue(m_volume);
 }
 
@@ -262,11 +283,15 @@ void PulseChannel::UpdateFreq()
 
 void PulseChannel::Restart()
 {
+    const bool wasEnabled = m_enabled;
+
     SetEnable(true);
     if (m_lengthCounter == 0)
+    {
         m_lengthCounter = 64;
+        m_freqMsbReg.lengthEnable = 0;
+    }
 
-    m_nbUpdateCalls = 0;
     m_volumeCounter = m_volumeReg.nbEnveloppeSweep;
     m_sweepCounter = m_sweepReg.time;
     m_volume = m_volumeReg.initialVolume;

@@ -26,6 +26,7 @@ public:
     uint8_t ReadByte(uint16_t addr) const;
 
     void FillSamples(float* outData, unsigned int numFrames, unsigned int numChannels);
+    uint8_t GetDivCounter() const { return m_divCounter; }
 
 private:
     PulseChannel m_channel1;
@@ -38,6 +39,8 @@ private:
     bool m_allSoundsOn = false;
 
     size_t m_nbCycles = 0;
+    // Passed to all channels on update to know if they need to clock their length, enveloppe and/or sweep.
+    uint8_t m_divCounter = 0;
 
     std::array<float, 128> m_internalBuffer;
     size_t m_bufferPtr = 0;

@@ -24,6 +24,7 @@ void APU::SerializeTo(Utils::IWriteVisitor& visitor) const
     m_channel3.SerializeTo(visitor);
     m_channel4.SerializeTo(visitor);
     visitor.WriteValue(m_nbCycles);
+    visitor.WriteValue(m_divCounter);
 
     visitor.WriteValue(m_vinRegister.reg);
     visitor.WriteValue(m_outputTerminalRegister.reg);
@@ -37,6 +38,7 @@ void APU::DeserializeFrom(Utils::IReadVisitor& visitor)
     m_channel3.DeserializeFrom(visitor);
     m_channel4.DeserializeFrom(visitor);
     visitor.ReadValue(m_nbCycles);
+    visitor.ReadValue(m_divCounter);
 
     visitor.ReadValue(m_vinRegister.reg);
     visitor.ReadValue(m_outputTerminalRegister.reg);
@@ -56,6 +58,8 @@ void APU::Reset()
     m_vinRegister.reg = 0x00;
     m_outputTerminalRegister.reg = 0x00;
     m_allSoundsOn = false;
+    m_nbCycles = 0;
+    m_divCounter = 0;
 }
 
 void APU::Clock()
@@ -70,10 +74,11 @@ void APU::Clock()
     // We clock the channels at 512 Hz, so every 2048 cycles
     if ((m_nbCycles & (size_t)0x07FF) == 0)
     {
-        m_channel1.Update();
-        m_channel2.Update();
+        m_channel1.Update(m_divCounter);
+        m_channel2.Update(m_divCounter);
         m_channel3.Update();
         m_channel4.Update();
+        ++m_divCounter;
     }
 
     constexpr double sampleTimePerCPUCycle = 4.0 / (GBEmulator::CPU_SINGLE_SPEED_FREQ_D);
@@ -133,11 +138,11 @@ void APU::WriteByte(uint16_t addr, uint8_t data)
 
     if (addr >= 0xFF10 && addr <= 0xFF14)
     {
-        m_channel1.WriteByte(addr - 0xFF10, data);
+        m_channel1.WriteByte(addr - 0xFF10, data, this);
     }
     else if (addr >= 0xFF15 && addr <= 0xFF19)
     {
-        m_channel2.WriteByte(addr - 0xFF15, data);
+        m_channel2.WriteByte(addr - 0xFF15, data, this);
     }
     else if ((addr >= 0xFF1A && addr <= 0xFF1E) || (addr >= 0xFF30 && addr <= 0xFF3F))
     {

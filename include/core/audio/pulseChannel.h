@@ -8,6 +8,8 @@
 
 namespace GBEmulator
 {
+class APU;
+
 class PulseOscillator
 {
 public:
@@ -35,13 +37,13 @@ public:
     PulseChannel(int number);
     ~PulseChannel() = default;
 
-    void Update();
+    void Update(uint8_t divCounter);
     void Reset();
 
     bool IsEnabled() const { return m_enabled; }
     void SetEnable(bool enabled) { m_enabled = enabled; }
 
-    void WriteByte(uint16_t addr, uint8_t data);
+    void WriteByte(uint16_t addr, uint8_t data, const APU* apu);
     uint8_t ReadByte(uint16_t addr) const;
     bool IsDACOn() const { return !!(m_volumeReg.reg & 0xF8); }
 
@@ -75,7 +77,5 @@ private:
     bool m_enabled = false;
     bool m_frequencyChanged = false;
     bool m_dutyChanged = false;
-
-    size_t m_nbUpdateCalls = 0;
 };
 } // namespace GBEmulator
