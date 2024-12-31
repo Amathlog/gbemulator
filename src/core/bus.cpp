@@ -1,7 +1,7 @@
-#include <core/z80Processor.h>
+#include <algorithm>
 #include <core/bus.h>
 #include <core/utils/utils.h>
-#include <algorithm>
+#include <core/z80Processor.h>
 #include <cstdint>
 
 using GBEmulator::Bus;
@@ -10,7 +10,7 @@ constexpr bool enableLogger = false;
 
 Bus::Bus()
 {
-    // 32kB work ram (in GBC mode). Will be limited to 
+    // 32kB work ram (in GBC mode). Will be limited to
     // 8kB in GB mode.
     m_WRAM.resize(0x8000);
 
@@ -26,10 +26,7 @@ Bus::Bus()
     Reset();
 }
 
-uint8_t Bus::ReadByte(uint16_t addr) const
-{
-    return const_cast<Bus*>(this)->ReadByte(addr, true);
-}
+uint8_t Bus::ReadByte(uint16_t addr) const { return const_cast<Bus*>(this)->ReadByte(addr, true); }
 
 uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
 {
@@ -103,17 +100,24 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
         // LCD
         data = m_ppu.ReadByte(addr, readOnly);
     }
-    else if (addr == 0xFF4D && m_mode == Mode::GBC)
+    else if (addr == 0xFF4D)
     {
-        // Switching speed (GBC only)
-        if (m_isDoubleSpeedMode)
+        if (m_mode == Mode::GBC)
         {
-            data |= 0x80;
-        }
+            // Switching speed (GBC only)
+            if (m_isDoubleSpeedMode)
+            {
+                data |= 0x80;
+            }
 
-        if (m_isPreparingForChangingSpeed)
+            if (m_isPreparingForChangingSpeed)
+            {
+                data |= 0x01;
+            }
+        }
+        else
         {
-            data |= 0x01;
+            data = 0xff;
         }
     }
     else if (addr == 0xFF4F && m_mode == Mode::GBC)
@@ -260,7 +264,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
     else if (addr >= 0xFF51 && addr <= 0xFF55 && m_mode == Mode::GBC)
     {
         // VRAM DMA (GBC only)
-        switch(addr)
+        switch (addr)
         {
         case 0xFF51:
             // High address source
@@ -285,7 +289,7 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
                 m_isDMAHBlankModeGBC = (data & 0x80) > 0;
                 m_DMABlocksRemainingGBC = (data & 0x7F);
                 m_DMAWasStoppedGBC = false;
-            } 
+            }
             else
             {
                 // Otherwise, if we are in HBlank mode, and bit 7 is 0, stop the transfer
@@ -448,7 +452,7 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     // If we have no cartridge, nothing to do
     if (!m_cartridge)
         return;
-        
+
     m_cpu.SerializeTo(visitor);
     m_ppu.SerializeTo(visitor);
     m_apu.SerializeTo(visitor);
@@ -567,8 +571,7 @@ void Bus::Reset()
 
 void Bus::ChangeMode(Mode newMode)
 {
-    if ((newMode == Mode::GB && !IsGBModeAvailable()) ||
-        (newMode == Mode::GBC && !IsGBCModeAvailable()))
+    if ((newMode == Mode::GB && !IsGBModeAvailable()) || (newMode == Mode::GBC && !IsGBCModeAvailable()))
         return;
 
     m_mode = newMode;
@@ -592,7 +595,7 @@ bool Bus::IsGBCModeAvailable() const
     return m_cartridge ? (m_cartridge->GetHeader().CGBOnly || m_cartridge->GetHeader().supportCGBMode) : true;
 }
 
-void Bus::InsertCartridge(const std::shared_ptr<Cartridge> &cartridge)
+void Bus::InsertCartridge(const std::shared_ptr<Cartridge>& cartridge)
 {
     if (!cartridge)
         return;

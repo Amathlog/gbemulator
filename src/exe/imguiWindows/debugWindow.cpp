@@ -1,8 +1,8 @@
 #include "exe/imguiWindows/imguiWindow.h"
 #include "exe/messageService/messageService.h"
 #include <exe/imguiWindows/debugWindow.h>
-#include <exe/messageService/messages/debugMessage.h>
 #include <exe/messageService/coreMessageService.h>
+#include <exe/messageService/messages/debugMessage.h>
 #include <imgui.h>
 
 using GBEmulatorExe::DebugWindow;
@@ -57,7 +57,8 @@ void DebugWindow::DrawInternal()
     static char addressRunTo[5] = "0000";
     float limit = 2.f * m_width / 5.f;
     ImGui::SetNextWindowPos(windowPos);
-    if (ImGui::BeginChild("Disassembly#12", ImVec2(limit, m_height), false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginChild("Disassembly#12", ImVec2(limit, m_height), 0,
+                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar))
     {
         for (auto i = 0; i < m_data.size(); ++i)
         {
@@ -82,11 +83,11 @@ void DebugWindow::DrawInternal()
 
         ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
-
         ImGui::Text("Run to: 0x");
         ImGui::SameLine();
         ImGui::SetNextItemWidth(40.f);
-        ImGui::InputText("##address", addressRunTo, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
+        ImGui::InputText("##address", addressRunTo, 5,
+                         ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
         ImGui::SameLine();
         if (ImGui::Button("Go"))
         {
@@ -106,9 +107,10 @@ void DebugWindow::DrawInternal()
 
     ImGui::SetNextWindowPos(nextWindowPos);
 
-    if(ImGui::BeginChild("Status#12", ImVec2(m_width - limit, m_height), false, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
+    if (ImGui::BeginChild("Status#12", ImVec2(m_width - limit, m_height), false,
+                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize))
     {
-        const ImVec4 greenColor(0.f, 1.f, 0.f, 1.f); 
+        const ImVec4 greenColor(0.f, 1.f, 0.f, 1.f);
         const ImVec4 redColor(1.f, 0.f, 0.f, 1.f);
 
         ImGui::Text("Flags: ");
@@ -124,20 +126,19 @@ void DebugWindow::DrawInternal()
         ImGui::TextColored(m_cpuRegisterInfo.m_IMEEnabled ? greenColor : redColor, "%s", "IME");
 
         ImGui::Text("A: 0x%02X [%3d]", m_cpuRegisterInfo.m_AF.A, m_cpuRegisterInfo.m_AF.A);
-        ImGui::Text("BC: 0x%04X ; B: 0x%02X [%3d] ; C: 0x%02X [%3d]", m_cpuRegisterInfo.m_BC.BC, 
-                                                                        m_cpuRegisterInfo.m_BC.B, m_cpuRegisterInfo.m_BC.B, 
-                                                                        m_cpuRegisterInfo.m_BC.C, m_cpuRegisterInfo.m_BC.C);
-        ImGui::Text("DE: 0x%04X ; D: 0x%02X [%3d] ; E: 0x%02X [%3d]", m_cpuRegisterInfo.m_DE.DE, 
-                                                                        m_cpuRegisterInfo.m_DE.D, m_cpuRegisterInfo.m_DE.D, 
-                                                                        m_cpuRegisterInfo.m_DE.E, m_cpuRegisterInfo.m_DE.E);
-        ImGui::Text("HL: 0x%04X ; H: 0x%02X [%3d] ; L: 0x%02X [%3d]", m_cpuRegisterInfo.m_HL.HL, 
-                                                                        m_cpuRegisterInfo.m_HL.H, m_cpuRegisterInfo.m_HL.H, 
-                                                                        m_cpuRegisterInfo.m_HL.L, m_cpuRegisterInfo.m_HL.L);
+        ImGui::Text("BC: 0x%04X ; B: 0x%02X [%3d] ; C: 0x%02X [%3d]", m_cpuRegisterInfo.m_BC.BC,
+                    m_cpuRegisterInfo.m_BC.B, m_cpuRegisterInfo.m_BC.B, m_cpuRegisterInfo.m_BC.C,
+                    m_cpuRegisterInfo.m_BC.C);
+        ImGui::Text("DE: 0x%04X ; D: 0x%02X [%3d] ; E: 0x%02X [%3d]", m_cpuRegisterInfo.m_DE.DE,
+                    m_cpuRegisterInfo.m_DE.D, m_cpuRegisterInfo.m_DE.D, m_cpuRegisterInfo.m_DE.E,
+                    m_cpuRegisterInfo.m_DE.E);
+        ImGui::Text("HL: 0x%04X ; H: 0x%02X [%3d] ; L: 0x%02X [%3d]", m_cpuRegisterInfo.m_HL.HL,
+                    m_cpuRegisterInfo.m_HL.H, m_cpuRegisterInfo.m_HL.H, m_cpuRegisterInfo.m_HL.L,
+                    m_cpuRegisterInfo.m_HL.L);
         ImGui::Text("SP: 0x%04X", m_cpuRegisterInfo.m_SP);
         ImGui::Text("PC: 0x%04X", m_cpuRegisterInfo.m_PC);
-
+        ImGui::Text("Paused: %s", m_cpuRegisterInfo.m_paused ? "true" : "false");
     }
 
     ImGui::EndChild();
 }
-

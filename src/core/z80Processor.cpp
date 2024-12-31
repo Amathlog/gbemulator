@@ -1,15 +1,13 @@
-#include <core/z80Processor.h>
-#include <core/bus.h>
-#include <cstdint>
+#include "core/utils/disassenbly.h"
 #include <array>
+#include <core/bus.h>
+#include <core/z80Processor.h>
+#include <cstdint>
 #include <sys/types.h>
 
 using GBEmulator::Z80Processor;
 
-Z80Processor::Z80Processor()
-{
-    Reset();
-} 
+Z80Processor::Z80Processor() { Reset(); }
 
 void Z80Processor::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
@@ -69,13 +67,14 @@ void Z80Processor::Reset()
     m_opcodeCount.fill(0);
 }
 
-inline uint8_t Z80Processor::ReadByte(uint16_t addr)
-{
-    return m_bus->ReadByte(addr);
-}
+inline uint8_t Z80Processor::ReadByte(uint16_t addr) { return m_bus->ReadByte(addr); }
 
 inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data)
 {
+    if (addr == 0xFF00)
+    {
+        int x = 1;
+    }
     m_bus->WriteByte(addr, data);
 }
 
@@ -108,6 +107,11 @@ bool Z80Processor::Clock()
 
     if (m_cycles == 0)
     {
+        if (__builtin_expect(m_dumpEnabled, 0))
+        {
+            std::cout << GBEmulator::Disassemble(*m_bus, m_PC, 1)[0] << std::endl;
+        }
+
         uint8_t opcode = FetchByte();
         m_cycles = DecodeOpcodeAndCall(opcode);
         m_nbInstructionsExecuted++;
@@ -123,7 +127,7 @@ bool Z80Processor::ReadByteFromRegisterIndex(uint8_t index, uint8_t& data)
 {
     bool extraCycle = false;
 
-    switch(index)
+    switch (index)
     {
     case 0:
         data = m_BC.B;
@@ -162,7 +166,7 @@ bool Z80Processor::WriteByteToRegisterIndex(uint8_t index, uint8_t data)
 {
     bool extraCycle = false;
 
-    switch(index)
+    switch (index)
     {
     case 0:
         m_BC.B = data;
@@ -198,7 +202,7 @@ bool Z80Processor::WriteByteToRegisterIndex(uint8_t index, uint8_t data)
 
 void Z80Processor::ReadWordFromRegisterIndex(uint8_t index, uint16_t& data)
 {
-    switch(index)
+    switch (index)
     {
     case 0:
         data = m_BC.BC;
@@ -220,7 +224,7 @@ void Z80Processor::ReadWordFromRegisterIndex(uint8_t index, uint16_t& data)
 
 void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
 {
-    switch(index)
+    switch (index)
     {
     case 0:
         m_BC.BC = data;
@@ -255,10 +259,7 @@ inline uint16_t Z80Processor::PopWordFromStack()
     return (highData << 8) | lowData;
 }
 
-inline uint8_t Z80Processor::FetchByte()
-{
-    return ReadByte(m_PC++);
-}
+inline uint8_t Z80Processor::FetchByte() { return ReadByte(m_PC++); }
 
 inline uint16_t Z80Processor::FetchWord()
 {
@@ -271,40 +272,70 @@ constexpr const char* Z80Processor::GetDebugStringForOp(uint8_t opcode)
 {
     auto opFunc = m_opcodesMap[opcode];
 
-#define TEST_FUNC(x) if (opFunc == &Z80Processor::x) return #x
+#define TEST_FUNC(x)                                                                                                   \
+    if (opFunc == &Z80Processor::x)                                                                                    \
+    return #x
 
-    TEST_FUNC(LD);   TEST_FUNC(LDH);
+    TEST_FUNC(LD);
+    TEST_FUNC(LDH);
 
     // Arithmetic/Logic instructions
-    TEST_FUNC(ADD);  TEST_FUNC(ADC);  TEST_FUNC(SUB);
-    TEST_FUNC(SBC);  TEST_FUNC(AND);  TEST_FUNC(OR);
-    TEST_FUNC(XOR);  TEST_FUNC(CP);   TEST_FUNC(DEC);
+    TEST_FUNC(ADD);
+    TEST_FUNC(ADC);
+    TEST_FUNC(SUB);
+    TEST_FUNC(SBC);
+    TEST_FUNC(AND);
+    TEST_FUNC(OR);
+    TEST_FUNC(XOR);
+    TEST_FUNC(CP);
+    TEST_FUNC(DEC);
     TEST_FUNC(INC);
 
     // Bit operations instructions
-    TEST_FUNC(BIT);  TEST_FUNC(RES);  TEST_FUNC(SET);
+    TEST_FUNC(BIT);
+    TEST_FUNC(RES);
+    TEST_FUNC(SET);
     TEST_FUNC(SWAP);
 
     // Bit shift instructions
-    TEST_FUNC(RL);   TEST_FUNC(RLA);  TEST_FUNC(RLC);
-    TEST_FUNC(RLCA); TEST_FUNC(RR);   TEST_FUNC(RRA);
-    TEST_FUNC(RRC);  TEST_FUNC(RRCA); TEST_FUNC(SLA);
-    TEST_FUNC(SRA);  TEST_FUNC(SRL);
+    TEST_FUNC(RL);
+    TEST_FUNC(RLA);
+    TEST_FUNC(RLC);
+    TEST_FUNC(RLCA);
+    TEST_FUNC(RR);
+    TEST_FUNC(RRA);
+    TEST_FUNC(RRC);
+    TEST_FUNC(RRCA);
+    TEST_FUNC(SLA);
+    TEST_FUNC(SRA);
+    TEST_FUNC(SRL);
 
     // Dispatcher instruction
     TEST_FUNC(DISP);
 
     // Jumps and Subroutines
-    TEST_FUNC(CALL); TEST_FUNC(JP);   TEST_FUNC(JR);
-    TEST_FUNC(RET);  TEST_FUNC(RETI); TEST_FUNC(RST);
+    TEST_FUNC(CALL);
+    TEST_FUNC(JP);
+    TEST_FUNC(JR);
+    TEST_FUNC(RET);
+    TEST_FUNC(RETI);
+    TEST_FUNC(RST);
 
     // Stack operations
-    TEST_FUNC(POP);  TEST_FUNC(PUSH); TEST_FUNC(LDSP);
+    TEST_FUNC(POP);
+    TEST_FUNC(PUSH);
+    TEST_FUNC(LDSP);
 
     // Misc instructions
-    TEST_FUNC(CCF);  TEST_FUNC(CPL);  TEST_FUNC(DAA);
-    TEST_FUNC(DI);   TEST_FUNC(EI);   TEST_FUNC(HALT);
-    TEST_FUNC(NOP);  TEST_FUNC(SCF);  TEST_FUNC(STOP);
+    TEST_FUNC(CCF);
+    TEST_FUNC(CPL);
+    TEST_FUNC(DAA);
+    TEST_FUNC(DI);
+    TEST_FUNC(EI);
+    TEST_FUNC(HALT);
+    TEST_FUNC(NOP);
+    TEST_FUNC(SCF);
+    TEST_FUNC(STOP);
 
 #undef TEST_FUNC
 
@@ -511,7 +542,7 @@ uint8_t Z80Processor::LD(uint8_t opcode)
         nbCycles++;
 
     return nbCycles;
-}   
+}
 
 // LDH op
 // Transfer accumulator to/from memory. Memory address is an offset of 1 byte
@@ -564,7 +595,7 @@ uint8_t Z80Processor::ADD(uint8_t opcode)
         uint32_t temp = (uint32_t)data + (uint32_t)m_HL.HL;
 
         // Half carry if the sum of the 12 lsb of each operand overflow
-        m_AF.F.H =((m_HL.HL & 0xFFF) + (data & 0xFFF)) > 0xFFF;
+        m_AF.F.H = ((m_HL.HL & 0xFFF) + (data & 0xFFF)) > 0xFFF;
         m_AF.F.C = (temp & 0xFFFF0000) > 0;
         m_HL.HL = (uint16_t)(temp & 0x0000FFFF);
         m_AF.F.N = 0;
@@ -751,7 +782,7 @@ uint8_t Z80Processor::OR(uint8_t opcode)
     m_AF.F.N = 0;
 
     m_AF.A |= data;
-    
+
     SetZeroFlag(m_AF.A);
 
     return nbCycles;
@@ -790,7 +821,7 @@ uint8_t Z80Processor::XOR(uint8_t opcode)
     m_AF.F.N = 0;
 
     m_AF.A ^= data;
-    
+
     SetZeroFlag(m_AF.A);
 
     return nbCycles;
@@ -855,7 +886,7 @@ uint8_t Z80Processor::DEC(uint8_t opcode)
     uint8_t lowestBitIndex = (opcode & 0x08) > 0;
     uint8_t index = ((opcode >> 4) << 1) | lowestBitIndex;
 
-    if(ReadByteFromRegisterIndex(index, data))
+    if (ReadByteFromRegisterIndex(index, data))
         nbCycles++;
 
     m_AF.F.H = (data & 0x0F) == 0;
@@ -907,7 +938,7 @@ uint8_t Z80Processor::INC(uint8_t opcode)
     uint8_t lowestBitIndex = (opcode & 0x08) > 0;
     uint8_t index = ((opcode >> 4) << 1) | lowestBitIndex;
 
-    if(ReadByteFromRegisterIndex(index, data))
+    if (ReadByteFromRegisterIndex(index, data))
         nbCycles++;
 
     m_AF.F.H = (data & 0x0F) == 0x0F;
@@ -928,7 +959,7 @@ uint8_t Z80Processor::INC(uint8_t opcode)
 // Compare a specific bit in a given data
 // and set the zero flag accordingly
 // The opcode encode the bit we want to check and the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                 => 2 cycles
 // Index 6          -> read memory pointed by HL => 3 cycles
@@ -944,7 +975,7 @@ uint8_t Z80Processor::BIT(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
     uint8_t bitToCheck = (opcode & 0x38) >> 3;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
     if (ReadByteFromRegisterIndex(registerIndex, data))
@@ -960,7 +991,7 @@ uint8_t Z80Processor::BIT(uint8_t opcode)
 // RES Op
 // Set a specific bit in a given data to 0
 // The opcode encode the bit we want to reset and the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -972,7 +1003,7 @@ uint8_t Z80Processor::RES(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
     uint8_t bitToCheck = (opcode & 0x38) >> 3;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -980,7 +1011,7 @@ uint8_t Z80Processor::RES(uint8_t opcode)
         nbCycles++;
 
     data = data & (~(1 << bitToCheck));
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -990,7 +1021,7 @@ uint8_t Z80Processor::RES(uint8_t opcode)
 // SET Op
 // Set a specific bit in a given data to 1
 // The opcode encode the bit we want to reset and the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1002,7 +1033,7 @@ uint8_t Z80Processor::SET(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
     uint8_t bitToCheck = (opcode & 0x38) >> 3;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1010,7 +1041,7 @@ uint8_t Z80Processor::SET(uint8_t opcode)
         nbCycles++;
 
     data = data | (1 << bitToCheck);
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1020,7 +1051,7 @@ uint8_t Z80Processor::SET(uint8_t opcode)
 // SWAP Op
 // Swap 4 most significant bits with the 4 less significant bits
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1033,7 +1064,7 @@ uint8_t Z80Processor::SET(uint8_t opcode)
 uint8_t Z80Processor::SWAP(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1041,7 +1072,7 @@ uint8_t Z80Processor::SWAP(uint8_t opcode)
         nbCycles++;
 
     data = (data << 4) | (data >> 4);
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1058,7 +1089,7 @@ uint8_t Z80Processor::SWAP(uint8_t opcode)
 // RL Op
 // Shift a given data to the left and introduce the carry to the right
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1071,7 +1102,7 @@ uint8_t Z80Processor::SWAP(uint8_t opcode)
 uint8_t Z80Processor::RL(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1082,7 +1113,7 @@ uint8_t Z80Processor::RL(uint8_t opcode)
     m_AF.F.C = (data & 0x80) > 0;
 
     data = (data << 1) | oldCarry;
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1108,7 +1139,7 @@ uint8_t Z80Processor::RLA(uint8_t opcode)
 // RLC Op
 // Shift a given data to the left and reintroduce the highest bit at the right.
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1121,7 +1152,7 @@ uint8_t Z80Processor::RLA(uint8_t opcode)
 uint8_t Z80Processor::RLC(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1131,7 +1162,7 @@ uint8_t Z80Processor::RLC(uint8_t opcode)
     m_AF.F.C = (data & 0x80) > 0;
 
     data = (data << 1) | m_AF.F.C;
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1157,7 +1188,7 @@ uint8_t Z80Processor::RLCA(uint8_t opcode)
 // RR Op
 // Shift a given data to the right and introduce the carry to the left
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1170,7 +1201,7 @@ uint8_t Z80Processor::RLCA(uint8_t opcode)
 uint8_t Z80Processor::RR(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1181,7 +1212,7 @@ uint8_t Z80Processor::RR(uint8_t opcode)
     m_AF.F.C = data & 0x01;
 
     data = (data >> 1) | (oldCarry << 7);
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1207,7 +1238,7 @@ uint8_t Z80Processor::RRA(uint8_t /*opcode*/)
 // RRC Op
 // Shift a given data to the right and reintroduce the lowest bit to the left
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1220,7 +1251,7 @@ uint8_t Z80Processor::RRA(uint8_t /*opcode*/)
 uint8_t Z80Processor::RRC(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1230,7 +1261,7 @@ uint8_t Z80Processor::RRC(uint8_t opcode)
     m_AF.F.C = data & 0x01;
 
     data = (data >> 1) | (m_AF.F.C << 7);
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1256,7 +1287,7 @@ uint8_t Z80Processor::RRCA(uint8_t /*opcode*/)
 // SLA Op: Left arithmetic shift
 // Shift a given data to the left
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1269,7 +1300,7 @@ uint8_t Z80Processor::RRCA(uint8_t /*opcode*/)
 uint8_t Z80Processor::SLA(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1279,7 +1310,7 @@ uint8_t Z80Processor::SLA(uint8_t opcode)
     m_AF.F.C = (data & 0x80) > 0;
 
     data <<= 1;
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1293,7 +1324,7 @@ uint8_t Z80Processor::SLA(uint8_t opcode)
 // SRA Op : Right arithmetic shift
 // Shift a given data to the right. Most significant bit stays unchanged.
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1306,7 +1337,7 @@ uint8_t Z80Processor::SLA(uint8_t opcode)
 uint8_t Z80Processor::SRA(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1316,7 +1347,7 @@ uint8_t Z80Processor::SRA(uint8_t opcode)
     m_AF.F.C = (data & 0x01) > 0;
 
     data = (data >> 1) | (data & 0x80);
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1330,7 +1361,7 @@ uint8_t Z80Processor::SRA(uint8_t opcode)
 // SRA Op : Right logical shift
 // Shift a given data to the right.
 // The opcode encode the register index
-// 
+//
 // Index is encoded in the 3 lowest bits (0x07)
 // Index [0, 5] + 7 -> registers                                => 2 cycles
 // Index 6          -> read memory pointed by HL and write back => 4 cycles
@@ -1343,7 +1374,7 @@ uint8_t Z80Processor::SRA(uint8_t opcode)
 uint8_t Z80Processor::SRL(uint8_t opcode)
 {
     uint8_t nbCycles = 2;
-    
+
     uint8_t registerIndex = opcode & 0x07;
     uint8_t data = 0;
 
@@ -1353,7 +1384,7 @@ uint8_t Z80Processor::SRL(uint8_t opcode)
     m_AF.F.C = (data & 0x01) > 0;
 
     data >>= 1;
-    
+
     if (WriteByteToRegisterIndex(registerIndex, data))
         nbCycles++;
 
@@ -1369,7 +1400,7 @@ uint8_t Z80Processor::DISP(uint8_t /*opcode*/)
 {
     // First get the second opcode
     uint8_t opcode = FetchByte();
-    
+
     switch (opcode >> 4)
     {
     case 0x0: // RLC and RRC
@@ -1421,12 +1452,8 @@ uint8_t Z80Processor::CALL(uint8_t opcode)
     // 0xCC => Z set
     // 0xDC => C set
     // 0xCD => Always jump
-    bool conditionMet = 
-        (opcode == 0xC4 && !m_AF.F.Z) ||
-        (opcode == 0xD4 && !m_AF.F.C) ||
-        (opcode == 0xCC && m_AF.F.Z) ||
-        (opcode == 0xDC && m_AF.F.C) ||
-        (opcode == 0xCD);
+    bool conditionMet = (opcode == 0xC4 && !m_AF.F.Z) || (opcode == 0xD4 && !m_AF.F.C) ||
+                        (opcode == 0xCC && m_AF.F.Z) || (opcode == 0xDC && m_AF.F.C) || (opcode == 0xCD);
 
     if (!conditionMet)
         return 3;
@@ -1463,12 +1490,8 @@ uint8_t Z80Processor::JP(uint8_t opcode)
     // 0xCA => Z set
     // 0xDA => C set
     // 0xC3 => Always jump
-    bool conditionMet = 
-        (opcode == 0xC2 && !m_AF.F.Z) ||
-        (opcode == 0xD2 && !m_AF.F.C) ||
-        (opcode == 0xCA && m_AF.F.Z) ||
-        (opcode == 0xDA && m_AF.F.C) ||
-        (opcode == 0xC3);
+    bool conditionMet = (opcode == 0xC2 && !m_AF.F.Z) || (opcode == 0xD2 && !m_AF.F.C) ||
+                        (opcode == 0xCA && m_AF.F.Z) || (opcode == 0xDA && m_AF.F.C) || (opcode == 0xC3);
 
     if (!conditionMet)
         return 3;
@@ -1493,12 +1516,8 @@ uint8_t Z80Processor::JR(uint8_t opcode)
     // 0x28 => Z set
     // 0x38 => C set
     // 0x18 => Always jump
-    bool conditionMet = 
-        (opcode == 0x20 && !m_AF.F.Z) ||
-        (opcode == 0x30 && !m_AF.F.C) ||
-        (opcode == 0x28 && m_AF.F.Z) ||
-        (opcode == 0x38 && m_AF.F.C) ||
-        (opcode == 0x18);
+    bool conditionMet = (opcode == 0x20 && !m_AF.F.Z) || (opcode == 0x30 && !m_AF.F.C) ||
+                        (opcode == 0x28 && m_AF.F.Z) || (opcode == 0x38 && m_AF.F.C) || (opcode == 0x18);
 
     if (!conditionMet)
         return 2;
@@ -1521,12 +1540,8 @@ uint8_t Z80Processor::RET(uint8_t opcode)
     // 0xC8 => Z set
     // 0xD8 => C set
     // 0xC9 => Always jump
-    bool conditionMet = 
-        (opcode == 0xC0 && !m_AF.F.Z) ||
-        (opcode == 0xD0 && !m_AF.F.C) ||
-        (opcode == 0xC8 && m_AF.F.Z) ||
-        (opcode == 0xD8 && m_AF.F.C) ||
-        (opcode == 0xC9);
+    bool conditionMet = (opcode == 0xC0 && !m_AF.F.Z) || (opcode == 0xD0 && !m_AF.F.C) ||
+                        (opcode == 0xC8 && m_AF.F.Z) || (opcode == 0xD8 && m_AF.F.C) || (opcode == 0xC9);
 
     if (!conditionMet)
         return 2;
@@ -1556,9 +1571,7 @@ uint8_t Z80Processor::RETI(uint8_t /*opcode*/)
 uint8_t Z80Processor::RST(uint8_t opcode)
 {
     uint8_t index = (((opcode >> 4) & 0x03) << 1) | ((opcode & 0x08) > 0);
-    constexpr std::array<uint16_t, 8> addrTable = {
-        0x0000, 0x0008, 0x0010, 0x0018, 0x0020, 0x0028, 0x0030, 0x0038
-    };
+    constexpr std::array<uint16_t, 8> addrTable = {0x0000, 0x0008, 0x0010, 0x0018, 0x0020, 0x0028, 0x0030, 0x0038};
 
     // Next instrcution is push on the stack
     PushWordToStack(m_PC);
@@ -1593,7 +1606,6 @@ uint8_t Z80Processor::POP(uint8_t opcode)
         WriteWordToRegisterIndex(index, data);
     }
 
-
     return 3;
 }
 
@@ -1626,7 +1638,7 @@ uint8_t Z80Processor::PUSH(uint8_t opcode)
 // LDSP op
 // Add signed litteral to SP and store value in HL
 // Nb cycles: 3
-// Flags: 
+// Flags:
 // N: 0
 // Z: 0
 // C: If overflow bit 7
@@ -1692,7 +1704,7 @@ uint8_t Z80Processor::CPL(uint8_t /*opcode*/)
 // need to do another pass to understand it better
 uint8_t Z80Processor::DAA(uint8_t /*opcode*/)
 {
-    // Addition, adjust if (half-)carry occured or 
+    // Addition, adjust if (half-)carry occured or
     // is the result is out-of-bounds
     if (m_AF.F.N == 0)
     {
@@ -1721,7 +1733,7 @@ uint8_t Z80Processor::DAA(uint8_t /*opcode*/)
 
     SetZeroFlag(m_AF.A);
     m_AF.F.H = 0;
-    
+
     return 1;
 }
 
@@ -1758,15 +1770,12 @@ uint8_t Z80Processor::HALT(uint8_t opcode)
 // Nb cycles: 1
 //
 // Flags: Untouched
-uint8_t Z80Processor::NOP(uint8_t /*opcode*/)
-{
-    return 1;
-}
+uint8_t Z80Processor::NOP(uint8_t /*opcode*/) { return 1; }
 
 // SCF op
 // Set carry flag to 1
 // 1 cycle
-// 
+//
 // Flags:
 // C: 1
 // N: 0
@@ -1778,7 +1787,6 @@ uint8_t Z80Processor::SCF(uint8_t /*opcode*/)
     m_AF.F.H = 0;
     return 1;
 }
-
 
 uint8_t Z80Processor::STOP(uint8_t opcode)
 {
@@ -1792,7 +1800,4 @@ uint8_t Z80Processor::STOP(uint8_t opcode)
 }
 
 // Invalid instruction
-uint8_t Z80Processor::XXX(uint8_t opcode)
-{
-    return 1;
-}
+uint8_t Z80Processor::XXX(uint8_t opcode) { return 1; }

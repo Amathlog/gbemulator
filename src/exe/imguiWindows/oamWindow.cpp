@@ -1,38 +1,39 @@
 #include "GLFW/glfw3.h"
-#include "exe/messageService/messages/debugMessage.h"
 #include "exe/messageService/messages/coreMessage.h"
-#include <cstdint>
-#include <cstdio>
-#include <exe/messageService/messageService.h>
-#include <exe/imguiWindows/oamWindow.h>
-#include <imgui.h>
+#include "exe/messageService/messages/debugMessage.h"
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <core/constants.h>
+#include <core/utils/tile.h>
+#include <core/utils/utils.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <exe/imguiWindows/oamWindow.h>
+#include <exe/messageService/messageService.h>
+#include <imgui.h>
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <iostream>
-#include <core/utils/utils.h>
-#include <core/utils/tile.h>
-#include <core/constants.h>
-#include <cstring>
 
 using GBEmulatorExe::OAMWindow;
 
-namespace {
-    ImColor GetImGuiColor(GBEmulator::RGB555 color)
-    {
-        uint8_t r,g,b;
-        GBEmulator::Utils::RGB555ToRGB888(color, r, g, b);
+namespace
+{
+ImColor GetImGuiColor(GBEmulator::RGB555 color)
+{
+    uint8_t r, g, b;
+    GBEmulator::Utils::RGB555ToRGB888(color, r, g, b);
 
-        return ImColor((int)r, (int)g, (int)b);
-    }
-
-    constexpr float colorSize = 18.0f;
-    constexpr float outlineThickness = 1.0f;
-    constexpr float outlineSizeX = colorSize * 4 + 2 * outlineThickness;
-    constexpr float outlineSizeY = colorSize + 2 * outlineThickness;
-    constexpr float spacing = 10.0f;
+    return ImColor((int)r, (int)g, (int)b);
 }
+
+constexpr float colorSize = 18.0f;
+constexpr float outlineThickness = 1.0f;
+constexpr float outlineSizeX = colorSize * 4 + 2 * outlineThickness;
+constexpr float outlineSizeY = colorSize + 2 * outlineThickness;
+constexpr float spacing = 10.0f;
+} // namespace
 
 void OAMWindow::DrawGBPalette()
 {
@@ -42,14 +43,15 @@ void OAMWindow::DrawGBPalette()
 
     ImGui::Text("%s", "Palette");
 
-    const ImVec2 p = ImGui::GetCursorScreenPos(); 
+    const ImVec2 p = ImGui::GetCursorScreenPos();
     float x = p.x + 4.0f;
     float y = p.y + 4.0f;
 
     for (auto i = 0; i < 2; ++i)
     {
         // Outline
-        draw_list->AddRect(ImVec2(x, y), ImVec2(x + outlineSizeX, y + outlineSizeY), ImColor(0xFFFFFFFF), 0.0f, 0, outlineThickness);
+        draw_list->AddRect(ImVec2(x, y), ImVec2(x + outlineSizeX, y + outlineSizeY), ImColor(0xFFFFFFFF), 0.0f, 0,
+                           outlineThickness);
         x += outlineThickness;
         y += outlineThickness;
 
@@ -82,22 +84,19 @@ void OAMWindow::DrawGBPalette()
 
 void OAMWindow::DrawGBCPalette()
 {
-ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-    ImGui::Text("%s", "Palette");
-
-    const ImVec2 p = ImGui::GetCursorScreenPos(); 
+    const ImVec2 p = ImGui::GetCursorScreenPos();
     float x = p.x + 4.0f;
     float y = p.y + 4.0f;
 
-    for (auto i = 0; i < m_gbcOBJPalettes.size(); ++i)
+    auto DrawColor = [this, &x, &y, draw_list](const GBEmulator::GBCPaletteData& palette)
     {
         // Outline
-        draw_list->AddRect(ImVec2(x, y), ImVec2(x + outlineSizeX, y + outlineSizeY), ImColor(0xFFFFFFFF), 0.0f, 0, outlineThickness);
+        draw_list->AddRect(ImVec2(x, y), ImVec2(x + outlineSizeX, y + outlineSizeY), ImColor(0xFFFFFFFF), 0.0f, 0,
+                           outlineThickness);
         x += outlineThickness;
         y += outlineThickness;
-
-        const GBEmulator::GBCPaletteData& palette = m_gbcOBJPalettes[i];
 
         for (auto j = 0; j < 4; ++j)
         {
@@ -109,6 +108,27 @@ ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
         x += spacing;
         y -= outlineThickness;
+    };
+
+    draw_list->AddText(ImVec2(x, y), ImColor(0xFFFFFFFF), "OBJ palette:");
+
+    y += 25.f;
+
+    for (auto i = 0; i < m_gbcOBJPalettes.size(); ++i)
+    {
+        DrawColor(m_gbcOBJPalettes[i]);
+    }
+
+    x = p.x + 4.0f;
+    y += outlineSizeY + spacing;
+
+    draw_list->AddText(ImVec2(x, y), ImColor(0xFFFFFFFF), "BG palette:");
+
+    y += 25.f;
+
+    for (auto i = 0; i < m_gbcBGPalettes.size(); ++i)
+    {
+        DrawColor(m_gbcBGPalettes[i]);
     }
 
     y += outlineSizeY + spacing;
@@ -120,9 +140,9 @@ OAMWindow::OAMWindow()
 {
     m_lastUpdateTime = ImGui::GetTime();
     m_forceUpdate = true;
-    //m_data.resize(128 * 16 * 2);
+    // m_data.resize(128 * 16 * 2);
 
-    //m_image = std::make_unique<Image>(16 * 8, 16 * 8); // 16 * 16 tiles
+    // m_image = std::make_unique<Image>(16 * 8, 16 * 8); // 16 * 16 tiles
 }
 
 void OAMWindow::UpdateImage()
@@ -131,7 +151,8 @@ void OAMWindow::UpdateImage()
 
     // std::array<uint8_t, 12> paletteColors;
     // int i = 0;
-    // for (auto& color : { GBEmulator::WHITE_COLOR, GBEmulator::LIGHT_GREY_COLOR, GBEmulator::DARK_GREY_COLOR, GBEmulator::BLACK_COLOR })
+    // for (auto& color : { GBEmulator::WHITE_COLOR, GBEmulator::LIGHT_GREY_COLOR, GBEmulator::DARK_GREY_COLOR,
+    // GBEmulator::BLACK_COLOR })
     // {
     //     GBEmulator::Utils::RGB555ToRGB888(color, paletteColors[i], paletteColors[i+1], paletteColors[i+2]);
     //     i += 3;
@@ -139,9 +160,8 @@ void OAMWindow::UpdateImage()
 
     // for (auto i = 0; i < 256; ++i)
     // {
-    //     std::array<uint8_t, 64> paletteColorIndexes = GBEmulator::Utils::GetTileDataFromBytes(m_data.data() + i * 16);
-    //     int tileLine = i / 16;
-    //     int tileColumn = i % 16;
+    //     std::array<uint8_t, 64> paletteColorIndexes = GBEmulator::Utils::GetTileDataFromBytes(m_data.data() + i *
+    //     16); int tileLine = i / 16; int tileColumn = i % 16;
 
     //     for (auto j = 0; j < 64; ++j)
     //     {
@@ -151,7 +171,8 @@ void OAMWindow::UpdateImage()
     //         int finalLine = tileLine * 8 + line;
     //         int finalColumn = tileColumn * 8 + column;
 
-    //         std::memcpy(finalImage.data() + (finalLine * 128 + finalColumn) * 3, paletteColors.data() + 3 * paletteColorIndexes[j], 3);
+    //         std::memcpy(finalImage.data() + (finalLine * 128 + finalColumn) * 3, paletteColors.data() + 3 *
+    //         paletteColorIndexes[j], 3);
     //     }
     // }
 
@@ -188,20 +209,15 @@ void OAMWindow::DrawInternal()
             const size_t paletteSize = m_gbcOBJPalettes.size() * sizeof(decltype(m_gbcOBJPalettes[0]));
             GetObjGBCPaletteMessage paletteMsg((uint8_t*)m_gbcOBJPalettes.data(), 0, paletteSize);
             DispatchMessageServiceSingleton::GetInstance().Pull(paletteMsg);
+
+            GetBGGBCPaletteMessage paletteBGMsg((uint8_t*)m_gbcBGPalettes.data(), 0, paletteSize);
+            DispatchMessageServiceSingleton::GetInstance().Pull(paletteBGMsg);
         }
 
         UpdateImage();
     }
 
-    constexpr const char* ColumnsNames[] = {
-        "Id",
-        "Sprite",
-        "Position",
-        "Palette",
-        "XFlip",
-        "YFlip",
-        "BGPriority"
-    };
+    constexpr const char* ColumnsNames[] = {"Id", "Sprite", "Position", "Palette", "XFlip", "YFlip", "BGPriority"};
 
     if (m_isGBC)
     {
@@ -234,7 +250,8 @@ void OAMWindow::DrawInternal()
         ImGui::Text("(%d, %d)", m_oamEntries[i].xPosition, m_oamEntries[i].yPosition);
 
         ImGui::TableNextColumn();
-        ImGui::Text("%d", (m_isGBC ? m_oamEntries[i].attributes.paletteNumberGBC : m_oamEntries[i].attributes.paletteNumberGB));
+        ImGui::Text(
+            "%d", (m_isGBC ? m_oamEntries[i].attributes.paletteNumberGBC : m_oamEntries[i].attributes.paletteNumberGB));
 
         ImGui::TableNextColumn();
         ImGui::Text("%s", (m_oamEntries[i].attributes.xFlip ? "X" : " "));

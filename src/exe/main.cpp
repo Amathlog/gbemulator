@@ -32,7 +32,7 @@ int main(int argc, char** argv)
     auto path = std::filesystem::path();
 
     // Mapper 000 also
-    path = root / "tests" / "external_roms" / "dmg-acid2.gb";
+    path = root / "tests" / "external_roms" / "cpu_inst" / "cpu_instrs.gb";
 
     // path = root / "roms" / "SuperMarioLand.gb";
 

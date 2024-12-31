@@ -1,18 +1,18 @@
 #include "core/utils/disassenbly.h"
-#include <cstdint>
-#include <exe/messageService/message.h>
-#include <exe/messageService/messages/coreMessage.h>
-#include <exe/messageService/coreMessageService.h>
-#include <exe/messageService/messages/corePayload.h>
-#include <exe/messageService/messages/debugPayload.h>
-#include <core/utils/fileVisitor.h>
-#include <core/utils/vectorVisitor.h>
 #include <core/bus.h>
 #include <core/cartridge.h>
+#include <core/utils/fileVisitor.h>
+#include <core/utils/utils.h>
+#include <core/utils/vectorVisitor.h>
+#include <cstdint>
+#include <cstring>
+#include <exe/messageService/coreMessageService.h>
+#include <exe/messageService/message.h>
+#include <exe/messageService/messages/coreMessage.h>
+#include <exe/messageService/messages/corePayload.h>
+#include <exe/messageService/messages/debugPayload.h>
 #include <filesystem>
 #include <iostream>
-#include <core/utils/utils.h>
-#include <cstring>
 
 namespace fs = std::filesystem;
 
@@ -36,16 +36,16 @@ bool CreateFolders(const std::string& file)
     return true;
 }
 
-bool CoreMessageService::Push(const Message &message)
+bool CoreMessageService::Push(const Message& message)
 {
     if (message.GetType() != DefaultMessageType::CORE && message.GetType() != DefaultMessageType::DEBUG)
         return true;
-    
+
     if (message.GetType() == DefaultMessageType::CORE)
     {
         auto payload = reinterpret_cast<const CorePayload*>(message.GetPayload());
 
-        switch(payload->m_type)
+        switch (payload->m_type)
         {
         case DefaultCoreMessageType::LOAD_NEW_GAME:
             return LoadNewGame(payload->m_data);
@@ -75,9 +75,12 @@ bool CoreMessageService::Push(const Message &message)
         {
             if (!m_bus.IsInBreak())
                 return false;
-            
+
             bool instDone = false;
-            while (!instDone){ m_bus.Clock(&instDone); }
+            while (!instDone && !m_bus.GetCPU().IsPaused())
+            {
+                m_bus.Clock(&instDone);
+            }
             return true;
         }
         case DefaultDebugMessageType::BREAK_CONTINUE:
@@ -99,16 +102,16 @@ bool CoreMessageService::Push(const Message &message)
     return true;
 }
 
-bool CoreMessageService::Pull(Message &message)
+bool CoreMessageService::Pull(Message& message)
 {
     if (message.GetType() != DefaultMessageType::CORE && message.GetType() != DefaultMessageType::DEBUG)
         return true;
-    
+
     if (message.GetType() == DefaultMessageType::CORE)
     {
         auto payload = reinterpret_cast<CorePayload*>(message.GetPayload());
 
-        switch(payload->m_type)
+        switch (payload->m_type)
         {
         case DefaultCoreMessageType::GET_MODE:
             payload->m_mode = m_bus.GetMode();
@@ -135,7 +138,8 @@ bool CoreMessageService::Pull(Message &message)
         }
         case DefaultDebugMessageType::DISASSEMBLY:
         {
-            payload->m_disassemblyLines = GBEmulator::Disassemble(m_bus, m_bus.GetCPU().GetPC(), payload->m_nbDisassemblyLines);
+            payload->m_disassemblyLines =
+                GBEmulator::Disassemble(m_bus, m_bus.GetCPU().GetPC(), payload->m_nbDisassemblyLines);
             return true;
         }
         case DefaultDebugMessageType::GET_BREAK_STATUS:
@@ -152,6 +156,7 @@ bool CoreMessageService::Pull(Message &message)
             payload->m_cpuRegistersInfo.m_PC = m_bus.GetCPU().GetPC();
             payload->m_cpuRegistersInfo.m_SP = m_bus.GetCPU().GetStackPointer();
             payload->m_cpuRegistersInfo.m_IMEEnabled = m_bus.GetCPU().IsIMEEnabled();
+            payload->m_cpuRegistersInfo.m_paused = m_bus.GetCPU().IsPaused();
             return true;
         }
         case DefaultDebugMessageType::GET_OAM_ENTRIES:
@@ -245,7 +250,9 @@ bool CoreMessageService::SaveState(const std::string& file, int number)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GBEmulator::Utils::GetSaveStateFile(m_exePath, number, GBEmulator::Utils::GetCartridgeUniqueID(m_bus.GetCartridge())).string();
+        finalFile = GBEmulator::Utils::GetSaveStateFile(m_exePath, number,
+                                                        GBEmulator::Utils::GetCartridgeUniqueID(m_bus.GetCartridge()))
+                        .string();
     }
 
     if (finalFile.empty())
@@ -257,7 +264,7 @@ bool CoreMessageService::SaveState(const std::string& file, int number)
     if (!visitor.IsValid())
     {
         std::cerr << "Couldn't open file " << finalFile << std::endl;
-        return false; 
+        return false;
     }
 
     m_bus.SerializeTo(visitor);
@@ -270,7 +277,9 @@ bool CoreMessageService::LoadState(const std::string& file, int number)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GBEmulator::Utils::GetSaveStateFile(m_exePath, number, GBEmulator::Utils::GetCartridgeUniqueID(m_bus.GetCartridge())).string();
+        finalFile = GBEmulator::Utils::GetSaveStateFile(m_exePath, number,
+                                                        GBEmulator::Utils::GetCartridgeUniqueID(m_bus.GetCartridge()))
+                        .string();
     }
 
     if (finalFile.empty())
@@ -280,7 +289,7 @@ bool CoreMessageService::LoadState(const std::string& file, int number)
     if (!visitor.IsValid())
     {
         std::cerr << "Couldn't open file " << file << std::endl;
-        return false; 
+        return false;
     }
 
     // When loading a state, we will reset the game then load
@@ -306,7 +315,8 @@ bool CoreMessageService::SaveGame(const std::string& file)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GBEmulator::Utils::GetSaveFile(m_exePath, GBEmulator::Utils::GetCartridgeUniqueID(cartridge)).string();
+        finalFile =
+            GBEmulator::Utils::GetSaveFile(m_exePath, GBEmulator::Utils::GetCartridgeUniqueID(cartridge)).string();
     }
 
     // Nothing to do
@@ -319,7 +329,7 @@ bool CoreMessageService::SaveGame(const std::string& file)
     if (!visitor.IsValid())
     {
         std::cerr << "Couldn't open file " << finalFile << std::endl;
-        return false; 
+        return false;
     }
 
     m_bus.SaveCartridgeRAM(visitor);
@@ -335,7 +345,8 @@ bool CoreMessageService::LoadSaveGame(const std::string& file)
     std::string finalFile = file;
     if (file.empty())
     {
-        finalFile = GBEmulator::Utils::GetSaveFile(m_exePath, GBEmulator::Utils::GetCartridgeUniqueID(cartridge)).string();
+        finalFile =
+            GBEmulator::Utils::GetSaveFile(m_exePath, GBEmulator::Utils::GetCartridgeUniqueID(cartridge)).string();
     }
 
     if (finalFile.empty())
@@ -345,7 +356,7 @@ bool CoreMessageService::LoadSaveGame(const std::string& file)
     if (!visitor.IsValid())
     {
         std::cerr << "Couldn't open file " << file << std::endl;
-        return false; 
+        return false;
     }
 
     // Loading the RAM is guarded by a lock, so there is no need to stop

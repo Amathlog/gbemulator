@@ -1,5 +1,5 @@
-#include <core/mappers/mbc3.h>
 #include <cassert>
+#include <core/mappers/mbc3.h>
 
 using GBEmulator::MBC3;
 
@@ -53,7 +53,7 @@ bool MBC3::WriteByte(uint16_t addr, uint8_t data)
     {
         // RAM bank selection or clock registers
         // Depends if we have enough RAM. If not, do nothing.
-        if (m_header.nbRamBanks == 0x03 && data <= 0x03) // 32 kB
+        if (data <= 0x03) // 32 kB
         {
             m_ramBank = data & 0x03;
             // No more custom read if we map a ram bank
@@ -103,7 +103,7 @@ uint8_t* MBC3::GetClockRegister()
     if (m_currentClockRegister == 0xFF)
         return nullptr;
 
-    switch(m_currentClockRegister)
+    switch (m_currentClockRegister)
     {
     case 0:
         return &m_clockRegisters.seconds;
@@ -115,7 +115,7 @@ uint8_t* MBC3::GetClockRegister()
         return &m_clockRegisters.lowerDayCounter;
     case 4:
         return &m_clockRegisters.extra.reg;
-    } 
+    }
 
     return nullptr;
 }
