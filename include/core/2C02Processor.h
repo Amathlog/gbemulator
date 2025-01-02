@@ -141,6 +141,7 @@ namespace GBEmulator
 
         bool IsFrameComplete() const { return m_isFrameComplete; }
         bool IsInHBlank() const { return m_lcdStatus.mode == 0; }
+        bool IsInVBlank() const { return m_lcdStatus.mode == 1; }
 
         void ConnectBus(Bus* bus) { m_bus = bus; }
 
@@ -208,7 +209,7 @@ namespace GBEmulator
 
         // Counters
         unsigned m_lineDots = 0x00;
-        unsigned m_scanlines = 0x00;
+        uint8_t m_scanlines = 0x00;
         unsigned m_currentLinePixel = 0x00;
         uint8_t m_currentX = 0x00;
         uint8_t m_currentNbPixelsToRender = 0x00;

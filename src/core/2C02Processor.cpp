@@ -1056,7 +1056,8 @@ void Processor2C02::Clock()
 
                 // A sprite is selected if the current scanline (+ 16) is between the y position and the y position +
                 // its size (8 or 16)
-                if (m_scanlines + 16 >= entry.yPosition && m_scanlines + 16 < entry.yPosition + objSize)
+                uint8_t shiftedScanlines = m_scanlines + 16u;
+                if (shiftedScanlines >= entry.yPosition && shiftedScanlines < entry.yPosition + objSize)
                 {
                     m_selectedOAM.push_back(index);
                 }

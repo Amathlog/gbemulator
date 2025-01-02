@@ -134,12 +134,21 @@ uint8_t Bus::ReadByte(uint16_t addr, bool readOnly)
     {
         // VRAM DMA (GBC only)
         // Only 0xFF55 is readable
-        // 0xFF means the transfer is done. Otherwise, returns the number of blocks
+        // 0xFF means the transfer is done. Otherwise, returns the number of $10 blocks
         // remaining.
         // If DMA was stopped, write 1 to bit 7
-        data = m_DMABlocksRemainingGBC == 0 ? 0xFF : m_DMABlocksRemainingGBC;
-        if (m_DMAWasStoppedGBC && m_DMABlocksRemainingGBC != 0)
-            data = (data | 0x80);
+        if (m_DMABlocksRemainingGBC == 0)
+        {
+            data = 0xFF;
+        }
+        else
+        {
+            data = (m_DMABlocksRemainingGBC >> 4) - 1;
+            if (m_DMAWasStoppedGBC)
+            {
+                data = data | 0x80;
+            }
+        }
     }
     else if (addr >= 0xFF68 && addr <= 0xFF6B && m_mode == Mode::GBC)
     {
@@ -275,19 +284,23 @@ void Bus::WriteByte(uint16_t addr, uint8_t data)
             m_DMASourceAddrGBC = (m_DMASourceAddrGBC & 0xFF00) | (data & 0xF0);
             break;
         case 0xFF53:
+        {
             // High address dest, 3 higher bits ignored. Will be between 0x8000 and 0x9FF0
-            m_DMADestAddrGBC = 0x8000 | (((uint16_t)data << 8) & 0x1F) | (m_DMADestAddrGBC & 0x00FF);
+            uint16_t highAddress = (uint16_t)(data & 0x1F);
+            highAddress <<= 8;
+            m_DMADestAddrGBC = 0x8000 | highAddress | (m_DMADestAddrGBC & 0x00FF);
             break;
+        }
         case 0xFF54:
             // Low address dest, 4 lower bits ignored
             m_DMADestAddrGBC = (m_DMADestAddrGBC & 0xFF00) | (data & 0xF0);
             break;
         case 0xFF55:
             // If DMA is not active (no remaining blocks) writing to this starts a new DMA
-            if (m_DMABlocksRemainingGBC == 0)
+            if (m_DMABlocksRemainingGBC == 0 || m_DMAWasStoppedGBC)
             {
                 m_isDMAHBlankModeGBC = (data & 0x80) > 0;
-                m_DMABlocksRemainingGBC = (data & 0x7F);
+                m_DMABlocksRemainingGBC = ((data & 0x7F) + 1) << 4;
                 m_DMAWasStoppedGBC = false;
             }
             else
@@ -344,7 +357,7 @@ bool Bus::Clock(bool* outInstDone)
     const unsigned numberOfPPUClocks = m_isDoubleSpeedMode ? 2 : 4;
 
     // Clock the PPU 4 times in single speed, 2 times in double speed.
-    for (auto i = 0; i < numberOfPPUClocks; ++i)
+    for (auto i = 0u; i < numberOfPPUClocks; ++i)
     {
         m_ppu.Clock();
         frameFinished |= m_ppu.IsFrameComplete();
@@ -396,20 +409,17 @@ bool Bus::Clock(bool* outInstDone)
     {
         if (!m_isDMAHBlankModeGBC || m_ppu.IsInHBlank())
         {
-            const uint16_t nbBytesToTransfer = (uint16_t)(m_isDMAHBlankModeGBC ? 1 : m_DMABlocksRemainingGBC) * 8;
+            const uint16_t nbBytesToTransfer = m_isDMAHBlankModeGBC ? 0x10 : m_DMABlocksRemainingGBC;
             for (uint16_t i = 0; i < nbBytesToTransfer; ++i)
             {
                 WriteByte(m_DMADestAddrGBC++, ReadByte(m_DMASourceAddrGBC++));
             }
 
+            m_DMABlocksRemainingGBC -= nbBytesToTransfer;
+
             if (m_isDMAHBlankModeGBC)
             {
-                m_DMABlocksRemainingGBC--;
                 m_DMAHBlankWasHandled = true;
-            }
-            else
-            {
-                m_DMABlocksRemainingGBC = 0;
             }
         }
     }
