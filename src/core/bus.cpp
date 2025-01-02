@@ -454,6 +454,15 @@ bool Bus::Clock(bool* outInstDone)
 
     m_nbCycles++;
 
+    const size_t nbCyclesToCheck = m_isDoubleSpeedMode ? GBEmulator::CPU_NB_CYCLES_PER_SECOND_DOUBLE_SPEED
+                                                       : GBEmulator::CPU_NB_CYCLES_PER_SECOND_SINGLE_SPEED;
+    if (++m_nbCyclesForSeconds >= nbCyclesToCheck)
+    {
+        m_nbCyclesForSeconds -= nbCyclesToCheck;
+        m_cartridge->TickSecond();
+        //std::cout << "Second" << std::endl;
+    }
+
     return frameFinished;
 }
 
@@ -473,6 +482,7 @@ void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteContainer(m_WRAM);
     visitor.WriteValue(m_currentWRAMBank);
     visitor.WriteValue(m_nbCycles);
+    visitor.WriteValue(m_nbCyclesForSeconds);
 
     visitor.WriteContainer(m_HRAM);
     visitor.WriteValue(m_IE.flag);
@@ -511,6 +521,7 @@ void Bus::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadContainer(m_WRAM);
     visitor.ReadValue(m_currentWRAMBank);
     visitor.ReadValue(m_nbCycles);
+    visitor.ReadValue(m_nbCyclesForSeconds);
 
     visitor.ReadContainer(m_HRAM);
     visitor.ReadValue(m_IE.flag);
@@ -562,6 +573,7 @@ void Bus::Reset()
     }
 
     m_nbCycles = 0;
+    m_nbCyclesForSeconds = 0;
 
     m_timer.Reset();
 

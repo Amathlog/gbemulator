@@ -114,6 +114,7 @@ namespace GBEmulator
         std::shared_ptr<Cartridge> m_cartridge;
         std::shared_ptr<Controller> m_controller;
         size_t m_nbCycles;
+        size_t m_nbCyclesForSeconds;
 
         bool m_isInBreakMode = false;
         bool m_shouldBreakOnStart = false;

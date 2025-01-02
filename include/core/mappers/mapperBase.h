@@ -45,6 +45,9 @@ namespace GBEmulator
             visitor.ReadValue(m_endAddrCustomRead);
         }
 
+        virtual void SerializeRam(Utils::IWriteVisitor& visitor) const {};
+        virtual void DeserializeRam(Utils::IReadVisitor& visitor) {};
+
         virtual void Reset()
         {
             m_ramEnabled = false;
@@ -62,6 +65,9 @@ namespace GBEmulator
 
         // Specific for MBC2 
         virtual size_t GetRAMSize() const { return m_header.nbRamBanks * 0x2000; }
+
+        // For all mappers that keep track of time
+        virtual void TickSecond() {}
 
     protected:
         const Header& m_header; 

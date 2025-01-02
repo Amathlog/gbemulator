@@ -30,13 +30,15 @@ namespace GBEmulator
     public:
         MBC3(const Header& header);
 
-        void SerializeTo(Utils::IWriteVisitor& visitor) const override;
-        void DeserializeFrom(Utils::IReadVisitor& visitor) override;
+        void SerializeRam(Utils::IWriteVisitor& visitor) const override;
+        void DeserializeRam(Utils::IReadVisitor& visitor) override;
 
         void Reset() override;
 
         bool WriteByte(uint16_t addr, uint8_t data) override;
         bool ReadByte(uint16_t addr, uint8_t& data) const override;
+
+        void TickSecond() override;
 
     private:
         uint8_t* GetClockRegister();
@@ -44,5 +46,7 @@ namespace GBEmulator
 
         uint8_t m_currentClockRegister = 0xFF;
         ClockCounterRegisters m_clockRegisters;
+        ClockCounterRegisters m_latchedClockRegisters;
+        bool m_isLatched = false;
     };
 }

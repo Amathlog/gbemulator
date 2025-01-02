@@ -11,16 +11,18 @@ MBC3::MBC3(const Header& header)
     assert(header.nbRamBanks <= 0x04 && "There are too many ram banks, exceeding MBC3 limitation");
 }
 
-void MBC3::SerializeTo(Utils::IWriteVisitor& visitor) const
+void MBC3::SerializeRam(Utils::IWriteVisitor& visitor) const
 {
-    MapperBase::SerializeTo(visitor);
+    MapperBase::SerializeRam(visitor);
+
     visitor.WriteValue(m_currentClockRegister);
     visitor.WriteValue(m_clockRegisters);
 }
 
-void MBC3::DeserializeFrom(Utils::IReadVisitor& visitor)
+void MBC3::DeserializeRam(Utils::IReadVisitor& visitor)
 {
-    MapperBase::DeserializeFrom(visitor);
+    MapperBase::DeserializeRam(visitor);
+
     visitor.ReadValue(m_currentClockRegister);
     visitor.ReadValue(m_clockRegisters);
 }
@@ -36,7 +38,7 @@ bool MBC3::WriteByte(uint16_t addr, uint8_t data)
     if (addr <= 0x1FFF)
     {
         // RAM enable
-        m_ramEnabled = !!(data & 0x0A);
+        m_ramEnabled = !!(data & 0x0A) && m_header.nbRamBanks > 0;
         return true;
     }
 
@@ -96,6 +98,39 @@ bool MBC3::ReadByte(uint16_t addr, uint8_t& data) const
     data = *GetClockRegister();
 
     return true;
+}
+
+void GBEmulator::MBC3::TickSecond() 
+{
+    m_clockRegisters.seconds++;
+    if (m_clockRegisters.seconds >= 60)
+    {
+        m_clockRegisters.seconds = 0;
+        m_clockRegisters.minutes++;
+        if (m_clockRegisters.minutes >= 60)
+        {
+            m_clockRegisters.minutes = 0;
+            m_clockRegisters.hours++;
+            if (m_clockRegisters.hours >= 24)
+            {
+                m_clockRegisters.hours = 0;
+                m_clockRegisters.lowerDayCounter++;
+                if (m_clockRegisters.lowerDayCounter == 0x00)
+                {
+                    m_clockRegisters.lowerDayCounter = 0;
+                    if (m_clockRegisters.extra.msbDayCounter == 0x01)
+                    {
+                        m_clockRegisters.extra.msbDayCounter = 0;
+                        m_clockRegisters.extra.dayCounterCarry = 1;
+                    }
+                    else
+                    {
+                        m_clockRegisters.extra.msbDayCounter = 1;
+                    }
+                }
+            }
+        }
+    }
 }
 
 uint8_t* MBC3::GetClockRegister()
