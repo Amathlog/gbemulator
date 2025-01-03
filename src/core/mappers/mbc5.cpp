@@ -21,7 +21,7 @@ bool MBC5::WriteByte(uint16_t addr, uint8_t data)
     if (addr <= 0x3FFF)
     {
         // 9th bit of second rom bank
-        m_secondRomBank = ((uint16_t)(data & 0x01) << 8) | (m_secondRomBank & 0x0F);
+        m_secondRomBank = ((uint16_t)(data & 0x01) << 8) | (m_secondRomBank & 0x00FF);
         return true;
     }
 

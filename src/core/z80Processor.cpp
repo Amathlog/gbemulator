@@ -69,14 +69,7 @@ void Z80Processor::Reset()
 
 inline uint8_t Z80Processor::ReadByte(uint16_t addr) { return m_bus->ReadByte(addr); }
 
-inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data)
-{
-    if (addr == 0xFF00)
-    {
-        int x = 1;
-    }
-    m_bus->WriteByte(addr, data);
-}
+inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data) { m_bus->WriteByte(addr, data); }
 
 // Oversimplification of the clock mecanism
 // Each operation will be done in one shot, regardless of their
@@ -547,7 +540,7 @@ uint8_t Z80Processor::LD(uint8_t opcode)
 // LDH op
 // Transfer accumulator to/from memory. Memory address is an offset of 1 byte
 // Offseting from 0xFF00
-// Nb cycles: 2
+// Nb cycles: 3
 // Flags: Untouched
 uint8_t Z80Processor::LDH(uint8_t opcode)
 {
@@ -558,7 +551,7 @@ uint8_t Z80Processor::LDH(uint8_t opcode)
     else
         m_AF.A = ReadByte(addr);
 
-    return 2;
+    return 3;
 }
 
 // Arithmetic/Logic instructions
