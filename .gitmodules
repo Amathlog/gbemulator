@@ -19,3 +19,9 @@
 [submodule "external/SDL"]
 	path = external/SDL
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "external/OpenJoystick"]
+	path = external/OpenJoystick
+	url = https://github.com/Amathlog/OpenJoystick
+[submodule "external/libretro-common"]
+	path = external/libretro-common
+	url = https://github.com/libretro/libretro-common.git

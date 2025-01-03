@@ -7,6 +7,10 @@ file(GLOB_RECURSE CORELIB_SRC
     ${GBEmulator_SOURCE_DIR}/src/core/*.cpp
 )
 
+if (UNIX)
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -fPIC")
+endif(UNIX)
+
 add_library(GBEmulator_Core STATIC ${CORELIB_SRC})
 target_link_libraries(GBEmulator_Core)
 set_target_properties(GBEmulator_Core PROPERTIES FOLDER ${MAIN_FOLDER})

@@ -19,7 +19,7 @@
 #include <ImGuiFileBrowser.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
-//#include <backends/imgui_impl_sdl2.h>
+// #include <backends/imgui_impl_sdl2.h>
 #include <glad/glad.h>
 #include <imgui.h>
 
@@ -47,7 +47,11 @@ ImguiManager::ImguiManager(WindowBase* window)
     m_context = ImGui::CreateContext();
     ImGui::SetCurrentContext(m_context);
     ImGuiIO& io = ImGui::GetIO();
+
+    // Don't enable viewport on Linux, it's pretty unstable
+#ifndef __unix__
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+#endif
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();

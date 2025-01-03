@@ -60,6 +60,7 @@ void APU::Reset()
     m_allSoundsOn = false;
     m_nbCycles = 0;
     m_divCounter = 0;
+    m_samplesReady = false;
 }
 
 void APU::Clock()
@@ -122,6 +123,7 @@ void APU::Clock()
         {
             m_bufferPtr = 0;
             m_circularBuffer.WriteData(m_internalBuffer.data(), m_internalBuffer.max_size() * sizeof(float));
+            m_samplesReady = true;
         }
     }
 
@@ -250,4 +252,16 @@ void APU::FillSamples(float* outData, unsigned int numFrames, unsigned int numCh
     {
         m_circularBuffer.ReadData(outData, numFrames * numChannels * sizeof(float));
     }
+}
+
+bool APU::FillSamplesIfReady(float* outData)
+{
+    if (m_samplesReady)
+    {
+        m_circularBuffer.ReadData(outData, 128 * sizeof(float));
+        m_samplesReady = false;
+        return true;
+    }
+
+    return false;
 }

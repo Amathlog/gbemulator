@@ -26,6 +26,9 @@ public:
     uint8_t ReadByte(uint16_t addr) const;
 
     void FillSamples(float* outData, unsigned int numFrames, unsigned int numChannels);
+    // Will fill 128 samples (64 sampels left and right) if they are ready.
+    bool FillSamplesIfReady(float* outData);
+
     uint8_t GetDivCounter() const { return m_divCounter; }
 
 private:
@@ -47,5 +50,6 @@ private:
     CircularBuffer<float> m_circularBuffer;
 
     double m_currentTime = 0.0;
+    bool m_samplesReady;
 };
 } // namespace GBEmulator
