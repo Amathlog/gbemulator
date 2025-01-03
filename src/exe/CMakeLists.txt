@@ -57,3 +57,5 @@ file(GLOB_RECURSE NEW_EXE_SRC
 add_executable(GBEmulator ${NEW_EXE_SRC})
 target_link_libraries(GBEmulator GBEmulator_Core ${OPENGL_LIBRARIES} glfw ${CMAKE_DL_LIBS} rtaudio ImGuiFE ImGui)
 set_target_properties(GBEmulator PROPERTIES FOLDER ${MAIN_FOLDER})
+
+install(FILES $<TARGET_RUNTIME_DLLS:GBEmulator> TYPE BIN)

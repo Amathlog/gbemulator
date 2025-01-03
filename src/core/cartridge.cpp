@@ -107,7 +107,13 @@ Cartridge::Cartridge(Utils::IReadVisitor& visitor)
 
 Cartridge::~Cartridge() { delete m_mapper; }
 
-void Cartridge::SerializeRam(Utils::IWriteVisitor& visitor) const { visitor.WriteContainer(m_externalRAM); }
+void Cartridge::SerializeRam(Utils::IWriteVisitor& visitor) const 
+{ 
+    visitor.WriteContainer(m_externalRAM);
+
+    if (m_mapper)
+        m_mapper->SerializeRam(visitor);
+}
 
 void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
@@ -117,7 +123,13 @@ void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const
         m_mapper->SerializeTo(visitor);
 }
 
-void Cartridge::DeserializeRam(Utils::IReadVisitor& visitor) { visitor.ReadContainer(m_externalRAM); }
+void Cartridge::DeserializeRam(Utils::IReadVisitor& visitor)
+{ 
+    visitor.ReadContainer(m_externalRAM);
+
+    if (m_mapper)
+        m_mapper->DeserializeRam(visitor);
+}
 
 void Cartridge::DeserializeFrom(Utils::IReadVisitor& visitor)
 {
@@ -134,6 +146,12 @@ void Cartridge::Reset()
 
     if (m_mapper)
         m_mapper->Reset();
+}
+
+void Cartridge::TickSecond()
+{
+    if (m_mapper)
+        m_mapper->TickSecond();
 }
 
 bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)

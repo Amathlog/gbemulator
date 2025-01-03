@@ -114,6 +114,7 @@ namespace GBEmulator
         std::shared_ptr<Cartridge> m_cartridge;
         std::shared_ptr<Controller> m_controller;
         size_t m_nbCycles;
+        size_t m_nbCyclesForSeconds;
 
         bool m_isInBreakMode = false;
         bool m_shouldBreakOnStart = false;
@@ -126,7 +127,7 @@ namespace GBEmulator
         // GBC DMA
         uint16_t m_DMASourceAddrGBC = 0x0000;
         uint16_t m_DMADestAddrGBC = 0x0000;
-        uint8_t m_DMABlocksRemainingGBC = 0x00;
+        uint16_t m_DMABlocksRemainingGBC = 0x0000;
         bool m_isDMAHBlankModeGBC = false;
         bool m_DMAHBlankWasHandled = false;
         bool m_DMAWasStoppedGBC = false;

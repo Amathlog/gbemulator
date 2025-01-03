@@ -203,7 +203,7 @@ bool CoreMessageService::Pull(Message& message)
             uint16_t offset = payload->m_addressStart - 0x8000;
             if (payload->m_VRAMBank >= 1)
             {
-                offset += vram.size() / 2;
+                offset += static_cast<uint16_t>(vram.size()) / 2;
             }
 
             std::memcpy(payload->m_data, (uint8_t*)vram.data() + offset, payload->m_dataCapacity);

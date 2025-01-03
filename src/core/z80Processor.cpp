@@ -100,10 +100,10 @@ bool Z80Processor::Clock()
 
     if (m_cycles == 0)
     {
-        if (__builtin_expect(m_dumpEnabled, 0))
-        {
-            std::cout << GBEmulator::Disassemble(*m_bus, m_PC, 1)[0] << std::endl;
-        }
+        //if (m_dumpEnabled)
+        //{
+        //    std::cout << GBEmulator::Disassemble(*m_bus, m_PC, 1)[0] << std::endl;
+        //}
 
         uint8_t opcode = FetchByte();
         m_cycles = DecodeOpcodeAndCall(opcode);

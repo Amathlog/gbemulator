@@ -56,6 +56,9 @@ namespace GBEmulator
         const Header& GetHeader() const { return m_header; }
         const std::string& GetSHA1() const { return m_sha1; }
 
+        // For cartridge that keep track of time, notify it that a second has passed.
+        void TickSecond();
+
     private:
         Header m_header;
 
