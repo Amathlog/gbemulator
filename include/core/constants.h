@@ -41,13 +41,13 @@ constexpr uint16_t IF_REG_ADDR = 0xFF0F;
 constexpr uint16_t IE_REG_ADDR = 0xFFFF;
 
 // CPU data
-constexpr size_t CPU_SINGLE_SPEED_FREQ = 4194304; // 4.194304 MHz
+constexpr std::size_t CPU_SINGLE_SPEED_FREQ = 4194304; // 4.194304 MHz
 constexpr double CPU_SINGLE_SPEED_FREQ_D = (double)(CPU_SINGLE_SPEED_FREQ);
-constexpr size_t CPU_DOUBLE_SPEED_FREQ = 8388608; // 8.388608 MHz
+constexpr std::size_t CPU_DOUBLE_SPEED_FREQ = 8388608; // 8.388608 MHz
 constexpr double CPU_DOUBLE_SPEED_FREQ_D = (double)(CPU_DOUBLE_SPEED_FREQ);
 
-constexpr size_t CPU_NB_CYCLES_PER_SECOND_SINGLE_SPEED = CPU_SINGLE_SPEED_FREQ / 4; // 4 ticks per cycle
-constexpr size_t CPU_NB_CYCLES_PER_SECOND_DOUBLE_SPEED = CPU_DOUBLE_SPEED_FREQ / 4; // 4 ticks per cycle
+constexpr std::size_t CPU_NB_CYCLES_PER_SECOND_SINGLE_SPEED = CPU_SINGLE_SPEED_FREQ / 4; // 4 ticks per cycle
+constexpr std::size_t CPU_NB_CYCLES_PER_SECOND_DOUBLE_SPEED = CPU_DOUBLE_SPEED_FREQ / 4; // 4 ticks per cycle
 
 // Audio data
 constexpr unsigned APU_SAMPLE_RATE = 41100;

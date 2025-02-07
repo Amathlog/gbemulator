@@ -107,8 +107,8 @@ Cartridge::Cartridge(Utils::IReadVisitor& visitor)
 
 Cartridge::~Cartridge() { delete m_mapper; }
 
-void Cartridge::SerializeRam(Utils::IWriteVisitor& visitor) const 
-{ 
+void Cartridge::SerializeRam(Utils::IWriteVisitor& visitor) const
+{
     visitor.WriteContainer(m_externalRAM);
 
     if (m_mapper)
@@ -124,7 +124,7 @@ void Cartridge::SerializeTo(Utils::IWriteVisitor& visitor) const
 }
 
 void Cartridge::DeserializeRam(Utils::IReadVisitor& visitor)
-{ 
+{
     visitor.ReadContainer(m_externalRAM);
 
     if (m_mapper)
@@ -161,7 +161,7 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
         return false;
 
     // If we have a custom read
-    if (m_mapper->HasCustomReadWrite(addr) && m_mapper->ReadByte(addr, data))
+    if (m_mapper->ReadByte(addr, data))
     {
         return true;
     }
@@ -177,17 +177,32 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
         return true;
     }
     // RAM zone
-    else if (addr >= 0xA000 && addr < 0xC000 && m_mapper->IsRamEnabled())
+    else if (addr >= 0xA000 && addr < 0xC000)
     {
-        // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
-        if (m_externalRAM.size() >= 0x2000)
+        if (m_mapper->IsRamEnabled())
         {
-            data = m_externalRAM[m_mapper->GetRAMBank() * 0x2000 + (addr & 0x1FFF)];
+            // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
+            if (m_externalRAM.size() >= 0x2000)
+            {
+                const uint8_t RAMBank = m_mapper->GetRAMBank();
+                if (RAMBank == 0 && addr == 0xabf0)
+                {
+                    data = data;
+                }
+                data = m_externalRAM[RAMBank * 0x2000 + (addr & 0x1FFF)];
+                // std::cout << "Read from bank " << (int)RAMBank << " at address " << std::hex << (int)addr <<
+                // std::endl;
+            }
+            else
+            {
+                data = m_externalRAM[addr & (uint16_t)(m_externalRAM.size())];
+            }
         }
         else
         {
-            data = m_externalRAM[addr & (uint16_t)(m_externalRAM.size())];
+            data = 0xFF;
         }
+
         return true;
     }
 
@@ -201,25 +216,36 @@ bool Cartridge::WriteByte(uint16_t addr, uint8_t data)
         return false;
 
     // If we have a custom write
-    if (m_mapper->HasCustomReadWrite(addr) && m_mapper->WriteByte(addr, data))
+    if (m_mapper->WriteByte(addr, data))
     {
         return true;
     }
 
     // Try to write to the RAM
-    if (addr >= 0xA000 && addr < 0xC000 && m_mapper->IsRamEnabled())
+    if (addr >= 0xA000 && addr < 0xC000)
     {
-        // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
-        if (m_externalRAM.size() >= 0x2000)
+        if (m_mapper->IsRamEnabled())
         {
-            m_externalRAM[m_mapper->GetRAMBank() * 0x2000 + (addr & 0x1FFF)] = data;
+            // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
+            if (m_externalRAM.size() >= 0x2000)
+            {
+                const uint8_t RAMBank = m_mapper->GetRAMBank();
+                // std::cout << "Write to bank " << (int)RAMBank << " at address " << std::hex << (int)addr <<
+                // std::endl;
+                m_externalRAM[RAMBank * 0x2000 + (addr & 0x1FFF)] = data;
+            }
+            else
+            {
+                m_externalRAM[addr & (uint16_t)(m_externalRAM.size())] = data;
+            }
         }
         else
         {
-            m_externalRAM[addr & (uint16_t)(m_externalRAM.size())] = data;
+            data = data;
         }
+
+        return true;
     }
 
-    // Otherwise, send the data to the mapper
-    return m_mapper->WriteByte(addr, data);
+    return false;
 }

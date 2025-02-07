@@ -384,6 +384,11 @@ bool Bus::Clock(bool* outInstDone)
     // So in double speed mode it will be twice as fast
     for (auto i = 0; i < 4; ++i)
     {
+        if (!m_isDoubleSpeedMode || !!(i & 0x01))
+        {
+            m_cartridge->TickSecond();
+        }
+
         if (m_timer.Clock())
         {
             m_IF.timer = 1;
@@ -453,15 +458,6 @@ bool Bus::Clock(bool* outInstDone)
     }
 
     m_nbCycles++;
-
-    const size_t nbCyclesToCheck = m_isDoubleSpeedMode ? GBEmulator::CPU_NB_CYCLES_PER_SECOND_DOUBLE_SPEED
-                                                       : GBEmulator::CPU_NB_CYCLES_PER_SECOND_SINGLE_SPEED;
-    if (++m_nbCyclesForSeconds >= nbCyclesToCheck)
-    {
-        m_nbCyclesForSeconds -= nbCyclesToCheck;
-        m_cartridge->TickSecond();
-        //std::cout << "Second" << std::endl;
-    }
 
     return frameFinished;
 }

@@ -1,12 +1,9 @@
-#include <core/timer.h>
 #include <core/constants.h>
+#include <core/timer.h>
 
 using GBEmulator::Timer;
 
-Timer::Timer()
-{
-    Reset();
-}
+Timer::Timer() { Reset(); }
 
 uint8_t Timer::ReadByte(uint16_t addr, bool /*readOnly*/)
 {
@@ -50,7 +47,7 @@ void Timer::WriteByte(uint16_t addr, uint8_t data)
         m_timerControl = data;
         m_enabled = !!(m_timerControl & 0x04);
 
-        switch(m_timerControl & 0x03)
+        switch (m_timerControl & 0x03)
         {
         case 0:
             m_timerControlValue = 1024 - 1; // CPU Clock / 1024
@@ -92,10 +89,14 @@ bool Timer::Clock()
 
     if ((m_nbClocks & m_timerControlValue) == 0)
     {
-        if (++m_timerCounter == 0x00) // overflow after increment
+        if (m_timerCounter == 0xFF) // overflow after increment
         {
             hasOverflow = true;
             m_timerCounter = m_timerModulo; // reset counter to the modulo value
+        }
+        else
+        {
+            m_timerCounter++;
         }
     }
 
@@ -109,7 +110,7 @@ void Timer::Reset()
     m_timerModulo = 0x00;
     m_timerControl = 0x00;
     m_enabled = false;
-    m_timerControlValue = 4096; // value at 0
+    m_timerControlValue = 1024 - 1; // value at 0
     m_nbClocks = 0;
 }
 

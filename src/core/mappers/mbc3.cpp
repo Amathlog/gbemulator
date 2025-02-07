@@ -1,6 +1,8 @@
+#include "core/constants.h"
 #include <cassert>
 #include <core/mappers/mbc3.h>
 
+using GBEmulator::ClockCounterRegisters;
 using GBEmulator::MBC3;
 
 MBC3::MBC3(const Header& header)
@@ -17,6 +19,7 @@ void MBC3::SerializeRam(Utils::IWriteVisitor& visitor) const
 
     visitor.WriteValue(m_currentClockRegister);
     visitor.WriteValue(m_clockRegisters);
+    visitor.WriteValue(m_rtcEnabled);
 }
 
 void MBC3::DeserializeRam(Utils::IReadVisitor& visitor)
@@ -25,12 +28,21 @@ void MBC3::DeserializeRam(Utils::IReadVisitor& visitor)
 
     visitor.ReadValue(m_currentClockRegister);
     visitor.ReadValue(m_clockRegisters);
+    visitor.ReadValue(m_rtcEnabled);
 }
 
 void MBC3::Reset()
 {
     MapperBase::Reset();
     m_currentClockRegister = 0xFF;
+    m_clockRegisters = ClockCounterRegisters();
+    m_latchedClockRegisters = ClockCounterRegisters();
+    m_firstLatchedSequence = false;
+    m_rtcEnabled = false;
+    m_startAddrCustomRead = 0x0000;
+    m_endAddrCustomRead = 0x0000;
+    m_ramBank = 0;
+    m_nbCycles = 0;
 }
 
 bool MBC3::WriteByte(uint16_t addr, uint8_t data)
@@ -38,7 +50,8 @@ bool MBC3::WriteByte(uint16_t addr, uint8_t data)
     if (addr <= 0x1FFF)
     {
         // RAM enable
-        m_ramEnabled = !!(data & 0x0A) && m_header.nbRamBanks > 0;
+        m_ramEnabled = !!(data & 0x0A);
+        // std::cout << "Set RAM enable to " << (m_ramEnabled ? "true" : "false") << std::endl;
         return true;
     }
 
@@ -58,16 +71,14 @@ bool MBC3::WriteByte(uint16_t addr, uint8_t data)
         if (data <= 0x03) // 32 kB
         {
             m_ramBank = data & 0x03;
-            // No more custom read if we map a ram bank
-            m_startAddrCustomRead = 0x0000;
-            m_endAddrCustomRead = 0x0000;
+            m_rtcEnabled = false;
+            // std::cout << "Set RAM bank to " << (int)m_ramBank << std::endl;
         }
         else if (data >= 0x08 && data <= 0x0C)
         {
             m_currentClockRegister = data - 0x08;
-            // Custom read for the RAM address range
-            m_startAddrCustomRead = 0xA000;
-            m_endAddrCustomRead = 0xC000;
+            m_rtcEnabled = true;
+            // std::cout << "Set RTC register to " << (int)data << std::endl;
         }
 
         return true;
@@ -76,15 +87,38 @@ bool MBC3::WriteByte(uint16_t addr, uint8_t data)
     if (addr <= 0x7FFF)
     {
         // Latch clock data
-        // TODO
+        if (data == 0x00)
+        {
+            m_firstLatchedSequence = true;
+        }
+        else if (data == 0x01 && m_firstLatchedSequence)
+        {
+            // Latchf
+            m_latchedClockRegisters = m_clockRegisters;
+            m_firstLatchedSequence = false;
+            // std::cout << "Latch RTC register " << std::endl;
+        }
+        else
+        {
+            m_firstLatchedSequence = false;
+        }
 
         return true;
     }
 
     // If we are mapped to a clock register
-    if (m_currentClockRegister != 0xFF && addr >= 0xA000 && addr < 0xC000)
+    if (addr >= 0xA000 && addr < 0xC000 && m_rtcEnabled)
     {
-        *GetClockRegister() = data;
+        if (m_ramEnabled)
+        {
+            WriteClockRegister(data);
+        }
+        else
+        {
+            m_ramEnabled = m_ramEnabled;
+        }
+
+        return true;
     }
 
     return false;
@@ -92,16 +126,37 @@ bool MBC3::WriteByte(uint16_t addr, uint8_t data)
 
 bool MBC3::ReadByte(uint16_t addr, uint8_t& data) const
 {
-    if (m_currentClockRegister == 0xFF)
-        return false;
+    if (addr >= 0xA000 && addr < 0xC000 && m_rtcEnabled)
+    {
+        if (m_ramEnabled)
+        {
+            data = ReadClockRegister();
+        }
+        else
+        {
+            data = 0xFF;
+        }
 
-    data = *GetClockRegister();
+        return true;
+    }
 
-    return true;
+    return false;
 }
 
-void GBEmulator::MBC3::TickSecond() 
+void GBEmulator::MBC3::TickSecond()
 {
+#if !PRECISE_TIME
+    return;
+#endif
+
+    if (m_clockRegisters.extra.halt)
+        return;
+
+    if (++m_nbCycles < GBEmulator::CPU_SINGLE_SPEED_FREQ)
+        return;
+
+    m_nbCycles -= GBEmulator::CPU_SINGLE_SPEED_FREQ;
+
     m_clockRegisters.seconds++;
     if (m_clockRegisters.seconds >= 60)
     {
@@ -133,24 +188,49 @@ void GBEmulator::MBC3::TickSecond()
     }
 }
 
-uint8_t* MBC3::GetClockRegister()
+void MBC3::WriteClockRegister(uint8_t data)
 {
-    if (m_currentClockRegister == 0xFF)
-        return nullptr;
+    // std::cout << "Write RTC register " << (int)m_currentClockRegister << ": " << (int)data << std::endl;
 
     switch (m_currentClockRegister)
     {
     case 0:
-        return &m_clockRegisters.seconds;
+        m_clockRegisters.seconds = data;
+        break;
     case 1:
-        return &m_clockRegisters.minutes;
+        m_clockRegisters.minutes = data;
+        break;
     case 2:
-        return &m_clockRegisters.hours;
+        m_clockRegisters.hours = data;
+        break;
     case 3:
-        return &m_clockRegisters.lowerDayCounter;
+        m_clockRegisters.lowerDayCounter = data;
+        break;
     case 4:
-        return &m_clockRegisters.extra.reg;
+        m_clockRegisters.extra.reg = data;
+        break;
+    default:
+        break;
     }
+}
 
-    return nullptr;
+const uint8_t MBC3::ReadClockRegister() const
+{
+    // std::cout << "Read RTC register " << (int)m_currentClockRegister << std::endl;
+
+    switch (m_currentClockRegister)
+    {
+    case 0:
+        return m_latchedClockRegisters.seconds & 0x3F;
+    case 1:
+        return m_latchedClockRegisters.minutes & 0x3F;
+    case 2:
+        return m_latchedClockRegisters.hours & 0x1F;
+    case 3:
+        return m_latchedClockRegisters.lowerDayCounter;
+    case 4:
+        return m_latchedClockRegisters.extra.reg & 0xC1;
+    default:
+        return 0xFF;
+    }
 }
