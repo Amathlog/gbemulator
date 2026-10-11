@@ -1,10 +1,11 @@
 #include <exe/screen.h>
 #include <memory>
 
+#include <glad/glad.h>
+
 #include <GLFW/glfw3.h>
 #include <cassert>
 #include <exe/messageService/screenMessageService.h>
-#include <glad/glad.h>
 #include <iostream>
 
 using GBEmulatorExe::Screen;

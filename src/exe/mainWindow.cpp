@@ -6,8 +6,9 @@
 #include <exe/screen.h>
 #include <memory>
 
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+
+#include <GLFW/glfw3.h>
 
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/screenMessage.h>

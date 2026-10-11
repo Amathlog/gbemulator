@@ -31,6 +31,7 @@ file (GLOB IMGUI_SRC
 
 add_library(ImGui STATIC ${IMGUI_SRC})
 set_target_properties(ImGui PROPERTIES FOLDER ${EXTERNAL_FOLDER})
+target_compile_options(ImGui PRIVATE -Wno-nontrivial-memcall)
 
 # Build ImGuiFileBrowser
 set(IMGUI_FE_DIR "${GBEmulator_SOURCE_DIR}/external/ImGui-Addons/FileBrowser")
@@ -57,5 +58,7 @@ file(GLOB_RECURSE NEW_EXE_SRC
 add_executable(GBEmulator ${NEW_EXE_SRC})
 target_link_libraries(GBEmulator GBEmulator_Core ${OPENGL_LIBRARIES} glfw ${CMAKE_DL_LIBS} rtaudio ImGuiFE ImGui)
 set_target_properties(GBEmulator PROPERTIES FOLDER ${MAIN_FOLDER})
+
+target_compile_options(GBEmulator PRIVATE -Wno-nontrivial-memcall)
 
 install(FILES $<TARGET_RUNTIME_DLLS:GBEmulator> TYPE BIN)
