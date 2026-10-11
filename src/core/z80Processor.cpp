@@ -1,3 +1,4 @@
+#include "core/utils/debugger.h"
 #include "core/utils/disassenbly.h"
 #include <array>
 #include <core/bus.h>
@@ -5,7 +6,31 @@
 #include <cstdint>
 #include <sys/types.h>
 
+#define USE_DEBUGGER 1
+
 using GBEmulator::Z80Processor;
+
+GBEmulator::Utils::ExecutionState Z80Processor::GetExecutionState(GBEmulator::Utils::ExecutionStatus execStatus) const
+{
+    GBEmulator::Utils::ExecutionState state;
+    state.AFRegister = m_AF.AF;
+    state.BCRegister = m_BC.BC;
+    state.DERegister = m_DE.DE;
+    state.HLRegister = m_HL.HL;
+    state.PC = m_PC;
+    state.SP = m_SP;
+    state.cycles = m_totalCycles;
+    state.romBank = m_bus->GetCartridge()->GetROMBankForAddress(m_PC);
+    state.ramBank = m_bus->GetCartridge()->GetRAMBankForAddress(m_PC);
+    state.status = execStatus;
+
+    return state;
+}
+
+void Z80Processor::PushExecutionState(GBEmulator::Utils::ExecutionStatus execStatus) const
+{
+    GBEmulator::Utils::Debugger::GetInstance().PushExecutionState(GetExecutionState(execStatus));
+}
 
 Z80Processor::Z80Processor() { Reset(); }
 
@@ -18,6 +43,7 @@ void Z80Processor::SerializeTo(Utils::IWriteVisitor& visitor) const
     visitor.WriteValue(m_SP);
     visitor.WriteValue(m_PC);
     visitor.WriteValue(m_cycles);
+    visitor.WriteValue(m_totalCycles);
 
     visitor.WriteValue(m_IMEEnabled);
     visitor.WriteValue(m_IMEScheduled);
@@ -34,6 +60,7 @@ void Z80Processor::DeserializeFrom(Utils::IReadVisitor& visitor)
     visitor.ReadValue(m_SP);
     visitor.ReadValue(m_PC);
     visitor.ReadValue(m_cycles);
+    visitor.ReadValue(m_totalCycles);
 
     visitor.ReadValue(m_IMEEnabled);
     visitor.ReadValue(m_IMEScheduled);
@@ -58,6 +85,7 @@ void Z80Processor::Reset()
     }
 
     m_cycles = 0;
+    m_totalCycles = 0;
 
     m_IMEEnabled = false;
     m_IMEScheduled = false;
@@ -65,6 +93,11 @@ void Z80Processor::Reset()
 
     m_nbInstructionsExecuted = 0;
     m_opcodeCount.fill(0);
+    m_uniqueSPValues.clear();
+
+#if USE_DEBUGGER
+    GBEmulator::Utils::Debugger::GetInstance().Reset();
+#endif // USE_DEBUGGER
 }
 
 inline uint8_t Z80Processor::ReadByte(uint16_t addr) { return m_bus->ReadByte(addr); }
@@ -78,6 +111,9 @@ inline void Z80Processor::WriteByte(uint16_t addr, uint8_t data) { m_bus->WriteB
 // Will return true if the next clock will execute a new instruction
 bool Z80Processor::Clock()
 {
+    m_lastOpWasCall = false;
+    m_lastOpWasRet = false;
+
     // IME enabling is done the next cycle after a EI instruction.
     // Handle it here.
     if (m_IMEScheduled)
@@ -107,6 +143,7 @@ bool Z80Processor::Clock()
     }
 
     m_cycles--;
+    m_totalCycles++;
 
     return m_cycles == 0;
 }
@@ -225,6 +262,10 @@ void Z80Processor::WriteWordToRegisterIndex(uint8_t index, uint16_t data)
         break;
     case 3:
         m_SP = data;
+        if (m_SP < 0xA000)
+        {
+            std::cout << "Invalid SP" << std::endl;
+        }
         break;
     default:
         break;
@@ -407,6 +448,12 @@ uint8_t Z80Processor::HandleInterrupt()
     // Then we jump
     m_PC = jumpingAddress;
 
+#if USE_DEBUGGER
+    PushExecutionState(GBEmulator::Utils::ExecutionStatus::Interruption);
+#endif // USE_DEBUGGER
+
+    m_lastOpWasCall = true;
+
     // This take 5 cycles to complete
     return 5;
 }
@@ -503,6 +550,10 @@ uint8_t Z80Processor::LD(uint8_t opcode)
     if (opcode == 0xF9)
     {
         m_SP = m_HL.HL;
+        if (m_SP < 0xA000)
+        {
+            std::cout << "Invalid SP" << std::endl;
+        }
         return 2;
     }
 
@@ -568,6 +619,10 @@ uint8_t Z80Processor::ADD(uint8_t opcode)
         m_AF.F.H = (m_SP & 0x0F) + (data & 0x0F) > 0x0F;
 
         m_SP += data;
+        if (m_SP < 0xA000)
+        {
+            std::cout << "Invalid SP" << std::endl;
+        }
         m_AF.F.Z = 0;
         m_AF.F.N = 0;
         return 4;
@@ -644,7 +699,7 @@ uint8_t Z80Processor::ADC(uint8_t opcode)
 
 // SUB op
 // General subtraction
-// There are a less cases than addition:
+// There are less cases than addition:
 // SUB A,r8: 0x90 -> 0x97: Subtract the value from a given register to A (1 or 2 cycles)
 // SUB A,d8: 0xD6: Subtract the litteral value to A (2 cycles)
 uint8_t Z80Processor::SUB(uint8_t opcode)
@@ -1449,8 +1504,14 @@ uint8_t Z80Processor::CALL(uint8_t opcode)
     // Next instrcution is push on the stack
     PushWordToStack(m_PC);
 
+    m_lastOpWasCall = true;
+
     // Then jump
     m_PC = addr;
+
+#if USE_DEBUGGER
+    PushExecutionState(GBEmulator::Utils::ExecutionStatus::FunctionCall);
+#endif // USE_DEBUGGER
 
     return 6;
 }
@@ -1536,6 +1597,12 @@ uint8_t Z80Processor::RET(uint8_t opcode)
 
     m_PC = PopWordFromStack();
 
+#if USE_DEBUGGER
+    PushExecutionState(GBEmulator::Utils::ExecutionStatus::FunctionReturn);
+#endif // USE_DEBUGGER
+
+    m_lastOpWasRet = true;
+
     return (opcode == 0xC9) ? 4 : 5;
 }
 
@@ -1547,7 +1614,8 @@ uint8_t Z80Processor::RETI(uint8_t /*opcode*/)
 {
     constexpr uint8_t unconditionalRetOpcode = 0xC9;
     RET(unconditionalRetOpcode);
-    EI(unconditionalRetOpcode);
+    // EI(unconditionalRetOpcode);
+    m_IMEEnabled = true;
     return 4;
 }
 
@@ -1565,6 +1633,12 @@ uint8_t Z80Processor::RST(uint8_t opcode)
     PushWordToStack(m_PC);
 
     m_PC = addrTable[index];
+
+#if USE_DEBUGGER
+    PushExecutionState(GBEmulator::Utils::ExecutionStatus::FunctionCall);
+#endif // USE_DEBUGGER
+
+    m_lastOpWasCall = true;
 
     return 4;
 }

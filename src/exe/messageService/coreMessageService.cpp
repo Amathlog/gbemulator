@@ -71,16 +71,20 @@ bool CoreMessageService::Push(const Message& message)
 
         switch (payload->m_type)
         {
-        case DefaultDebugMessageType::STEP:
+        case DefaultDebugMessageType::STEP_IN:
         {
             if (!m_bus.IsInBreak())
                 return false;
 
-            bool instDone = false;
-            while (!instDone && !m_bus.GetCPU().IsPaused())
-            {
-                m_bus.Clock(&instDone);
-            }
+            m_bus.StepIn();
+            return true;
+        }
+        case DefaultDebugMessageType::STEP_OVER:
+        {
+            if (!m_bus.IsInBreak())
+                return false;
+
+            m_bus.StepOver();
             return true;
         }
         case DefaultDebugMessageType::BREAK_CONTINUE:

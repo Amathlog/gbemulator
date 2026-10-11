@@ -154,6 +154,21 @@ void Cartridge::TickSecond()
         m_mapper->TickSecond();
 }
 
+uint16_t Cartridge::GetROMBankForAddress(uint16_t addr) const
+{
+    if (!m_mapper)
+        return 0xFFFF;
+
+    if (addr >= 0x8000)
+        return 0;
+    else if (addr >= 0x4000)
+        return m_mapper->GetSecondROMBank();
+    else
+        return m_mapper->GetFirstROMBank();
+}
+
+uint16_t Cartridge::GetRAMBankForAddress(uint16_t addr) const { return m_mapper ? m_mapper->GetRAMBank() : 0xFFFF; }
+
 bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
 {
     // No mapper, nothing to do
@@ -181,22 +196,8 @@ bool Cartridge::ReadByte(uint16_t addr, uint8_t& data, bool /*readOnly*/)
     {
         if (m_mapper->IsRamEnabled())
         {
-            // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
-            if (m_externalRAM.size() >= 0x2000)
-            {
-                const uint8_t RAMBank = m_mapper->GetRAMBank();
-                if (RAMBank == 0 && addr == 0xabf0)
-                {
-                    data = data;
-                }
-                data = m_externalRAM[RAMBank * 0x2000 + (addr & 0x1FFF)];
-                // std::cout << "Read from bank " << (int)RAMBank << " at address " << std::hex << (int)addr <<
-                // std::endl;
-            }
-            else
-            {
-                data = m_externalRAM[addr & (uint16_t)(m_externalRAM.size())];
-            }
+            const uint8_t RAMBank = m_mapper->GetRAMBank();
+            data = m_externalRAM[RAMBank * 0x2000 + (addr & 0x1FFF)];
         }
         else
         {
@@ -226,22 +227,8 @@ bool Cartridge::WriteByte(uint16_t addr, uint8_t data)
     {
         if (m_mapper->IsRamEnabled())
         {
-            // RAM banks are 8kB in size usually. In case of a smaller RAM, we cut the address
-            if (m_externalRAM.size() >= 0x2000)
-            {
-                const uint8_t RAMBank = m_mapper->GetRAMBank();
-                // std::cout << "Write to bank " << (int)RAMBank << " at address " << std::hex << (int)addr <<
-                // std::endl;
-                m_externalRAM[RAMBank * 0x2000 + (addr & 0x1FFF)] = data;
-            }
-            else
-            {
-                m_externalRAM[addr & (uint16_t)(m_externalRAM.size())] = data;
-            }
-        }
-        else
-        {
-            data = data;
+            const uint8_t RAMBank = m_mapper->GetRAMBank();
+            m_externalRAM[RAMBank * 0x2000 + (addr & 0x1FFF)] = data;
         }
 
         return true;

@@ -76,9 +76,15 @@ void DebugWindow::DrawInternal()
         ImGui::SameLine();
 
         ImGui::BeginDisabled(!m_isInBreakMode);
-        if (ImGui::Button("Step"))
+        if (ImGui::Button("StepIn"))
         {
-            DispatchMessageServiceSingleton::GetInstance().Push(StepMessage());
+            DispatchMessageServiceSingleton::GetInstance().Push(StepInMessage());
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button("StepOver"))
+        {
+            DispatchMessageServiceSingleton::GetInstance().Push(StepOverMessage());
         }
 
         ImGui::Dummy(ImVec2(0.0f, 10.0f));

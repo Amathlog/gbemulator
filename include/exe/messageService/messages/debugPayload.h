@@ -14,7 +14,8 @@ using DebugMessageType = uint32_t;
 enum DefaultDebugMessageType : DebugMessageType
 {
     RAM_DATA,
-    STEP,
+    STEP_IN,
+    STEP_OVER,
     BREAK_CONTINUE,
     DISASSEMBLY,
     GET_BREAK_STATUS,

@@ -462,6 +462,44 @@ bool Bus::Clock(bool* outInstDone)
     return frameFinished;
 }
 
+void Bus::StepIn()
+{
+    bool instDone = false;
+    while (!instDone && !m_cpu.IsPaused())
+    {
+        Clock(&instDone);
+    }
+}
+
+void Bus::StepOver()
+{
+    Clock();
+    if (m_cpu.LastOpWasCall())
+    {
+        int callstack_depth = 1;
+        while (true)
+        {
+            Clock();
+            if (m_cpu.LastOpWasCall())
+            {
+                callstack_depth++;
+            }
+            else if (m_cpu.LastOpWasRet())
+            {
+                callstack_depth--;
+            }
+
+            if (callstack_depth == 0)
+            {
+                break;
+            }
+        }
+    }
+
+    // Then finish the current instruction
+    StepIn();
+}
+
 void Bus::SerializeTo(Utils::IWriteVisitor& visitor) const
 {
     // If we have no cartridge, nothing to do

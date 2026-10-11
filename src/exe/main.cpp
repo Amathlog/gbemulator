@@ -2,6 +2,7 @@
 #include <core/bus.h>
 #include <core/cartridge.h>
 #include <core/constants.h>
+#include <core/utils/debugger.h>
 #include <core/utils/fileVisitor.h>
 #include <core/utils/utils.h>
 
@@ -32,9 +33,9 @@ int main(int argc, char** argv)
     auto path = std::filesystem::path();
 
     // Mapper 000 also
-    path = root / "tests" / "external_roms" / "cpu_inst" / "cpu_instrs.gb";
+    // path = root / "tests" / "external_roms" / "cpu_inst" / "cpu_instrs.gb";
 
-    // path = root / "roms" / "SuperMarioLand.gb";
+    path = root / "roms" / "Pokemon Red.gb";
 
     // Check the arg, if there is a file to load
     if (argc > 1)
@@ -45,6 +46,9 @@ int main(int argc, char** argv)
     }
 
     GBEmulator::Bus bus;
+
+    GBEmulator::Utils::Debugger& debugger = GBEmulator::Utils::Debugger::GetInstance();
+    debugger.LoadSymbols(root / "roms" / "pokered.sym");
 
     GBAudioSystem audioSystem(bus, syncWithAudio, 2, GBEmulator::APU_SAMPLE_RATE, 256);
     audioSystem.Enable(enableAudioByDefault);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/utils/debugger.h"
 #include <array>
 #include <core/serializable.h>
 #include <core/utils/visitor.h>
@@ -7,9 +8,15 @@
 #include <map>
 #include <string>
 #include <type_traits>
+#include <unordered_set>
 
 namespace GBEmulator
 {
+namespace Utils
+{
+struct ExecutionState;
+}
+
 class Bus;
 
 // Registers
@@ -122,6 +129,13 @@ public:
         m_isPaused = false;
         m_isStopped = false;
     }
+
+    bool LastOpWasCall() const { return m_lastOpWasCall; }
+    bool LastOpWasRet() const { return m_lastOpWasRet; }
+
+    GBEmulator::Utils::ExecutionState
+    GetExecutionState(GBEmulator::Utils::ExecutionStatus execStatus = GBEmulator::Utils::ExecutionStatus::Normal) const;
+    void PushExecutionState(GBEmulator::Utils::ExecutionStatus execStatus) const;
 
 private:
     uint8_t ReadByte(uint16_t addr);
@@ -239,6 +253,7 @@ private:
     uint16_t m_PC;
 
     uint8_t m_cycles = 0;
+    uint64_t m_totalCycles = 0;
 
     size_t m_nbInstructionsExecuted = 0;
     std::array<size_t, 256> m_opcodeCount;
@@ -256,6 +271,9 @@ private:
 
     // Debug
     bool m_dumpEnabled = false;
+    std::unordered_set<uint16_t> m_uniqueSPValues;
+    bool m_lastOpWasCall = false;
+    bool m_lastOpWasRet = false;
 
     using OpCall = uint8_t (Z80Processor::*)(uint8_t);
     using Z = Z80Processor;

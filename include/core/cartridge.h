@@ -59,6 +59,9 @@ public:
     // For cartridge that keep track of time, notify it that a second has passed.
     void TickSecond();
 
+    uint16_t GetROMBankForAddress(uint16_t addr) const;
+    uint16_t GetRAMBankForAddress(uint16_t addr) const;
+
 private:
     Header m_header;
 
