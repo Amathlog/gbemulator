@@ -1,8 +1,8 @@
+#include <cassert>
 #include <core/utils/fileVisitor.h>
 #include <cstring>
-#include <cassert>
-#include <limits>
 #include <iostream>
+#include <limits>
 
 using GBEmulator::Utils::FileReadVisitor;
 using GBEmulator::Utils::FileWriteVisitor;
@@ -37,21 +37,18 @@ FileReadVisitor::FileReadVisitor(const std::string& file, bool withVersioning, b
         return;
     }
 
-    m_file.ignore( std::numeric_limits<std::streamsize>::max() );
+    m_file.ignore(std::numeric_limits<std::streamsize>::max());
     m_size = (size_t)m_file.gcount();
-    m_file.clear();   //  Since ignore will have set eof.
-    m_file.seekg( 0, std::ios_base::beg );
-    
+    m_file.clear(); //  Since ignore will have set eof.
+    m_file.seekg(0, std::ios_base::beg);
+
     if (withVersioning)
         ReadValue(m_version);
     else
         m_version = FileVersion::NoVersion;
 }
 
-FileReadVisitor::~FileReadVisitor()
-{
-    Close(m_file);
-}
+FileReadVisitor::~FileReadVisitor() { Close(m_file); }
 
 void FileReadVisitor::Read(uint8_t* data, size_t size)
 {
@@ -75,10 +72,7 @@ void FileReadVisitor::Advance(size_t size)
     m_ptr += size;
 }
 
-size_t FileReadVisitor::Remaining() const
-{
-    return m_size - m_ptr;
-}
+size_t FileReadVisitor::Remaining() const { return m_size - m_ptr; }
 
 FileWriteVisitor::FileWriteVisitor(const std::string& file, bool withVersioning, bool binary)
     : m_ptr(0)
@@ -92,10 +86,7 @@ FileWriteVisitor::FileWriteVisitor(const std::string& file, bool withVersioning,
         m_version = FileVersion::NoVersion;
 }
 
-FileWriteVisitor::~FileWriteVisitor()
-{
-    Close(m_file);
-}
+FileWriteVisitor::~FileWriteVisitor() { Close(m_file); }
 
 void FileWriteVisitor::Write(const uint8_t* data, size_t size)
 {
@@ -104,7 +95,4 @@ void FileWriteVisitor::Write(const uint8_t* data, size_t size)
     m_ptr += size;
 }
 
-size_t FileWriteVisitor::Written() const
-{
-    return m_ptr;
-}
+size_t FileWriteVisitor::Written() const { return m_ptr; }

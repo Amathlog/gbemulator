@@ -4,14 +4,14 @@
 #include <cstdio>
 #include <exe/messageService/messageService.h>
 // #include <exe/messageService/messages/debugMessage.h>
-#include <exe/imguiWindows/ramWindow.h>
-#include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <core/utils/utils.h>
+#include <exe/imguiWindows/ramWindow.h>
+#include <imgui.h>
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <iostream>
-#include <core/utils/utils.h>
 
 using GBEmulatorExe::RamWindow;
 
@@ -37,8 +37,9 @@ void RamWindow::DrawInternal()
     static char addressStart[10] = "0000";
     ImGui::Text("%s", "Go to address: 0x");
     ImGui::SameLine();
-    if (ImGui::InputText("##AddressText", addressStart, 5, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase)
-        && addressStart[0] != '\0')
+    if (ImGui::InputText("##AddressText", addressStart, 5,
+                         ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase) &&
+        addressStart[0] != '\0')
     {
         m_forceUpdate = true;
         auto addressStartN = std::stoul(addressStart, 0, 16);
@@ -48,7 +49,7 @@ void RamWindow::DrawInternal()
             m_addressStart = 0xFFF0 - 0x0130;
         }
     }
-    
+
     if (ImGui::BeginTable("Table", 17))
     {
         ImGui::TableSetupColumn("Addr", ImGuiTableColumnFlags_WidthFixed, 50.0f);

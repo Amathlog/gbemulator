@@ -2,18 +2,18 @@
 
 using GBEmulatorExe::AudioSystem;
 
-int audioCallback(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
-                  double streamTime, RtAudioStreamStatus status, void *userData)
+int audioCallback(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime,
+                  RtAudioStreamStatus status, void* userData)
 {
     AudioSystem* audioSystem = reinterpret_cast<AudioSystem*>(userData);
-    return audioSystem->RenderCallback(outputBuffer, inputBuffer, nBufferFrames, streamTime, status, userData);   
+    return audioSystem->RenderCallback(outputBuffer, inputBuffer, nBufferFrames, streamTime, status, userData);
 }
 
 AudioSystem::AudioSystem(unsigned nbChannels, unsigned sampleRate, unsigned bufferFrames)
     : m_nbChannels(nbChannels)
     , m_sampleRate(sampleRate)
     , m_bufferFrames(bufferFrames)
-    // , m_messageService(*this)
+// , m_messageService(*this)
 {
     // DispatchMessageServiceSingleton::GetInstance().Connect(&m_messageService);
 }
@@ -37,7 +37,8 @@ bool AudioSystem::Initialize()
     RtAudio::StreamOptions rtOptions;
     rtOptions.numberOfBuffers = 4;
 
-    auto res = m_dac->openStream(&rtParams, NULL, RTAUDIO_FLOAT32, m_sampleRate, &m_bufferFrames, &audioCallback, this, &rtOptions);
+    auto res = m_dac->openStream(&rtParams, NULL, RTAUDIO_FLOAT32, m_sampleRate, &m_bufferFrames, &audioCallback, this,
+                                 &rtOptions);
 
     if (res != RtAudioErrorType::RTAUDIO_NO_ERROR)
     {
@@ -81,7 +82,7 @@ void AudioSystem::Enable(bool value)
         m_enabled = value;
         if (m_dac == nullptr)
             return;
-        
+
         if (m_enabled)
             m_dac->startStream();
         else

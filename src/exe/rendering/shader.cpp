@@ -4,10 +4,7 @@
 
 using GBEmulatorExe::Shader;
 
-Shader::Shader(const char* vertexPrg, const char* fragmentPrg)
-{
-    CreateShaders(vertexPrg, fragmentPrg);
-}
+Shader::Shader(const char* vertexPrg, const char* fragmentPrg) { CreateShaders(vertexPrg, fragmentPrg); }
 
 Shader::~Shader()
 {
@@ -29,7 +26,7 @@ void Shader::CreateShaders(const char* vertexPrg, const char* fragmentPrg)
     glCompileShader(vertex);
     // print compile errors if any
     glGetShaderiv(vertex, GL_COMPILE_STATUS, &success);
-    if(!success)
+    if (!success)
     {
         glGetShaderInfoLog(vertex, 512, nullptr, infoLog);
         std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
@@ -37,14 +34,14 @@ void Shader::CreateShaders(const char* vertexPrg, const char* fragmentPrg)
         glDeleteShader(vertex);
         return;
     };
-    
+
     // similiar for Fragment Shader
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fragmentPrg, nullptr);
     glCompileShader(fragment);
     // print compile errors if any
     glGetShaderiv(fragment, GL_COMPILE_STATUS, &success);
-    if(!success)
+    if (!success)
     {
         glGetShaderInfoLog(fragment, 512, nullptr, infoLog);
         std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
@@ -53,7 +50,7 @@ void Shader::CreateShaders(const char* vertexPrg, const char* fragmentPrg)
         m_programId = 0;
         return;
     };
-    
+
     // shader Program
     m_programId = glCreateProgram();
     glAttachShader(m_programId, vertex);
@@ -61,7 +58,7 @@ void Shader::CreateShaders(const char* vertexPrg, const char* fragmentPrg)
     glLinkProgram(m_programId);
     // print linking errors if any
     glGetProgramiv(m_programId, GL_LINK_STATUS, &success);
-    if(!success)
+    if (!success)
     {
         glGetProgramInfoLog(m_programId, 512, nullptr, infoLog);
         std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
@@ -71,13 +68,10 @@ void Shader::CreateShaders(const char* vertexPrg, const char* fragmentPrg)
         m_programId = 0;
         return;
     }
-    
+
     // delete the shaders as they're linked into our program now and no longer necessary
     glDeleteShader(vertex);
     glDeleteShader(fragment);
 }
 
-void Shader::UseProgram()
-{
-    glUseProgram(m_programId);
-}
+void Shader::UseProgram() { glUseProgram(m_programId); }

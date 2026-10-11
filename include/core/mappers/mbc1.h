@@ -4,19 +4,19 @@
 
 namespace GBEmulator
 {
-    class MBC1 : public MapperBase
-    {
-    public:
-        MBC1(const Header& header);
+class MBC1 : public MapperBase
+{
+public:
+    MBC1(const Header& header);
 
-        void SerializeTo(Utils::IWriteVisitor& visitor) const override;
-        void DeserializeFrom(Utils::IReadVisitor& visitor) override;
+    void SerializeTo(Utils::IWriteVisitor& visitor) const override;
+    void DeserializeFrom(Utils::IReadVisitor& visitor) override;
 
-        void Reset() override;
+    void Reset() override;
 
-        bool WriteByte(uint16_t addr, uint8_t data) override;
+    bool WriteByte(uint16_t addr, uint8_t data) override;
 
-    private:
-        bool m_advancedBankingMode = false;
-    };
-}
+private:
+    bool m_advancedBankingMode = false;
+};
+} // namespace GBEmulator

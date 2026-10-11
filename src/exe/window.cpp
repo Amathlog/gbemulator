@@ -1,31 +1,32 @@
+#include <core/bus.h>
 #include <cstdint>
-#include <memory>
-#include <exe/window.h>
+#include <exe/controller.h>
 #include <exe/imguiManager.h>
 #include <exe/screen.h>
-#include <exe/controller.h>
-#include <core/bus.h>
+#include <exe/window.h>
+#include <memory>
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 #include <iostream>
 #include <thread>
 
 using GBEmulatorExe::Window;
 
-namespace {
-    void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-    {
-        GLFWwindow* previousContext = glfwGetCurrentContext();
-        glfwMakeContextCurrent(window);
-        glViewport(0, 0, width, height);
-        Window* myWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
-        myWindow->OnScreenResized(width, height);
-        if (previousContext != nullptr)
-            glfwMakeContextCurrent(previousContext);
-    } 
+namespace
+{
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    GLFWwindow* previousContext = glfwGetCurrentContext();
+    glfwMakeContextCurrent(window);
+    glViewport(0, 0, width, height);
+    Window* myWindow = reinterpret_cast<Window*>(glfwGetWindowUserPointer(window));
+    myWindow->OnScreenResized(width, height);
+    if (previousContext != nullptr)
+        glfwMakeContextCurrent(previousContext);
 }
+} // namespace
 
 Window::Window(const char* name, unsigned width, unsigned height)
 {

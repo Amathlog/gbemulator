@@ -1,11 +1,11 @@
 #include <exe/screen.h>
 #include <memory>
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <iostream>
 #include <cassert>
 #include <exe/messageService/screenMessageService.h>
+#include <glad/glad.h>
+#include <iostream>
 
 using GBEmulatorExe::Screen;
 
@@ -23,10 +23,7 @@ Screen::Screen(unsigned internalResWidth, unsigned internalResHeight)
     m_lastTick = std::chrono::high_resolution_clock::now();
 }
 
-Screen::~Screen()
-{
-    DispatchMessageServiceSingleton::GetInstance().Disconnect(m_screenMessageService.get());
-}
+Screen::~Screen() { DispatchMessageServiceSingleton::GetInstance().Disconnect(m_screenMessageService.get()); }
 
 void Screen::Update()
 {
@@ -45,7 +42,4 @@ void Screen::Update()
     m_image.Draw();
 }
 
-void Screen::OnScreenResized(int width, int height)
-{
-    m_image.UpdateRatio(width, height);
-}
+void Screen::OnScreenResized(int width, int height) { m_image.UpdateRatio(width, height); }

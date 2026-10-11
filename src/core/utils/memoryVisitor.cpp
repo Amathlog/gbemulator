@@ -1,6 +1,6 @@
+#include <cassert>
 #include <core/utils/memoryVisitor.h>
 #include <cstring>
-#include <cassert>
 
 using GBEmulator::Utils::MemoryReadVisitor;
 using GBEmulator::Utils::MemoryWriteVisitor;
@@ -10,7 +10,6 @@ MemoryReadVisitor::MemoryReadVisitor(const uint8_t* data, size_t size)
     , m_size(size)
     , m_ptr(0)
 {
-
 }
 
 void MemoryReadVisitor::Read(uint8_t* data, size_t size)
@@ -31,17 +30,13 @@ void MemoryReadVisitor::Advance(size_t size)
     m_ptr += size;
 }
 
-size_t MemoryReadVisitor::Remaining() const
-{
-    return m_size - m_ptr;
-}
+size_t MemoryReadVisitor::Remaining() const { return m_size - m_ptr; }
 
 MemoryWriteVisitor::MemoryWriteVisitor(uint8_t* data, size_t size)
     : m_data(data)
     , m_size(size)
     , m_ptr(0)
 {
-
 }
 
 void MemoryWriteVisitor::Write(const uint8_t* data, size_t size)
@@ -51,7 +46,4 @@ void MemoryWriteVisitor::Write(const uint8_t* data, size_t size)
     m_ptr += size;
 }
 
-size_t MemoryWriteVisitor::Written() const
-{
-    return m_ptr;
-}
+size_t MemoryWriteVisitor::Written() const { return m_ptr; }

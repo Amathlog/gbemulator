@@ -8,14 +8,15 @@ struct GLFWwindow;
 
 namespace GBEmulatorExe
 {
-    class Controller : public GBEmulator::Controller
-    {
-    public:
-        Controller(GLFWwindow* window);
-        ~Controller();
+class Controller : public GBEmulator::Controller
+{
+public:
+    Controller(GLFWwindow* window);
+    ~Controller();
 
-        void Update();
-    private:
-        GLFWwindow* m_window;
-    };
-}
+    void Update();
+
+private:
+    GLFWwindow* m_window;
+};
+} // namespace GBEmulatorExe

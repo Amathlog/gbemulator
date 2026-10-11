@@ -1,27 +1,22 @@
 #include "RtAudio.h"
-#include <iostream>
-#include <cstdlib>
-#include <exception>
-#include <mutex>
-#include <vector>
 #include <atomic>
-#include <cstring>
-#include <thread>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <exception>
+#include <iostream>
+#include <mutex>
+#include <thread>
+#include <vector>
 
-class RtAudioError : public std::exception{  
-    public:  
-        const char * what() const throw()  
-        {  
-            return "Audio error\n";  
-        }  
+class RtAudioError : public std::exception
+{
+public:
+    const char* what() const throw() { return "Audio error\n"; }
 
-        void printMessage()
-        {
-            std::cout << what();
-        }
-}; 
+    void printMessage() { std::cout << what(); }
+};
 
 constexpr double pi = 3.141592653589793;
 constexpr double two_pi = 2.0 * pi;
@@ -35,7 +30,7 @@ template <typename T>
 class CircularBuffer
 {
 public:
-    CircularBuffer(size_t maxSize) 
+    CircularBuffer(size_t maxSize)
         : m_maxSize(maxSize)
     {
         m_buffer.resize(maxSize);
@@ -61,7 +56,7 @@ public:
             return;
         }
 
-        //std::scoped_lock lock(m_lock);
+        // std::scoped_lock lock(m_lock);
         size_t targetPtr = m_readerPtr + nbElements;
 
         if (targetPtr >= m_maxSize)
@@ -96,7 +91,7 @@ public:
             return;
         }
 
-        //std::scoped_lock lock(m_lock);
+        // std::scoped_lock lock(m_lock);
         size_t targetPtr = m_writerPtr + nbElements;
 
         if (targetPtr >= m_maxSize)
@@ -142,15 +137,15 @@ struct UserData
     CircularBuffer<double>* buffer = nullptr;
 };
 
-using CallbackRtAudio = int(*)(void*, void*, unsigned int, double, RtAudioStreamStatus, void*);
+using CallbackRtAudio = int (*)(void*, void*, unsigned int, double, RtAudioStreamStatus, void*);
 
 // Two-channel sawtooth wave generator.
-int saw(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
-        double streamTime, RtAudioStreamStatus status, void *userData)
+int saw(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime,
+        RtAudioStreamStatus status, void* userData)
 {
     unsigned int i, j;
-    double *buffer = (double *)outputBuffer;
-    double *lastValues = (double *)userData;
+    double* buffer = (double*)outputBuffer;
+    double* lastValues = (double*)userData;
     if (status)
         std::cout << "Stream underflow detected!" << std::endl;
     // Write interleaved audio data.
@@ -167,8 +162,8 @@ int saw(void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
     return 0;
 }
 
-int MySin(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
-    double streamTime, RtAudioStreamStatus status, void* userData)
+int MySin(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime,
+          RtAudioStreamStatus status, void* userData)
 {
     static double phase = 0.0;
 
@@ -191,8 +186,8 @@ int MySin(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
     return 0;
 }
 
-int MySquare(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
-    double streamTime, RtAudioStreamStatus status, void* userData)
+int MySquare(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime,
+             RtAudioStreamStatus status, void* userData)
 {
     static double phase = 0.0;
 
@@ -212,7 +207,7 @@ int MySquare(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
         if (phase <= 0.5)
             value = -1.0;
         else
-            value =  1.0;
+            value = 1.0;
 
         for (int j = 0; j < nbChannels; ++j)
         {
@@ -223,8 +218,8 @@ int MySquare(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
     return 0;
 }
 
-int ReadBuffer(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames,
-    double streamTime, RtAudioStreamStatus status, void* userData)
+int ReadBuffer(void* outputBuffer, void* inputBuffer, unsigned int nBufferFrames, double streamTime,
+               RtAudioStreamStatus status, void* userData)
 {
     CircularBuffer<double>& buffer = *((UserData*)userData)->buffer;
 
@@ -272,15 +267,14 @@ int main()
 
     CircularBuffer<double> buffer(1000000);
 
-    UserData userData{ 440.0, &buffer };
+    UserData userData{440.0, &buffer};
 
     try
     {
-        dac.openStream(&parameters, NULL, RTAUDIO_FLOAT64,
-                       sampleRate, &bufferFrames, &ReadBuffer, (void *)&userData);
+        dac.openStream(&parameters, NULL, RTAUDIO_FLOAT64, sampleRate, &bufferFrames, &ReadBuffer, (void*)&userData);
         dac.startStream();
     }
-    catch (RtAudioError &e)
+    catch (RtAudioError& e)
     {
         e.printMessage();
         exit(0);
@@ -315,7 +309,7 @@ int main()
         // Stop the stream
         dac.stopStream();
     }
-    catch (RtAudioError &e)
+    catch (RtAudioError& e)
     {
         e.printMessage();
     }

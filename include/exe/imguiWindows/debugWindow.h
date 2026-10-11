@@ -10,22 +10,22 @@ struct ImGuiContext;
 
 namespace GBEmulatorExe
 {
-    class DebugWindow : public ImGuiWindow
-    {
-    public:
-        DebugWindow();
-        WINDOW_ID_IMPL(AllWindowsId::DebugWindowId);
+class DebugWindow : public ImGuiWindow
+{
+public:
+    DebugWindow();
+    WINDOW_ID_IMPL(AllWindowsId::DebugWindowId);
 
-    protected:
-        void DrawInternal() override;
-        const char* GetWindowName() const override { return "DebugWindow##12"; }
-        void UpdateBreakStatus();
+protected:
+    void DrawInternal() override;
+    const char* GetWindowName() const override { return "DebugWindow##12"; }
+    void UpdateBreakStatus();
 
-        double m_lastUpdateTime;
-        bool m_forceUpdate = false;
-        bool m_isInBreakMode = false;
+    double m_lastUpdateTime;
+    bool m_forceUpdate = false;
+    bool m_isInBreakMode = false;
 
-        std::vector<std::string> m_data;
-        CPURegistersInfo m_cpuRegisterInfo;
-    };
-}
+    std::vector<std::string> m_data;
+    CPURegistersInfo m_cpuRegisterInfo;
+};
+} // namespace GBEmulatorExe

@@ -1,18 +1,14 @@
-#include <exe/controller.h>
 #include <GLFW/glfw3.h>
+#include <exe/controller.h>
 
 using GBEmulatorExe::Controller;
 
 Controller::Controller(GLFWwindow* window)
     : m_window(window)
 {
-    
 }
 
-Controller::~Controller()
-{
-
-}
+Controller::~Controller() {}
 
 void Controller::Update()
 {

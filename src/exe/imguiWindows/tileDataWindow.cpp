@@ -1,18 +1,18 @@
 #include "GLFW/glfw3.h"
 #include "exe/messageService/messages/debugMessage.h"
-#include <cstdint>
-#include <cstdio>
-#include <exe/messageService/messageService.h>
-#include <exe/imguiWindows/tileDataWindow.h>
-#include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
+#include <core/utils/tile.h>
+#include <core/utils/utils.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
+#include <exe/imguiWindows/tileDataWindow.h>
+#include <exe/messageService/messageService.h>
+#include <imgui.h>
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <iostream>
-#include <core/utils/utils.h>
-#include <core/utils/tile.h>
-#include <cstring>
 
 using GBEmulatorExe::TileDataWindow;
 
@@ -31,9 +31,10 @@ void TileDataWindow::UpdateImage()
 
     std::array<uint8_t, 12> paletteColors;
     int i = 0;
-    for (auto& color : { GBEmulator::WHITE_COLOR, GBEmulator::LIGHT_GREY_COLOR, GBEmulator::DARK_GREY_COLOR, GBEmulator::BLACK_COLOR })
+    for (auto& color :
+         {GBEmulator::WHITE_COLOR, GBEmulator::LIGHT_GREY_COLOR, GBEmulator::DARK_GREY_COLOR, GBEmulator::BLACK_COLOR})
     {
-        GBEmulator::Utils::RGB555ToRGB888(color, paletteColors[i], paletteColors[i+1], paletteColors[i+2]);
+        GBEmulator::Utils::RGB555ToRGB888(color, paletteColors[i], paletteColors[i + 1], paletteColors[i + 2]);
         i += 3;
     }
 
@@ -51,7 +52,8 @@ void TileDataWindow::UpdateImage()
             int finalLine = tileLine * 8 + line;
             int finalColumn = tileColumn * 8 + column;
 
-            std::memcpy(finalImage.data() + (finalLine * 128 + finalColumn) * 3, paletteColors.data() + 3 * paletteColorIndexes[j], 3);
+            std::memcpy(finalImage.data() + (finalLine * 128 + finalColumn) * 3,
+                        paletteColors.data() + 3 * paletteColorIndexes[j], 3);
         }
     }
 
@@ -66,7 +68,8 @@ void TileDataWindow::DrawInternal()
     {
         m_lastUpdateTime = elapsedTime;
         m_forceUpdate = false;
-        GetVRAMMessage msg(m_data.data(), m_data.size(), m_data.size(), 0x8000 + m_currentBlock * 0x0800, m_currentBank);
+        GetVRAMMessage msg(m_data.data(), m_data.size(), m_data.size(), 0x8000 + m_currentBlock * 0x0800,
+                           m_currentBank);
         DispatchMessageServiceSingleton::GetInstance().Pull(msg);
 
         UpdateImage();
@@ -102,5 +105,5 @@ void TileDataWindow::DrawInternal()
         }
     }
 
-    ImGui::Image((void*)(intptr_t)m_image->GetTextureId(), ImVec2(16*8*5, 16*8*5));
+    ImGui::Image((void*)(intptr_t)m_image->GetTextureId(), ImVec2(16 * 8 * 5, 16 * 8 * 5));
 }

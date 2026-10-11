@@ -1,13 +1,14 @@
-#include <gtest/gtest.h>
+#include <common.h>
 #include <core/bus.h>
 #include <core/cartridge.h>
 #include <core/utils/fileVisitor.h>
-#include <common.h>
+#include <gtest/gtest.h>
 
 class LDTest : public GBEmulatorTests::DefaultTest
 {
 public:
-    LDTest() : GBEmulatorTests::DefaultTest() 
+    LDTest()
+        : GBEmulatorTests::DefaultTest()
     {
         m_testRomName = "ld_test.gb";
     }
@@ -154,11 +155,11 @@ TEST_F(LDTest, LoadAToMemoryRegisters)
 TEST_F(LDTest, SpecialLoads_SP)
 {
     Run(0x0E00, 0x0E09);
-    EXPECT_EQ(m_bus.GetCPU().GetStackPointer(), 0x9FFF); // ld sp, hl
-    EXPECT_EQ(m_bus.ReadByte(0xC000), 0xFF); // ld [$C000], sp
-    EXPECT_EQ(m_bus.ReadByte(0xC001), 0x9F); // ld [$C000], sp
+    EXPECT_EQ(m_bus.GetCPU().GetStackPointer(), 0x9FFF);       // ld sp, hl
+    EXPECT_EQ(m_bus.ReadByte(0xC000), 0xFF);                   // ld [$C000], sp
+    EXPECT_EQ(m_bus.ReadByte(0xC001), 0x9F);                   // ld [$C000], sp
     EXPECT_EQ(m_bus.GetCPU().GetHLRegister().HL, 0x9FFF + 10); // ld hl, sp + e8
-    EXPECT_EQ(m_bus.GetCPU().GetAFRegister().F.flags, 0x30); // H and C set
+    EXPECT_EQ(m_bus.GetCPU().GetAFRegister().F.flags, 0x30);   // H and C set
 
     GBEmulatorTests::RunTo(m_bus, 0x3FF0);
     EXPECT_EQ(m_bus.GetCPU().GetHLRegister().HL, 0x9FFF - 10); // ld hl, sp + e8

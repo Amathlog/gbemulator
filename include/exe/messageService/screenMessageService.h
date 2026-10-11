@@ -2,21 +2,22 @@
 
 #include <exe/messageService/messageService.h>
 
-namespace GBEmulatorExe 
+namespace GBEmulatorExe
 {
-    class Screen;
+class Screen;
 
-    class ScreenMessageService : public IMessageService
+class ScreenMessageService : public IMessageService
+{
+public:
+    ScreenMessageService(Screen& screen)
+        : m_screen(screen)
     {
-    public:
-        ScreenMessageService(Screen& screen)
-            : m_screen(screen)
-        {}
+    }
 
-        bool Push(const Message& message) override;
-        bool Pull(Message& message) override;
+    bool Push(const Message& message) override;
+    bool Pull(Message& message) override;
 
-    private:
-        Screen& m_screen;
-    };
-}
+private:
+    Screen& m_screen;
+};
+} // namespace GBEmulatorExe

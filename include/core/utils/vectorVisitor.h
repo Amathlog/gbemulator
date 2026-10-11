@@ -21,7 +21,6 @@ private:
     size_t m_ptr;
 };
 
-
 class VectorWriteVisitor : public IWriteVisitor
 {
 public:
@@ -34,5 +33,5 @@ private:
     std::vector<uint8_t>& m_data;
 };
 
-}
-}
+} // namespace Utils
+} // namespace GBEmulator

@@ -1,11 +1,11 @@
-#include <core/utils/instLogger.h>
-#include <core/utils/fileVisitor.h>
-#include <core/utils/disassenbly.h>
 #include <core/bus.h>
+#include <core/utils/disassenbly.h>
+#include <core/utils/fileVisitor.h>
+#include <core/utils/instLogger.h>
 
 using GBEmulator::Bus;
-using GBEmulator::Utils::FileWriteVisitor;
 using GBEmulator::InstructionLogger;
+using GBEmulator::Utils::FileWriteVisitor;
 
 void InstructionLogger::OpenFileVisitor(const std::string& filepath)
 {

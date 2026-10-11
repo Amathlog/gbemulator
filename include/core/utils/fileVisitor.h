@@ -1,8 +1,8 @@
 #pragma once
 
 #include <core/utils/visitor.h>
-#include <string>
 #include <fstream>
+#include <string>
 
 namespace GBEmulator
 {
@@ -16,7 +16,7 @@ enum class FileVersion : int32_t
     Version_0_0_2 = 2,
     Version_0_1_0 = 1 << 8,
     Version_1_0_0 = 1 << 16,
-    
+
     CurrentVersion = Version_0_0_2,
 };
 
@@ -41,7 +41,6 @@ private:
     FileVersion m_version;
 };
 
-
 class FileWriteVisitor : public IWriteVisitor
 {
 public:
@@ -60,6 +59,5 @@ private:
     FileVersion m_version;
 };
 
-
-}
-}
+} // namespace Utils
+} // namespace GBEmulator

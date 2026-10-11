@@ -1,5 +1,5 @@
-#include <core/mappers/mbc1.h>
 #include <cassert>
+#include <core/mappers/mbc1.h>
 
 using GBEmulator::MBC1;
 

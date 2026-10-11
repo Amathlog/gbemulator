@@ -1,7 +1,7 @@
 #include <exe/messageService/messageService.h>
 
-using GBEmulatorExe::IMessageService;
 using GBEmulatorExe::DispatchMessageService;
+using GBEmulatorExe::IMessageService;
 using GBEmulatorExe::Message;
 
 bool DispatchMessageService::Push(const Message& message)
@@ -22,12 +22,6 @@ bool DispatchMessageService::Pull(Message& message)
     return pullOK;
 }
 
-void DispatchMessageService::Connect(IMessageService* messageService)
-{
-    m_messageServices.insert(messageService);
-}
+void DispatchMessageService::Connect(IMessageService* messageService) { m_messageServices.insert(messageService); }
 
-void DispatchMessageService::Disconnect(IMessageService* messageService)
-{
-    m_messageServices.erase(messageService);
-}
+void DispatchMessageService::Disconnect(IMessageService* messageService) { m_messageServices.erase(messageService); }

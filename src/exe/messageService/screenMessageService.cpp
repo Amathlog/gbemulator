@@ -21,7 +21,8 @@ bool ScreenMessageService::Push(const Message& message)
         m_screen.OnScreenResized(payload->m_width, payload->m_height);
         break;
     case DefaultScreenMessageType::RENDER:
-        m_screen.GetImage().UpdateInternalBuffer(reinterpret_cast<const uint8_t*>(payload->m_dataPtr), payload->m_dataSize);
+        m_screen.GetImage().UpdateInternalBuffer(reinterpret_cast<const uint8_t*>(payload->m_dataPtr),
+                                                 payload->m_dataSize);
         break;
     }
 

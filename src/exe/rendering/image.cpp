@@ -1,9 +1,9 @@
-#include <exe/rendering/image.h>
 #include <exe/rendering/defaultShadersPrg.h>
+#include <exe/rendering/image.h>
 #include <glad/glad.h>
 // #include <core/palette.h>
-#include <cstring>
 #include <cassert>
+#include <cstring>
 
 using GBEmulatorExe::Image;
 
@@ -66,7 +66,8 @@ void Image::UpdateGLTexture(bool bindBefore)
         glBindTexture(GL_TEXTURE_2D, m_texture);
     }
 
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_internalResWidth, m_internalResHeight, GL_RGB, GL_UNSIGNED_BYTE, m_imageBuffer.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_internalResWidth, m_internalResHeight, GL_RGB, GL_UNSIGNED_BYTE,
+                    m_imageBuffer.data());
     m_bufferWasUpdated = false;
 
     if (bindBefore)
@@ -83,7 +84,6 @@ void Image::UpdateInternalBuffer(const uint8_t* data, size_t size)
     m_bufferWasUpdated = true;
 }
 
-
 void Image::SetImageFormat(Format format)
 {
     m_format = format;
@@ -95,10 +95,10 @@ void Image::UpdateRatio(int width, int height)
     m_currentWidth = width;
     m_currentHeight = height;
 
-    float currentRatio = (float) width / height;
+    float currentRatio = (float)width / height;
     float targetRatio = 1.0f;
 
-    switch(m_format)
+    switch (m_format)
     {
     case Format::STRETCH:
         targetRatio = currentRatio;
@@ -118,7 +118,7 @@ void Image::UpdateRatio(int width, int height)
         m_imageFormat[0] = targetRatio / currentRatio;
         m_imageFormat[1] = 1.0f;
     }
-    else 
+    else
     {
         // We have a bigger height that needed
         m_imageFormat[0] = 1.0f;
@@ -128,17 +128,11 @@ void Image::UpdateRatio(int width, int height)
 
 bool Image::InitializeImage()
 {
-        float vertices[] = {
-        1.0f, 1.0f, 1.0f, 0.0f,
-        1.0f, -1.0f, 1.0f, 1.0f,
-        -1.0f, -1.0f, 0.0f, 1.0f,
-        -1.0f, 1.0f, 0.0f, 0.0f,
+    float vertices[] = {
+        1.0f, 1.0f, 1.0f, 0.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f,
     };
 
-    unsigned indices[] = {
-        0, 1, 3,
-        1, 2, 3
-    };
+    unsigned indices[] = {0, 1, 3, 1, 2, 3};
 
     glGenVertexArrays(1, &m_VAO);
     glGenBuffers(1, &m_VBO);
@@ -162,7 +156,8 @@ bool Image::InitializeImage()
     glBindTexture(GL_TEXTURE_2D, m_texture);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_internalResWidth, m_internalResHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, (void*)0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_internalResWidth, m_internalResHeight, 0, GL_RGB, GL_UNSIGNED_BYTE,
+                 (void*)0);
     glGenerateMipmap(GL_TEXTURE_2D);
     m_shader.UseProgram();
     glUniform1i(glGetUniformLocation(m_shader.GetProgramId(), "Texture"), 0);

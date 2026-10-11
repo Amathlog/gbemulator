@@ -1,31 +1,33 @@
-#include <cstdint>
-#include <memory>
-#include <exe/mainWindow.h>
-#include <exe/imguiManager.h>
-#include <exe/screen.h>
-#include <exe/controller.h>
 #include <core/bus.h>
+#include <cstdint>
+#include <exe/controller.h>
+#include <exe/imguiManager.h>
+#include <exe/mainWindow.h>
+#include <exe/screen.h>
+#include <memory>
 
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
-#include <iostream>
-#include <thread>
 #include <exe/messageService/messageService.h>
 #include <exe/messageService/messages/screenMessage.h>
+#include <iostream>
+#include <thread>
 
 using GBEmulatorExe::MainWindow;
 
-namespace {
-    void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-    {
-        glViewport(0, 0, width, height);
-        // Notify the screen that we have resized
-        GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(GBEmulatorExe::ResizeMessage(width, height));
-    } 
+namespace
+{
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+    // Notify the screen that we have resized
+    GBEmulatorExe::DispatchMessageServiceSingleton::GetInstance().Push(GBEmulatorExe::ResizeMessage(width, height));
 }
+} // namespace
 
-MainWindow::MainWindow(const char* name, unsigned width, unsigned height, unsigned internalResWidth, unsigned internalResHeight)
+MainWindow::MainWindow(const char* name, unsigned width, unsigned height, unsigned internalResWidth,
+                       unsigned internalResHeight)
     : Window(name, width, height)
 {
     m_isMainWindow = true;
@@ -54,7 +56,7 @@ void MainWindow::InternalUpdate(bool externalSync)
     m_controller->Update();
 
     static bool hasPressed = false;
-    
+
     if (glfwGetKey(m_window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     {
         hasPressed = true;
@@ -66,7 +68,8 @@ void MainWindow::InternalUpdate(bool externalSync)
     }
 
     // if (!externalSync)
-    //     m_screen->GetImage().UpdateInternalBuffer(bus->GetPPU().GetScreen(), bus->GetPPU().GetHeight() * bus->GetPPU().GetWidth());
+    //     m_screen->GetImage().UpdateInternalBuffer(bus->GetPPU().GetScreen(), bus->GetPPU().GetHeight() *
+    //     bus->GetPPU().GetWidth());
 
     m_screen->Update();
     m_imguiManager->Update();

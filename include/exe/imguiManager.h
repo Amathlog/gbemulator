@@ -1,68 +1,70 @@
 #pragma once
 
 #include "exe/imguiWindows/imguiWindow.h"
-#include <string>
-#include <exe/rendering/image.h>
 #include <array>
+#include <exe/rendering/image.h>
 #include <map>
+#include <string>
 #include <vector>
-
 
 struct ImGuiContext;
 
 namespace GBEmulatorExe
 {
-    class WindowBase;
+class WindowBase;
 
-    struct Toggle
+struct Toggle
+{
+    Toggle(bool _value)
+        : value(_value)
     {
-        Toggle(bool _value) : value(_value) {}
+    }
 
-        bool value = false;
-        bool previous = false;
-    };
-    
-    class ImguiManager
-    {
-    public:
-        ImguiManager(WindowBase* window);
-        ~ImguiManager();
+    bool value = false;
+    bool previous = false;
+};
 
-        bool ShouldClose() const { return m_closeRequested; }
-        void ToggleMainMenu() { m_showMainMenu = !m_showMainMenu; }
+class ImguiManager
+{
+public:
+    ImguiManager(WindowBase* window);
+    ~ImguiManager();
 
-        bool IsBreakOnStart() const { return m_breakOnStart.value; }
+    bool ShouldClose() const { return m_closeRequested; }
+    void ToggleMainMenu() { m_showMainMenu = !m_showMainMenu; }
 
-        void Update();
+    bool IsBreakOnStart() const { return m_breakOnStart.value; }
 
-        using ChildWidgetMap = std::map<int, std::unique_ptr<ImGuiWindow>>;
+    void Update();
 
-    private:
-        void HandleFileExplorer();
-        void HandlePerf(bool showFPS);
-        void HandleBreakOnStart();
+    using ChildWidgetMap = std::map<int, std::unique_ptr<ImGuiWindow>>;
 
-        void Serialize();
-        void Deserialize();
-        
-        ImGuiContext* m_context;
+private:
+    void HandleFileExplorer();
+    void HandlePerf(bool showFPS);
+    void HandleBreakOnStart();
 
-        bool m_showFileExplorer = false;
-        bool m_closeRequested = false;
-        bool m_showMainMenu = true;
-        Toggle m_isSoundEnabled = false;
-        Toggle m_breakOnStart = false;
+    void Serialize();
+    void Deserialize();
 
-        Format m_currentFormat = Format::ORIGINAL;
+    ImGuiContext* m_context;
 
-        std::array<bool, 2> m_modes;
+    bool m_showFileExplorer = false;
+    bool m_closeRequested = false;
+    bool m_showMainMenu = true;
+    Toggle m_isSoundEnabled = false;
+    Toggle m_breakOnStart = false;
 
-        std::array<bool, (size_t)Format::COUNT> m_changeFormats;
-        
-        inline static constexpr unsigned MAX_SAVE_STATES = 4;
-        std::array<bool, MAX_SAVE_STATES> m_requestSaveState;
-        std::array<bool, MAX_SAVE_STATES> m_requestLoadState;
+    Format m_currentFormat = Format::ORIGINAL;
 
-        ChildWidgetMap m_childWidgets;
-    };
-}
+    std::array<bool, 2> m_modes;
+
+    std::array<bool, (size_t)Format::COUNT> m_changeFormats;
+
+    inline static constexpr unsigned MAX_SAVE_STATES = 4;
+    std::array<bool, MAX_SAVE_STATES> m_requestSaveState;
+    std::array<bool, MAX_SAVE_STATES> m_requestLoadState;
+
+    ChildWidgetMap m_childWidgets;
+};
+} // namespace GBEmulatorExe

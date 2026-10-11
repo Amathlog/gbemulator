@@ -4,11 +4,12 @@
 
 namespace GBEmulator
 {
-    class MBC5 : public MapperBase
-    {
-    public:
-        MBC5(const Header& header) : MapperBase(header) {};
+class MBC5 : public MapperBase
+{
+public:
+    MBC5(const Header& header)
+        : MapperBase(header) {};
 
-        bool WriteByte(uint16_t addr, uint8_t data) override;
-    };
-}
+    bool WriteByte(uint16_t addr, uint8_t data) override;
+};
+} // namespace GBEmulator

@@ -21,7 +21,6 @@ private:
     size_t m_size;
 };
 
-
 class MemoryWriteVisitor : public IWriteVisitor
 {
 public:
@@ -36,5 +35,5 @@ private:
     size_t m_size;
 };
 
-}
-}
+} // namespace Utils
+} // namespace GBEmulator
